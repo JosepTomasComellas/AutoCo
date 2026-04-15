@@ -1,0 +1,157 @@
+@page "/professor/classes"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageTitle>Classes – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<!-- Capçalera de pàgina -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">Gestió de classes</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Download"
+               Href="/professor/export-students">
+        Exportar alumnes
+    </MudButton>
+</MudStack>
+
+<MudGrid>
+    <!-- Nova classe -->
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.Add" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Nova classe</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTextField @bind-Value="_nom" Label="Nom de la classe" Variant="Variant.Outlined"
+                              Class="mb-3" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Class" />
+                <MudTextField @bind-Value="_curs" Label="Curs acadèmic (opcional)"
+                              Placeholder="2024-2025" Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
+            </MudCardContent>
+            <MudCardActions Class="px-4 pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           OnClick="CreateAsync" Disabled="_saving"
+                           StartIcon="@Icons.Material.Filled.AddCircle">
+                    Crear classe
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <!-- Llista de classes -->
+    <MudItem xs="12" md="8">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudText Typo="Typo.h6" Style="font-weight:600">
+                Classes (@_classes.Count)
+            </MudText>
+        </MudStack>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (!_classes.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                Encara no hi ha cap classe. Crea'n una a l'esquerra.
+            </MudAlert>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                @foreach (var c in _classes)
+                {
+                    <MudPaper Elevation="1" Class="pa-0" Style="overflow:hidden;border-radius:8px">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Style="padding:12px 16px">
+                            <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Medium" Class="mr-3">
+                                <MudIcon Icon="@Icons.Material.Filled.Class" />
+                            </MudAvatar>
+                            <MudStack Spacing="0" Style="flex:1;min-width:0">
+                                <MudText Typo="Typo.subtitle1" Style="font-weight:600">@c.Name</MudText>
+                                <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                    @if (c.AcademicYear is not null)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@c.AcademicYear</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">·</MudText>
+                                    }
+                                    <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small"
+                                             Style="font-size:14px;color:var(--mud-palette-text-secondary)" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@c.NumStudents alumnes</MudText>
+                                </MudStack>
+                            </MudStack>
+                            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.People"
+                                       Href="@($"/professor/alumnes/{c.Id}")">
+                                Alumnes
+                            </MudButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           Size="Size.Small" title="Eliminar classe"
+                                           OnClick="() => DeleteAsync(c)" />
+                        </MudStack>
+                    </MudPaper>
+                }
+            </MudStack>
+        }
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<ClassDto> _classes = [];
+    private string _nom  = "";
+    private string _curs = "";
+    private bool _loading = true;
+    private bool _saving  = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+        _classes = await Api.GetClassesAsync() ?? [];
+        _loading = false;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nom)) { Snackbar.Add("El nom és obligatori.", Severity.Warning); return; }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var c = await Api.CreateClassAsync(new CreateClassRequest(_nom.Trim(), string.IsNullOrWhiteSpace(_curs) ? null : _curs.Trim()));
+        if (c is not null)
+        {
+            _classes.Add(c);
+            _nom = ""; _curs = "";
+            Snackbar.Add($"Classe «{c.Name}» creada.", Severity.Success);
+        }
+        _saving = false;
+    }
+
+    private async Task DeleteAsync(ClassDto c)
+    {
+        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
+            $"Eliminar la classe «{c.Name}» i tots els seus alumnes?",
+            yesText: "Eliminar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+        Api.SetToken(UserState.Token!);
+        await Api.DeleteClassAsync(c.Id);
+        _classes.RemoveAll(x => x.Id == c.Id);
+        Snackbar.Add("Classe eliminada.", Severity.Info);
+    }
+}

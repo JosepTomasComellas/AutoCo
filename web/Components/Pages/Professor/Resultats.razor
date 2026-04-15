@@ -1,0 +1,136 @@
+@page "/professor/resultats/{ActivityId:int}"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+
+<PageTitle>Resultats – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard" Variant="Variant.Text">
+        Tauler
+    </MudButton>
+    @if (_results is not null)
+    {
+        <MudText Typo="Typo.h5">@_results.Activity.Name</MudText>
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_results.Activity.ClassName</MudChip>
+    }
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary"
+                   title="Actualitzar" OnClick="LoadAsync" />
+    @if (_results is not null)
+    {
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   Href="@($"/professor/export-csv/{ActivityId}")">
+            Exportar CSV
+        </MudButton>
+    }
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_results is null)
+{
+    <MudAlert Severity="Severity.Error">Activitat no trobada o sense permisos.</MudAlert>
+}
+else if (!_results.Students.Any())
+{
+    <MudAlert Severity="Severity.Info">Encara no hi ha avaluacions.</MudAlert>
+}
+else
+{
+    <MudDataGrid T="StudentResultDto" Items="_results.Students" Dense="true" Hover="true"
+                 SortMode="SortMode.Single" Class="mb-6">
+        <Columns>
+            <PropertyColumn Property="s => s.NumLlista" Title="#" />
+            <TemplateColumn Title="Cognoms, Nom">
+                <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="s => s.GroupName" Title="Grup" />
+            @foreach (var c in _results.Criteria)
+            {
+                var key = c.Key;
+                var label = c.Label;
+                <TemplateColumn Title="@label">
+                    <HeaderTemplate>
+                        <MudText Typo="Typo.caption" Style="white-space:normal;text-align:center">
+                            @label<br/><small>Auto / Co</small>
+                        </MudText>
+                    </HeaderTemplate>
+                    <CellTemplate>
+                        @{
+                            var autoVal = context.Item.SelfScores.TryGetValue(key, out var av) && av.HasValue ? av.Value.ToString() : "–";
+                            var coVal   = context.Item.AvgCoScores.TryGetValue(key, out var cv) && cv.HasValue ? cv.Value.ToString("F1") : "–";
+                        }
+                        <MudText Typo="Typo.body2">
+                            <span style="color:var(--mud-palette-primary)">@autoVal</span>
+                            /
+                            <span style="color:var(--mud-palette-secondary)">@coVal</span>
+                        </MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+            }
+            <TemplateColumn Title="AutEval">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2" Style="font-weight:600">
+                        @(context.Item.AutAvgGlobal.HasValue ? context.Item.AutAvgGlobal.Value.ToString("F1") : "–")
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="CoEval">
+                <CellTemplate>
+                    <MudText Typo="Typo.body2" Style="font-weight:600">
+                        @(context.Item.AvgGlobal.HasValue ? context.Item.AvgGlobal.Value.ToString("F1") : "–")
+                    </MudText>
+                </CellTemplate>
+            </TemplateColumn>
+            <PropertyColumn Property="s => s.NumPeerEvaluators" Title="Coavs." />
+            <PropertyColumn Property="s => s.SelfComment" Title="Comentari" />
+        </Columns>
+    </MudDataGrid>
+
+    <!-- Detall coavaluacions -->
+    <MudText Typo="Typo.h6" Class="mb-3">Detall coavaluacions</MudText>
+    @foreach (var s in _results.Students.Where(x => x.PeerEvaluations.Any()))
+    {
+        <MudExpansionPanel Text="@($"{s.Cognoms}, {s.Nom} ({s.GroupName})")" Class="mb-1">
+            <MudDataGrid T="PeerEvaluationDto" Items="s.PeerEvaluations" Dense="true">
+                <Columns>
+                    <PropertyColumn Property="p => p.EvaluatorName" Title="Avaluador/a" />
+                    @foreach (var c in _results.Criteria)
+                    {
+                        var key = c.Key;
+                        var label = c.Label;
+                        <TemplateColumn Title="@label">
+                            <CellTemplate>
+                                @(context.Item.Scores.TryGetValue(key, out var v) ? v.ToString() : "–")
+                            </CellTemplate>
+                        </TemplateColumn>
+                    }
+                    <PropertyColumn Property="p => p.Comment" Title="Comentari" />
+                </Columns>
+            </MudDataGrid>
+        </MudExpansionPanel>
+    }
+}
+
+@code {
+    [Parameter] public int ActivityId { get; set; }
+
+    private ActivityResultsDto? _results = null;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        _loading = true;
+        Api.SetToken(UserState.Token!);
+        _results = await Api.GetResultsAsync(ActivityId);
+        _loading = false;
+    }
+}

@@ -1,0 +1,27 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.vscode/
+*.nupkg
+*.snupkg
+
+# ASP.NET
+appsettings.Development.json
+
+# Docker / dades locals
+backups/
+data/
+nginx/ssl/
+
+# Eines de sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+logs/
+.claude/

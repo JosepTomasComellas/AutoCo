@@ -1,0 +1,35 @@
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4" Color="Color.Secondary">
+            Es crearà una nova activitat amb els mateixos grups i membres que «@NomOriginal».
+        </MudText>
+        <MudTextField @bind-Value="_nom" Label="Nom de la nova activitat" Variant="Variant.Outlined"
+                      Class="mb-3" Immediate="true" />
+        <MudTextField @bind-Value="_desc" Label="Descripció (opcional)" Variant="Variant.Outlined"
+                      Lines="2" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel·lar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Confirm"
+                   Disabled="@string.IsNullOrWhiteSpace(_nom)">
+            Duplicar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string NomOriginal { get; set; } = "";
+
+    private string  _nom  = "";
+    private string? _desc = null;
+
+    private void Cancel()  => MudDialog.Cancel();
+    private void Confirm()
+    {
+        if (string.IsNullOrWhiteSpace(_nom)) return;
+        MudDialog.Close(DialogResult.Ok((_nom.Trim(), string.IsNullOrWhiteSpace(_desc) ? null : _desc.Trim())));
+    }
+}

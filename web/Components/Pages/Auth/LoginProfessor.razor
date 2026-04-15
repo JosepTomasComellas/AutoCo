@@ -1,0 +1,80 @@
+@page "/auth/login-professor"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+
+<PageTitle>Accés Professor – AutoCo</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
+    <MudPaper Elevation="3" Class="pa-8">
+        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.h5" Align="Align.Center">Accés Professor</MudText>
+        </MudStack>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+        }
+
+        <MudTextField @bind-Value="_username" Label="Nom d'usuari" Variant="Variant.Outlined"
+                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
+                      Class="mb-3" @onkeydown="OnKeyDown" />
+        <MudTextField @bind-Value="_password" Label="Contrasenya" Variant="Variant.Outlined"
+                      InputType="@_pwdType"
+                      Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
+                      OnAdornmentClick="TogglePassword"
+                      Class="mb-4" @onkeydown="OnKeyDown" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   Size="Size.Large" OnClick="Login" Disabled="_loading">
+            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Entrar
+        </MudButton>
+
+        <MudLink Href="/" Class="d-block text-center mt-4">← Tornar</MudLink>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string _username = "";
+    private string _password = "";
+    private string? _error;
+    private bool _loading;
+    private bool _showPwd;
+    private InputType _pwdType  => _showPwd ? InputType.Text : InputType.Password;
+    private string   _pwdIcon   => _showPwd ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+
+    protected override void OnInitialized()
+    {
+        if (UserState.IsLoggedIn)
+            Nav.NavigateTo(UserState.IsProfessor ? "/professor/dashboard" : "/alumne/dashboard");
+    }
+
+    private void TogglePassword() => _showPwd = !_showPwd;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Login();
+    }
+
+    private async Task Login()
+    {
+        if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_password))
+        {
+            _error = "Omple tots els camps.";
+            return;
+        }
+        _loading = true;
+        _error   = null;
+        var result = await Api.LoginProfessorAsync(_username.Trim(), _password);
+        _loading = false;
+        if (result is null)
+        {
+            _error = "Credencials incorrectes.";
+            return;
+        }
+        UserState.SetLogin(result);
+        Nav.NavigateTo("/professor/dashboard");
+    }
+}

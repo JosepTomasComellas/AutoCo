@@ -1,0 +1,286 @@
+@page "/professor/dashboard"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageTitle>Tauler del Professor – AutoCo</PageTitle>
+
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudText Typo="Typo.h5">Benvingut/da, @UserState.NomComplet</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Add"
+               Href="/professor/nova-activitat">
+        Nova activitat
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Class"
+               Href="/professor/classes">
+        Gestió de classes
+    </MudButton>
+    @if (UserState.IsAdmin)
+    {
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+                   StartIcon="@Icons.Material.Filled.People"
+                   Href="/admin/professors">
+            Professors
+        </MudButton>
+    }
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (!_activities.Any())
+{
+    <MudAlert Severity="Severity.Info">
+        No hi ha activitats creades. Comença creant-ne una.
+    </MudAlert>
+}
+else
+{
+    var obertes  = _activities.Where(a =>  a.IsOpen).ToList();
+    var tancades = _activities.Where(a => !a.IsOpen).ToList();
+
+    @if (obertes.Any())
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
+            <MudIcon Icon="@Icons.Material.Filled.LockOpen" Size="Size.Small"
+                     Color="Color.Success" Class="mr-1" Style="vertical-align:middle" />
+            Activitats obertes (@obertes.Count)
+        </MudText>
+        <MudGrid Class="mb-6">
+            @foreach (var act in obertes)
+            {
+                <MudItem xs="12" sm="6" lg="4">
+                    <MudCard Elevation="2">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@act.Name</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @act.ClassName · @act.ProfessorName
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        @if (act.Description is not null)
+                        {
+                            <MudCardContent Class="pt-0">
+                                <MudText Typo="Typo.body2">@act.Description</MudText>
+                            </MudCardContent>
+                        }
+                        <MudCardContent Class="pt-0 pb-0">
+                            <MudStack Row="true" Spacing="1">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @act.NumGroups grups
+                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @act.NumStudents alumnes
+                                </MudChip>
+                            </MudStack>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Size="Size.Small" Color="Color.Primary"
+                                       Href="@($"/professor/resultats/{act.Id}")">
+                                Resultats
+                            </MudButton>
+                            <MudButton Size="Size.Small" Color="Color.Secondary"
+                                       Href="@($"/professor/grups/{act.Id}")">
+                                Grups
+                            </MudButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
+                                           title="Editar nom i descripció"
+                                           OnClick="() => EditarAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary"
+                                           title="Veure gràfica"
+                                           OnClick="() => ShowChartAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Info"
+                                           title="Duplicar activitat"
+                                           OnClick="() => DuplicarAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Lock" Color="Color.Warning"
+                                           title="Tancar"
+                                           OnClick="() => ToggleAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           title="Eliminar"
+                                           OnClick="() => DeleteAsync(act)" />
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    @if (tancades.Any())
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600;color:var(--mud-palette-text-secondary)">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
+                     Color="Color.Default" Class="mr-1" Style="vertical-align:middle" />
+            Activitats tancades (@tancades.Count)
+        </MudText>
+        <MudGrid>
+            @foreach (var act in tancades)
+            {
+                <MudItem xs="12" sm="6" lg="4">
+                    <MudCard Elevation="1"
+                             Style="background:#fff5f5;border:1px solid #f5c6c6">
+                        <MudCardHeader>
+                            <CardHeaderContent>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudText Typo="Typo.h6" Style="color:var(--mud-palette-text-secondary)">@act.Name</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Tancada</MudChip>
+                                </MudStack>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @act.ClassName · @act.ProfessorName
+                                </MudText>
+                            </CardHeaderContent>
+                        </MudCardHeader>
+                        @if (act.Description is not null)
+                        {
+                            <MudCardContent Class="pt-0">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@act.Description</MudText>
+                            </MudCardContent>
+                        }
+                        <MudCardContent Class="pt-0 pb-0">
+                            <MudStack Row="true" Spacing="1">
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @act.NumGroups grups
+                                </MudChip>
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                                    @act.NumStudents alumnes
+                                </MudChip>
+                            </MudStack>
+                        </MudCardContent>
+                        <MudCardActions>
+                            <MudButton Size="Size.Small" Color="Color.Primary"
+                                       Href="@($"/professor/resultats/{act.Id}")">
+                                Resultats
+                            </MudButton>
+                            <MudButton Size="Size.Small" Color="Color.Secondary"
+                                       Href="@($"/professor/grups/{act.Id}")">
+                                Grups
+                            </MudButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
+                                           title="Editar nom i descripció"
+                                           OnClick="() => EditarAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary"
+                                           title="Veure gràfica"
+                                           OnClick="() => ShowChartAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Info"
+                                           title="Duplicar activitat"
+                                           OnClick="() => DuplicarAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.LockOpen" Color="Color.Success"
+                                           title="Obrir"
+                                           OnClick="() => ToggleAsync(act)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           title="Eliminar"
+                                           OnClick="() => DeleteAsync(act)" />
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+}
+
+@code {
+    private List<ActivityDto> _activities = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+        _activities = await Api.GetActivitiesAsync() ?? [];
+        _loading = false;
+    }
+
+    private async Task ToggleAsync(ActivityDto act)
+    {
+        Api.SetToken(UserState.Token!);
+        var updated = await Api.ToggleActivityAsync(act.Id);
+        if (updated is not null)
+        {
+            var idx = _activities.FindIndex(a => a.Id == act.Id);
+            if (idx >= 0) _activities[idx] = updated;
+            Snackbar.Add(updated.IsOpen ? "Activitat oberta." : "Activitat tancada.", Severity.Success);
+        }
+    }
+
+    private async Task EditarAsync(ActivityDto act)
+    {
+        var parameters = new DialogParameters<EditarActivitatDialog>
+        {
+            { d => d.NomActual,  act.Name },
+            { d => d.DescActual, act.Description }
+        };
+        var opts   = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await Dialog.ShowAsync<EditarActivitatDialog>("Editar activitat", parameters, opts);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        var (nom, desc) = ((string, string?))result.Data!;
+        Api.SetToken(UserState.Token!);
+        var updated = await Api.UpdateActivityAsync(act.Id, new UpdateActivityRequest(nom, desc));
+        if (updated is not null)
+        {
+            var idx = _activities.FindIndex(a => a.Id == act.Id);
+            if (idx >= 0) _activities[idx] = updated;
+            Snackbar.Add("Activitat actualitzada.", Severity.Success);
+        }
+        else Snackbar.Add("Error en desar els canvis.", Severity.Error);
+    }
+
+    private async Task ShowChartAsync(ActivityDto act)
+    {
+        var parameters = new DialogParameters<GraficaActivitatDialog>
+        {
+            { d => d.ActivityId,         act.Id },
+            { d => d.ActivityName,       act.Name },
+            { d => d.ClassName,          act.ClassName },
+            { d => d.ClassAcademicYear,  act.ClassAcademicYear }
+        };
+        var opts = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseButton = true };
+        await Dialog.ShowAsync<GraficaActivitatDialog>("", parameters, opts);
+    }
+
+    private async Task DuplicarAsync(ActivityDto act)
+    {
+        var parameters = new DialogParameters<DuplicarActivitatDialog>
+        {
+            { d => d.NomOriginal, act.Name }
+        };
+        var opts = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await Dialog.ShowAsync<DuplicarActivitatDialog>("Duplicar activitat", parameters, opts);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        var (nom, desc) = ((string, string?))result.Data!;
+        Api.SetToken(UserState.Token!);
+        var nova = await Api.DuplicateActivityAsync(act.Id, new DuplicateActivityRequest(nom, desc));
+        if (nova is not null)
+        {
+            _activities.Insert(0, nova);
+            Snackbar.Add($"Activitat «{nova.Name}» creada.", Severity.Success);
+            Nav.NavigateTo($"/professor/grups/{nova.Id}");
+        }
+        else Snackbar.Add("Error en duplicar l'activitat.", Severity.Error);
+    }
+
+    private async Task DeleteAsync(ActivityDto act)
+    {
+        var confirm = await Dialog.ShowMessageBox(
+            "Confirmar eliminació",
+            $"Segur que vols eliminar «{act.Name}»?",
+            yesText: "Eliminar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+
+        Api.SetToken(UserState.Token!);
+        await Api.DeleteActivityAsync(act.Id);
+        _activities.RemoveAll(a => a.Id == act.Id);
+        Snackbar.Add("Activitat eliminada.", Severity.Info);
+    }
+}

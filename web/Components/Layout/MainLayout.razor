@@ -1,0 +1,72 @@
+@inherits LayoutComponentBase
+@inject UserStateService UserState
+@inject NavigationManager Nav
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="2" Color="Color.Error" Dense="true">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudImage Src="/images/Logo.png" Height="28" Style="filter:brightness(0) invert(1)" />
+            <MudStack Spacing="0">
+                <MudText Typo="Typo.subtitle1" Style="font-weight:700;line-height:1.1;color:white">
+                    Salesians de Sarrià
+                </MudText>
+                <MudText Typo="Typo.caption" Style="line-height:1;color:rgba(255,255,255,.8)">
+                    Departament d'Informàtica
+                </MudText>
+            </MudStack>
+        </MudStack>
+        <MudSpacer />
+        @if (UserState.IsLoggedIn)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudChip T="string" Color="Color.Default" Size="Size.Small" Style="color:white;background:rgba(255,255,255,.15)">
+                    @UserState.Role
+                </MudChip>
+                <MudText Typo="Typo.body2" Style="color:white">@UserState.NomComplet</MudText>
+                <MudIconButton Icon="@Icons.Material.Filled.Logout"
+                               Color="Color.Inherit"
+                               title="Sortir"
+                               OnClick="Logout" />
+            </MudStack>
+        }
+    </MudAppBar>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-8">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+
+    <MudAppBar Bottom="true" Elevation="0" Dense="true"
+               Style="background:var(--mud-palette-background-grey);border-top:1px solid var(--mud-palette-divider)">
+        <MudSpacer />
+        <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary)">
+            <strong>Salesians de Sarrià</strong> · Departament d'Informàtica &nbsp;|&nbsp;
+            AutoCo Avaluació © @DateTime.Now.Year
+        </MudText>
+        <MudSpacer />
+    </MudAppBar>
+</MudLayout>
+
+@code {
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary       = "#CC0000",
+            PrimaryDarken = "#a30000",
+            Error         = "#CC0000",
+        }
+    };
+
+    private void Logout()
+    {
+        UserState.Logout();
+        Nav.NavigateTo("/", forceLoad: false);
+    }
+}

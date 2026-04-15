@@ -1,0 +1,281 @@
+@page "/professor/grups/{ActivityId:int}"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+@inject IJSRuntime JS
+
+<PageTitle>Grups – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard" Variant="Variant.Text">
+        Tauler
+    </MudButton>
+    <MudText Typo="Typo.h5">@(_activity?.Name ?? "Grups")</MudText>
+    @if (_activity is not null)
+    {
+        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@_activity.ClassName</MudChip>
+    }
+    <MudSpacer />
+    @if (_activity is not null)
+    {
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Download"
+                   OnClick="ExportGroupsAsync">
+            Exportar grups
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Upload"
+                   OnClick="() => _showImport = !_showImport">
+            Importar grups
+        </MudButton>
+    }
+</MudStack>
+
+@if (_showImport)
+{
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>Importar assignació de grups</strong></MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+            Format CSV: capçalera <code>Grup;Correu</code>, una fila per alumne.
+            Els alumnes s'identifiquen pel correu electrònic dins la classe d'aquesta activitat.
+        </MudText>
+        <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".csv,.txt"
+                       Class="mb-3">
+            <ActivatorContent>
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.AttachFile">
+                    @(_importFileName ?? "Seleccionar fitxer CSV")
+                </MudButton>
+            </ActivatorContent>
+        </MudFileUpload>
+        @if (_importContent is not null)
+        {
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Info"
+                           OnClick="ImportGroupsAsync" Disabled="_importing">
+                    @if (_importing) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    Importar
+                </MudButton>
+                <MudButton OnClick="() => { _importContent = null; _importFileName = null; }">
+                    Netejar
+                </MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+}
+
+@if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" /> }
+
+<MudGrid>
+    <!-- Crear grup -->
+    <MudItem xs="12" md="4">
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Nou grup</MudText>
+            <MudTextField @bind-Value="_nomGrup" Label="Nom del grup" Variant="Variant.Outlined" Class="mb-3" />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateGroupAsync" Disabled="_saving">
+                Crear grup
+            </MudButton>
+        </MudPaper>
+
+        <!-- Alumnes no assignats -->
+        <MudPaper Elevation="1" Class="pa-4">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">
+                <strong>Sense grup (@_unassigned.Count)</strong>
+            </MudText>
+            @if (!_unassigned.Any())
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Tots els alumnes estan assignats.</MudText>
+            }
+            else
+            {
+                <MudStack Spacing="1">
+                    @foreach (var s in _unassigned)
+                    {
+                        <MudText Typo="Typo.body2">@s.NumLlista. @s.Cognoms, @s.Nom</MudText>
+                    }
+                </MudStack>
+            }
+        </MudPaper>
+    </MudItem>
+
+    <!-- Grups existents -->
+    <MudItem xs="12" md="8">
+        <MudText Typo="Typo.h6" Class="mb-3">Grups (@_groups.Count)</MudText>
+        @if (!_groups.Any())
+        {
+            <MudAlert Severity="Severity.Info">No hi ha grups. Crea'n un primer.</MudAlert>
+        }
+        <MudStack Spacing="3">
+            @foreach (var g in _groups)
+            {
+                <MudPaper Elevation="2" Class="pa-3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                        <MudText Typo="Typo.subtitle1"><strong>@g.Name</strong></MudText>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@g.Members.Count membres</MudChip>
+                        <MudSpacer />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error" OnClick="() => DeleteGroupAsync(g)" />
+                    </MudStack>
+
+                    <!-- Membres actuals -->
+                    @foreach (var m in g.Members)
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1">
+                            <MudText Typo="Typo.body2">@m.NumLlista. @m.Cognoms, @m.Nom</MudText>
+                            <MudSpacer />
+                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
+                                           Size="Size.Small" Color="Color.Warning"
+                                           title="Treure del grup"
+                                           OnClick="() => RemoveMemberAsync(g.Id, m.Id)" />
+                        </MudStack>
+                    }
+
+                    <!-- Afegir membre -->
+                    @if (_unassigned.Any())
+                    {
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-2" Spacing="2">
+                            <MudSelect T="int" @bind-Value="_selectedStudent[g.Id]"
+                                       Label="Afegir alumne" Variant="Variant.Outlined"
+                                       Dense="true" Style="max-width:220px">
+                                <MudSelectItem T="int" Value="0">--</MudSelectItem>
+                                @foreach (var s in _unassigned)
+                                {
+                                    <MudSelectItem T="int" Value="@s.Id">
+                                        @s.NumLlista. @s.Cognoms, @s.Nom
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
+                                           Color="Color.Primary"
+                                           OnClick="() => AddMemberAsync(g.Id)" />
+                        </MudStack>
+                    }
+                </MudPaper>
+            }
+        </MudStack>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public int ActivityId { get; set; }
+
+    private ActivityDto?      _activity   = null;
+    private List<GroupDto>    _groups     = [];
+    private List<StudentDto>  _unassigned = [];
+    private bool _loading = true;
+    private bool _saving  = false;
+    private string _nomGrup = "";
+    private Dictionary<int, int> _selectedStudent = new();
+    private bool    _showImport    = false;
+    private bool    _importing     = false;
+    private string? _importContent = null;
+    private string? _importFileName = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        await LoadAsync();
+        _loading = false;
+    }
+
+    private async Task LoadAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        _activity = await Api.GetActivityAsync(ActivityId);
+        if (_activity is null) return;
+
+        _groups = await Api.GetGroupsAsync(ActivityId) ?? [];
+        var allStudents = await Api.GetStudentsAsync(_activity.ClassId) ?? [];
+        var assignedIds = _groups.SelectMany(g => g.Members).Select(m => m.Id).ToHashSet();
+        _unassigned = allStudents
+            .Where(s => !assignedIds.Contains(s.Id))
+            .OrderBy(s => s.NumLlista)
+            .Select(s => new StudentDto(s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.CreatedAt))
+            .ToList();
+
+        foreach (var g in _groups)
+            _selectedStudent.TryAdd(g.Id, 0);
+    }
+
+    private async Task CreateGroupAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nomGrup)) { Snackbar.Add("Indica el nom del grup.", Severity.Warning); return; }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        await Api.CreateGroupAsync(ActivityId, _nomGrup.Trim());
+        _nomGrup = "";
+        await LoadAsync();
+        _saving = false;
+        Snackbar.Add("Grup creat.", Severity.Success);
+    }
+
+    private async Task DeleteGroupAsync(GroupDto g)
+    {
+        var confirm = await Dialog.ShowMessageBox("Confirmar",
+            $"Eliminar el grup «{g.Name}»?",
+            yesText: "Eliminar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+        Api.SetToken(UserState.Token!);
+        await Api.DeleteGroupAsync(ActivityId, g.Id);
+        await LoadAsync();
+        Snackbar.Add("Grup eliminat.", Severity.Info);
+    }
+
+    private async Task AddMemberAsync(int groupId)
+    {
+        if (!_selectedStudent.TryGetValue(groupId, out var studentId) || studentId <= 0) return;
+        Api.SetToken(UserState.Token!);
+        await Api.AddMemberAsync(ActivityId, groupId, studentId);
+        _selectedStudent[groupId] = 0;
+        await LoadAsync();
+    }
+
+    private async Task RemoveMemberAsync(int groupId, int studentId)
+    {
+        Api.SetToken(UserState.Token!);
+        await Api.RemoveMemberAsync(ActivityId, groupId, studentId);
+        await LoadAsync();
+    }
+
+    private async Task ExportGroupsAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var result = await Api.ExportGroupsAsync(ActivityId);
+        if (result is null) { Snackbar.Add("Error en exportar.", Severity.Error); return; }
+        var (bytes, fileName) = result.Value;
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("downloadBase64File", base64, fileName, "text/csv");
+    }
+
+    private async Task OnFileSelected(IBrowserFile file)
+    {
+        _importFileName = file.Name;
+        using var reader = new System.IO.StreamReader(file.OpenReadStream(maxAllowedSize: 1_048_576));
+        _importContent  = await reader.ReadToEndAsync();
+    }
+
+    private async Task ImportGroupsAsync()
+    {
+        if (_importContent is null) return;
+        _importing = true;
+        Api.SetToken(UserState.Token!);
+        var result = await Api.ImportGroupsAsync(ActivityId, _importContent);
+        _importing = false;
+
+        if (result is null) { Snackbar.Add("Error en importar.", Severity.Error); return; }
+
+        Snackbar.Add($"Importat: {result.Assigned} assignats, {result.Skipped} omesos.",
+            result.Skipped > 0 ? Severity.Warning : Severity.Success);
+
+        if (result.Errors.Any())
+            foreach (var e in result.Errors.Take(5))
+                Snackbar.Add(e, Severity.Warning);
+
+        _importContent  = null;
+        _importFileName = null;
+        _showImport     = false;
+        await LoadAsync();
+    }
+}

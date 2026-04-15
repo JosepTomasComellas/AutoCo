@@ -1,0 +1,44 @@
+@page "/"
+@inject UserStateService UserState
+@inject NavigationManager Nav
+
+<PageTitle>AutoCo Avaluació</PageTitle>
+
+@if (UserState.IsLoggedIn)
+{
+    // Redirigeix automàticament si ja té sessió
+    if (UserState.IsProfessor) Nav.NavigateTo("/professor/dashboard");
+    else Nav.NavigateTo("/alumne/dashboard");
+}
+
+<MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="mt-16">
+    <MudPaper Elevation="3" Class="pa-8">
+        <MudStack AlignItems="AlignItems.Center" Spacing="3">
+            <MudImage Src="/images/Logo.png" Height="48" />
+            <MudStack Spacing="0" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h5" Align="Align.Center" Style="font-weight:700">
+                    Salesians de Sarrià
+                </MudText>
+                <MudText Typo="Typo.body2" Align="Align.Center" Color="Color.Secondary">
+                    Departament d'Informàtica
+                </MudText>
+            </MudStack>
+            <MudDivider Class="my-1" Style="width:100%" />
+            <MudText Typo="Typo.subtitle2" Align="Align.Center" Color="Color.Default" Class="mb-2">
+                Sistema d'Autoavaluació i Coavaluació
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                       FullWidth="true"
+                       Href="/auth/login-professor"
+                       StartIcon="@Icons.Material.Filled.School">
+                Accés Professor
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Large"
+                       FullWidth="true"
+                       Href="/auth/login-alumne"
+                       StartIcon="@Icons.Material.Filled.Person">
+                Accés Alumne
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>

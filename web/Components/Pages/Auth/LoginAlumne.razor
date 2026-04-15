@@ -1,0 +1,92 @@
+@page "/auth/login-alumne"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+
+<PageTitle>Accés Alumne – AutoCo</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
+    <MudPaper Elevation="3" Class="pa-8">
+        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Size="Size.Large" />
+            <MudText Typo="Typo.h5" Align="Align.Center">Accés Alumne</MudText>
+        </MudStack>
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+        }
+
+        <MudSelect T="int" @bind-Value="_classId" Label="Classe" Variant="Variant.Outlined"
+                   Class="mb-3" Disabled="_loading">
+            <MudSelectItem T="int" Value="0">-- Selecciona la classe --</MudSelectItem>
+            @foreach (var c in _classes)
+            {
+                <MudSelectItem T="int" Value="@c.Id">
+                    @c.Name @(c.AcademicYear is not null ? $"({c.AcademicYear})" : "")
+                </MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudNumericField T="int" @bind-Value="_numLlista" Label="Número de llista"
+                         Variant="Variant.Outlined" Min="1" Max="99" Class="mb-3" />
+
+        <MudTextField @bind-Value="_pin" Label="PIN" Variant="Variant.Outlined"
+                      InputType="@_pinType"
+                      Adornment="Adornment.End" AdornmentIcon="@_pinIcon"
+                      OnAdornmentClick="TogglePin"
+                      Class="mb-4" />
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   Size="Size.Large" OnClick="Login" Disabled="_loading">
+            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Entrar
+        </MudButton>
+
+        <MudLink Href="/" Class="d-block text-center mt-4">← Tornar</MudLink>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<ClassDto> _classes = [];
+    private int    _classId   = 0;
+    private int    _numLlista = 0;
+    private string _pin       = "";
+    private string? _error;
+    private bool _loading;
+    private bool _showPin;
+    private InputType _pinType => _showPin ? InputType.Text : InputType.Password;
+    private string   _pinIcon  => _showPin ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserState.IsLoggedIn)
+        {
+            Nav.NavigateTo(UserState.IsStudent ? "/alumne/dashboard" : "/professor/dashboard");
+            return;
+        }
+        _classes = await Api.GetPublicClassesAsync() ?? [];
+    }
+
+    private void TogglePin() => _showPin = !_showPin;
+
+    private async Task Login()
+    {
+        if (_classId <= 0 || _numLlista <= 0 || string.IsNullOrWhiteSpace(_pin))
+        {
+            _error = "Omple tots els camps.";
+            return;
+        }
+        _loading = true;
+        _error   = null;
+        var result = await Api.LoginStudentAsync(_classId, _numLlista, _pin.Trim());
+        _loading = false;
+        if (result is null)
+        {
+            _error = "Dades incorrectes. Comprova la classe, el número i el PIN.";
+            return;
+        }
+        UserState.SetLogin(result);
+        Nav.NavigateTo("/alumne/dashboard");
+    }
+}

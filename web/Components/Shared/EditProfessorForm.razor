@@ -1,0 +1,65 @@
+@inject ApiClient Api
+@inject UserStateService UserState
+
+<MudStack Spacing="2" Class="pa-2">
+    <MudGrid Spacing="2">
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_nom"     Label="Nom"     Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+    <MudTextField @bind-Value="_correu" Label="Correu electrònic"
+                  InputType="InputType.Email" Variant="Variant.Outlined" />
+    <MudTextField @bind-Value="_newPwd"
+                  Label="Nova contrasenya (deixa buit per no canviar)"
+                  InputType="InputType.Password" Variant="Variant.Outlined"
+                  Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
+                  OnAdornmentClick="() => _showPwd = !_showPwd" />
+    <MudCheckBox @bind-Value="_isAdmin" Label="Administrador" Color="Color.Primary" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_saving">
+        Desar canvis
+    </MudButton>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired] public ProfessorDto Professor { get; set; } = null!;
+    [Parameter] public EventCallback<ProfessorDto> OnSaved { get; set; }
+
+    private string _nom     = "";
+    private string _cognoms = "";
+    private string _correu  = "";
+    private string _newPwd  = "";
+    private bool   _isAdmin = false;
+    private bool   _saving  = false;
+    private bool   _showPwd = false;
+    private string _pwdIcon => _showPwd ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+
+    protected override void OnParametersSet()
+    {
+        _nom     = Professor.Nom;
+        _cognoms = Professor.Cognoms;
+        _correu  = Professor.CorreuElectronic ?? "";
+        _isAdmin = Professor.IsAdmin;
+        _newPwd  = "";
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms)) return;
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var updated = await Api.UpdateProfessorAsync(Professor.Id, new UpdateProfessorRequest(
+            _nom.Trim(), _cognoms.Trim(),
+            string.IsNullOrWhiteSpace(_correu) ? null : _correu.Trim(),
+            _isAdmin,
+            string.IsNullOrWhiteSpace(_newPwd) ? null : _newPwd.Trim()));
+        _saving = false;
+        if (updated is not null)
+        {
+            _newPwd = "";
+            await OnSaved.InvokeAsync(updated);
+        }
+    }
+}

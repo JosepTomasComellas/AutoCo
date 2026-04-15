@@ -1,0 +1,92 @@
+@page "/alumne/dashboard"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+
+<PageTitle>Les meves activitats – AutoCo</PageTitle>
+@if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudText Typo="Typo.h5">Benvingut/da, @UserState.NomComplet</MudText>
+    <MudSpacer />
+    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Les teves activitats d'avaluació</MudText>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (!_activities.Any())
+{
+    <MudAlert Severity="Severity.Info">No tens cap activitat assignada de moment.</MudAlert>
+}
+else
+{
+    <MudGrid>
+        @foreach (var act in _activities)
+        {
+            var pct  = act.TotalToEvaluate > 0 ? (double)act.AlreadyEvaluated / act.TotalToEvaluate * 100 : 0;
+            var done = act.AlreadyEvaluated >= act.TotalToEvaluate && act.TotalToEvaluate > 0;
+
+            <MudItem xs="12" sm="6" lg="4">
+                <MudCard Elevation="2" Style="@(act.IsOpen ? "" : "opacity:.65")">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                <MudText Typo="Typo.h6">@act.Name</MudText>
+                                <MudChip T="string" Size="Size.Small"
+                                         Color="@(act.IsOpen ? Color.Success : Color.Default)">
+                                    @(act.IsOpen ? "Oberta" : "Tancada")
+                                </MudChip>
+                            </MudStack>
+                            <MudText Typo="Typo.caption">Grup: <strong>@act.GroupName</strong></MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    @if (act.Description is not null)
+                    {
+                        <MudCardContent Class="pt-0">
+                            <MudText Typo="Typo.body2">@act.Description</MudText>
+                        </MudCardContent>
+                    }
+                    <MudCardContent Class="pt-0">
+                        <MudProgressLinear Value="pct" Color="@(done ? Color.Success : Color.Primary)"
+                                           Rounded="true" Class="mb-1" />
+                        <MudText Typo="Typo.caption">
+                            @act.AlreadyEvaluated de @act.TotalToEvaluate avaluats
+                        </MudText>
+                    </MudCardContent>
+                    <MudCardActions>
+                        @if (act.IsOpen)
+                        {
+                            <MudButton Variant="Variant.Filled"
+                                       Color="@(done ? Color.Secondary : Color.Primary)"
+                                       Href="@($"/alumne/avaluacio/{act.Id}")">
+                                @(done ? "Revisar avaluació" : "Avaluar")
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" Disabled="true">
+                                Activitat tancada
+                            </MudButton>
+                        }
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<StudentActivityDto> _activities = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsStudent) return;
+        Api.SetToken(UserState.Token!);
+        var dashboard = await Api.GetStudentDashboardAsync();
+        _activities = dashboard?.Activities ?? [];
+        _loading = false;
+    }
+}

@@ -1,0 +1,121 @@
+networks:
+  autoco-net:
+    driver: bridge
+
+volumes:
+  db-data:    # Volum Docker per a SQL Server (NTFS via WSL2 no és compatible amb SQLPAL)
+  redis-data: # Volum per a Redis (persistència AOF)
+
+services:
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: autoco-db
+    environment:
+      ACCEPT_EULA:        "Y"
+      MSSQL_SA_PASSWORD:  "AutoCo_Pass123!"
+      MSSQL_PID:          "Express"
+    expose:
+      - "1433"
+    volumes:
+      - db-data:/var/opt/mssql
+      - ./backups:/var/opt/mssql/backup   # Còpies de seguretat accessibles al sistema de fitxers
+    networks:
+      - autoco-net
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd",
+             "-S", "localhost", "-U", "sa", "-P", "AutoCo_Pass123!",
+             "-Q", "SELECT 1", "-No"]
+      interval: 10s
+      timeout:  5s
+      retries:  12
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: autoco-redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    expose:
+      - "6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - autoco-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+    restart: unless-stopped
+
+  api:
+    build:
+      context:    ./api
+      dockerfile: Dockerfile
+    container_name: autoco-api
+    environment:
+      ASPNETCORE_ENVIRONMENT:          Production
+      ConnectionStrings__DefaultConnection: >
+        Server=db;Database=AutoCoAvaluacio;
+        User Id=sa;Password=AutoCo_Pass123!;
+        TrustServerCertificate=True
+      JwtSettings__Secret:          "AutoCoAvaluacio_JWT_Secret_ChangeThis_2024"
+      JwtSettings__ExpiryHours:     "8"
+      Admin__Username:              "admin"
+      Admin__Password:              "Admin12345aA."
+      Admin__Nom:                   "Josep"
+      Admin__Cognoms:               "Tomàs Comellas"
+      Smtp__Host:                   "smtp.gmail.com"
+      Smtp__Port:                   "587"
+      Smtp__Username:               "josep.tomas.comellas@gmail.com"
+      Smtp__Password:               "egrw tgyz yxco rlsy"
+      Smtp__FromAddress:            "josep.tomas.comellas@gmail.com"
+      Smtp__FromName:               "Salesians de Sarrià - Dept. Informàtica"
+      App__WebUrl:                  "https://localhost"
+      Redis__ConnectionString:      "redis:6379"
+    expose:
+      - "8080"   # API accessible directament (Swagger, debug)
+    networks:
+      - autoco-net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context:    ./web
+      dockerfile: Dockerfile
+    container_name: autoco-web
+    environment:
+      ASPNETCORE_ENVIRONMENT:  Production
+      ApiSettings__BaseUrl:    "http://api:8080"
+      Redis__ConnectionString: "redis:6379"
+    # Sense ports externs: tot passa per nginx
+    networks:
+      - autoco-net
+    depends_on:
+      - api
+      - redis
+    restart: unless-stopped
+
+  nginx:
+    build:
+      context:    ./nginx
+      dockerfile: Dockerfile
+    container_name: autoco-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Els certificats es guarden al sistema de fitxers local (./nginx/ssl/)
+      # Per usar certificats reals, substitueix server.crt i server.key per la teva CA
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - autoco-net
+    depends_on:
+      - web
+    restart: unless-stopped

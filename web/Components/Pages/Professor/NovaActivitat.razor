@@ -1,0 +1,90 @@
+@page "/professor/nova-activitat"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Nova activitat – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">Nova activitat</MudText>
+</MudStack>
+
+<MudContainer MaxWidth="MaxWidth.Small">
+    <MudCard Elevation="3">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Crea una nova activitat d'avaluació. Podràs configurar els grups un cop creada.
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudSelect T="int" @bind-Value="_classId" Label="Classe" Variant="Variant.Outlined"
+                       Class="mb-4" Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.Class">
+                <MudSelectItem T="int" Value="0">-- Selecciona la classe --</MudSelectItem>
+                @foreach (var c in _classes)
+                {
+                    <MudSelectItem T="int" Value="@c.Id">
+                        @c.Name @(c.AcademicYear is not null ? $"({c.AcademicYear})" : "")
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField @bind-Value="_nom" Label="Nom de l'activitat" Variant="Variant.Outlined"
+                          Class="mb-4" Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Assignment" />
+            <MudTextField @bind-Value="_desc" Label="Descripció (opcional)" Variant="Variant.Outlined"
+                          Lines="3" />
+        </MudCardContent>
+        <MudCardActions Class="px-4 pb-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                       Size="Size.Large" OnClick="CreateAsync" Disabled="_saving"
+                       StartIcon="@Icons.Material.Filled.AddCircle">
+                @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                Crear activitat
+            </MudButton>
+        </MudCardActions>
+    </MudCard>
+</MudContainer>
+
+@code {
+    private List<ClassDto> _classes = [];
+    private int    _classId = 0;
+    private string _nom     = "";
+    private string _desc    = "";
+    private bool   _saving  = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+        _classes = await Api.GetClassesAsync() ?? [];
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_classId <= 0 || string.IsNullOrWhiteSpace(_nom))
+        {
+            Snackbar.Add("Selecciona una classe i indica el nom.", Severity.Warning);
+            return;
+        }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var act = await Api.CreateActivityAsync(new CreateActivityRequest(
+            _classId, _nom.Trim(),
+            string.IsNullOrWhiteSpace(_desc) ? null : _desc.Trim()));
+        _saving = false;
+        if (act is not null)
+        {
+            Snackbar.Add($"Activitat «{act.Name}» creada.", Severity.Success);
+            Nav.NavigateTo($"/professor/grups/{act.Id}");
+        }
+        else Snackbar.Add("Error en crear l'activitat.", Severity.Error);
+    }
+}

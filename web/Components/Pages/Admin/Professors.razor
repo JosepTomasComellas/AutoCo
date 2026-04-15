@@ -1,0 +1,251 @@
+@page "/admin/professors"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageTitle>Gestió de professors – AutoCo</PageTitle>
+@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+
+<!-- Capçalera -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Color="Color.Secondary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">Gestió de professors</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
+               StartIcon="@Icons.Material.Filled.MarkEmailRead"
+               OnClick="SendAllAsync">
+        Enviar credencials a tots
+    </MudButton>
+</MudStack>
+
+@if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Secondary" Class="mb-4" /> }
+
+<MudGrid>
+    <!-- Formulari nou professor -->
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Nou professor</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTextField @bind-Value="_username" Label="Nom d'usuari" Variant="Variant.Outlined"
+                              Class="mb-3" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.AccountCircle" />
+                <MudTextField @bind-Value="_password" Label="Contrasenya" Variant="Variant.Outlined"
+                              InputType="InputType.Password" Class="mb-3"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Lock" />
+                <MudGrid Spacing="2">
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="_nom" Label="Nom" Variant="Variant.Outlined" />
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" />
+                    </MudItem>
+                </MudGrid>
+                <MudTextField @bind-Value="_correu" Label="Correu (opcional)" Class="mt-3"
+                              Variant="Variant.Outlined" InputType="InputType.Email"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Email" />
+                <MudCheckBox @bind-Value="_isAdmin" Label="Administrador" Color="Color.Warning" Class="mt-2" />
+            </MudCardContent>
+            <MudCardActions Class="px-4 pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true"
+                           OnClick="CreateAsync" Disabled="_saving"
+                           StartIcon="@Icons.Material.Filled.PersonAdd">
+                    Crear professor
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <!-- Llista de professors -->
+    <MudItem xs="12" md="8">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudText Typo="Typo.h6" Style="font-weight:600">
+                Professors (@_professors.Count)
+            </MudText>
+            <MudSpacer />
+            @{
+                var admins = _professors.Count(p => p.IsAdmin);
+            }
+            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Outlined">
+                @admins admin@(admins != 1 ? "s" : "")
+            </MudChip>
+            <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">
+                @(_professors.Count - admins) professor@((_professors.Count - admins) != 1 ? "s" : "")
+            </MudChip>
+        </MudStack>
+
+        @if (!_loading && !_professors.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No hi ha professors.</MudAlert>
+        }
+
+        <MudStack Spacing="2">
+            @foreach (var p in _professors)
+            {
+                <MudCard Elevation="1" Style="@(p.IsAdmin ? "border-left:3px solid var(--mud-palette-warning)" : "border-left:3px solid var(--mud-palette-divider)")">
+                    <MudExpansionPanel>
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%">
+                                <MudAvatar Color="@(p.IsAdmin ? Color.Warning : Color.Default)"
+                                           Variant="Variant.Filled" Size="Size.Medium"
+                                           Style="font-size:.85rem;font-weight:700;flex-shrink:0">
+                                    @(p.Nom.Length > 0 ? p.Nom[0].ToString().ToUpper() : "")@(p.Cognoms.Length > 0 ? p.Cognoms[0].ToString().ToUpper() : "")
+                                </MudAvatar>
+                                <MudStack Spacing="0" Style="flex:1;min-width:0">
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudText Typo="Typo.subtitle2" Style="font-weight:600">
+                                            @p.Cognoms, @p.Nom
+                                        </MudText>
+                                        @if (p.IsAdmin)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                                     Variant="Variant.Filled" Style="height:20px">Admin</MudChip>
+                                        }
+                                    </MudStack>
+                                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle"
+                                                     Size="Size.Small" Style="font-size:13px;vertical-align:middle" />
+                                            @p.Username
+                                        </MudText>
+                                        @if (p.CorreuElectronic is not null)
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.Email"
+                                                         Size="Size.Small" Style="font-size:13px;vertical-align:middle" />
+                                                @p.CorreuElectronic
+                                            </MudText>
+                                        }
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudIcon Icon="@Icons.Material.Filled.Class"
+                                                     Size="Size.Small" Style="font-size:13px;vertical-align:middle" />
+                                            @p.NumClasses classe@(p.NumClasses != 1 ? "s" : "")
+                                        </MudText>
+                                    </MudStack>
+                                </MudStack>
+                                <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
+                                    @if (p.CorreuElectronic is not null)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.MarkEmailRead"
+                                                       Size="Size.Small" Color="Color.Secondary"
+                                                       title="Enviar credencials"
+                                                       OnClick="() => SendCredentialsAsync(p)" />
+                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small" Color="Color.Error"
+                                                   title="Eliminar"
+                                                   OnClick="() => DeleteAsync(p)" />
+                                </MudStack>
+                            </MudStack>
+                        </TitleContent>
+                        <ChildContent>
+                            <MudDivider />
+                            <div class="pa-4">
+                                <EditProfessorForm Professor="p" OnSaved="OnProfessorSaved" />
+                            </div>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                </MudCard>
+            }
+        </MudStack>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<ProfessorDto> _professors = [];
+    private bool _loading = true;
+    private bool _saving  = false;
+
+    private string _username = "";
+    private string _password = "";
+    private string _nom      = "";
+    private string _cognoms  = "";
+    private string _correu   = "";
+    private bool   _isAdmin  = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsAdmin) return;
+        Api.SetToken(UserState.Token!);
+        _professors = await Api.GetProfessorsAsync() ?? [];
+        _loading = false;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_password)
+            || string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms))
+        {
+            Snackbar.Add("Tots els camps obligatoris han d'estar omplerts.", Severity.Warning); return;
+        }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var p = await Api.CreateProfessorAsync(new CreateProfessorRequest(
+            _username.Trim(), _password.Trim(), _nom.Trim(), _cognoms.Trim(),
+            string.IsNullOrWhiteSpace(_correu) ? null : _correu.Trim(), _isAdmin));
+        if (p is not null)
+        {
+            _professors.Add(p);
+            _professors = [.. _professors.OrderBy(x => x.Cognoms)];
+            _username = ""; _password = ""; _nom = ""; _cognoms = ""; _correu = ""; _isAdmin = false;
+            Snackbar.Add($"Professor «{p.NomComplet}» creat.", Severity.Success);
+        }
+        else Snackbar.Add("Error en crear el professor.", Severity.Error);
+        _saving = false;
+    }
+
+    private async Task SendCredentialsAsync(ProfessorDto p)
+    {
+        Api.SetToken(UserState.Token!);
+        var result = await Api.SendProfessorCredentialsAsync(p.Id);
+        if (result?.Sent == true) Snackbar.Add("Credencials enviades.", Severity.Success);
+        else Snackbar.Add($"No s'ha pogut enviar: {result?.Reason}", Severity.Error);
+    }
+
+    private async Task SendAllAsync()
+    {
+        var confirm = await Dialog.ShowMessageBox("Confirmar",
+            "Enviar credencials a tots els professors amb correu?",
+            yesText: "Enviar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+        Api.SetToken(UserState.Token!);
+        var result = await Api.SendAllProfessorCredentialsAsync();
+        if (result is not null)
+            Snackbar.Add($"Enviats: {result.Sent} · Omesos: {result.Skipped}", Severity.Success);
+    }
+
+    private async Task DeleteAsync(ProfessorDto p)
+    {
+        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
+            $"Eliminar el professor «{p.NomComplet}»?",
+            yesText: "Eliminar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+        Api.SetToken(UserState.Token!);
+        await Api.DeleteProfessorAsync(p.Id);
+        _professors.RemoveAll(x => x.Id == p.Id);
+        Snackbar.Add("Professor eliminat.", Severity.Info);
+    }
+
+    private async Task OnProfessorSaved(ProfessorDto updated)
+    {
+        var idx = _professors.FindIndex(p => p.Id == updated.Id);
+        if (idx >= 0) _professors[idx] = updated;
+        Snackbar.Add($"Professor «{updated.NomComplet}» actualitzat.", Severity.Success);
+        await Task.CompletedTask;
+    }
+}
