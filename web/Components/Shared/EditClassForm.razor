@@ -1,0 +1,57 @@
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+
+<MudGrid Spacing="2">
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_nom" Label="Nom de la classe" Variant="Variant.Outlined"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Class" />
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudTextField @bind-Value="_curs" Label="Curs acadèmic" Variant="Variant.Outlined"
+                      Placeholder="2024-2025"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
+    </MudItem>
+    <MudItem xs="12">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Save"
+                   OnClick="SaveAsync" Disabled="_saving">
+            @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Desar canvis
+        </MudButton>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter, EditorRequired] public ClassDto Class { get; set; } = default!;
+    [Parameter] public EventCallback<ClassDto> OnSaved { get; set; }
+
+    private string _nom  = "";
+    private string _curs = "";
+    private bool   _saving = false;
+
+    protected override void OnParametersSet()
+    {
+        _nom  = Class.Name;
+        _curs = Class.AcademicYear ?? "";
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nom))
+        {
+            Snackbar.Add("El nom és obligatori.", Severity.Warning); return;
+        }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var updated = await Api.UpdateClassAsync(Class.Id,
+            new UpdateClassRequest(_nom.Trim(), string.IsNullOrWhiteSpace(_curs) ? null : _curs.Trim()));
+        _saving = false;
+        if (updated is not null)
+            await OnSaved.InvokeAsync(updated);
+        else
+            Snackbar.Add("Error en desar la classe.", Severity.Error);
+    }
+}
