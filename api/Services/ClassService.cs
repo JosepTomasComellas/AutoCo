@@ -332,5 +332,5 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
 
     private static StudentWithPinDto ToStudentDto(Student s) => new(
         s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet,
-        s.NumLlista, s.Pin, s.CorreuElectronic, s.CreatedAt);
+        s.NumLlista, "••••", s.CorreuElectronic, s.CreatedAt);
 }
