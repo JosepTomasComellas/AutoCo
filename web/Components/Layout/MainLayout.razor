@@ -8,29 +8,24 @@
 <MudSnackbarProvider />
 
 <MudLayout>
-    <MudAppBar Elevation="2" Color="Color.Error" Dense="true">
-        <!-- Marca: visible sempre -->
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="min-width:0;flex-shrink:0">
-            <MudImage Src="/images/Logo.png" Height="28" Style="filter:brightness(0) invert(1);flex-shrink:0" />
-            <MudStack Spacing="0" Class="d-none d-sm-flex">
-                <MudText Typo="Typo.subtitle1" Style="font-weight:700;line-height:1.1;color:white">
-                    Salesians de Sarrià
-                </MudText>
-                <MudText Typo="Typo.caption" Style="line-height:1;color:rgba(255,255,255,.8)">
-                    Departament d'Informàtica
-                </MudText>
-            </MudStack>
+    <MudAppBar Elevation="3" Dense="true" Style="background:#1e293b">
+        <!-- Logo -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0" Style="min-width:0;flex-shrink:0">
+            <MudImage Src="/images/logo2.png" Height="36" Style="display:block" />
         </MudStack>
+
         <MudSpacer />
+
+        <!-- Usuari + logout -->
         @if (UserState.IsLoggedIn)
         {
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Style="min-width:0">
-                <MudChip T="string" Color="Color.Default" Size="Size.Small"
+                <MudChip T="string" Size="Size.Small"
                          Style="color:white;background:rgba(255,255,255,.15);flex-shrink:0">
                     @UserState.Role
                 </MudChip>
-                <!-- Nom: truncat i ocult en pantalles molt petites -->
-                <MudText Typo="Typo.body2" Style="color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px"
+                <MudText Typo="Typo.body2"
+                         Style="color:rgba(255,255,255,.9);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px"
                          Class="d-none d-sm-block">
                     @UserState.NomComplet
                 </MudText>
@@ -48,11 +43,12 @@
         </MudContainer>
     </MudMainContent>
 
-    <MudAppBar Bottom="true" Elevation="0" Dense="true"
-               Style="background:var(--mud-palette-background-grey);border-top:1px solid var(--mud-palette-divider)">
+    <!-- Footer fosc, igual que la capçalera -->
+    <MudAppBar Bottom="true" Elevation="0" Dense="true" Style="background:#1e293b">
         <MudSpacer />
-        <MudText Typo="Typo.caption" Style="color:var(--mud-palette-text-secondary)">
-            <strong>Salesians de Sarrià</strong> · Departament d'Informàtica &nbsp;|&nbsp;
+        <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.6)">
+            <strong style="color:rgba(255,255,255,.85)">Salesians de Sarrià</strong>
+            &nbsp;·&nbsp; Departament d'Informàtica &nbsp;|&nbsp;
             AutoCo Avaluació © @DateTime.Now.Year
         </MudText>
         <MudSpacer />
@@ -66,7 +62,12 @@
         {
             Primary       = "#CC0000",
             PrimaryDarken = "#a30000",
-            Error         = "#CC0000",
+            Secondary     = "#1e293b",
+            SecondaryDarken = "#0f172a",
+            AppbarBackground = "#1e293b",
+            Background    = "#f8fafc",
+            Surface       = "#ffffff",
+            DrawerBackground = "#1e293b",
         }
     };
 

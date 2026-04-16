@@ -5,47 +5,67 @@
 
 <PageTitle>Accés Alumne – AutoCo</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
-    <MudPaper Elevation="3" Class="pa-8">
-        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mb-6">
-            <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Size="Size.Large" />
-            <MudText Typo="Typo.h5" Align="Align.Center">Accés Alumne</MudText>
-        </MudStack>
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center">
+    <MudContainer MaxWidth="MaxWidth.ExtraSmall">
+        <MudPaper Elevation="4" Style="overflow:hidden;border-radius:12px">
 
-        @if (_error is not null)
-        {
-            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
-        }
+            <div style="background:#1e293b;padding:1.5rem 2rem;display:flex;align-items:center;gap:1rem">
+                <MudIcon Icon="@Icons.Material.Filled.Person"
+                         Style="color:rgba(255,255,255,.9);font-size:2rem;flex-shrink:0" />
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h6" Style="color:white;font-weight:700;line-height:1.2">
+                        Accés Alumne
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.55)">
+                        AutoCo · Avaluació entre iguals
+                    </MudText>
+                </MudStack>
+            </div>
 
-        <MudSelect T="int" @bind-Value="_classId" Label="Classe" Variant="Variant.Outlined"
-                   Class="mb-3" Disabled="_loading">
-            <MudSelectItem T="int" Value="0">-- Selecciona la classe --</MudSelectItem>
-            @foreach (var c in _classes)
-            {
-                <MudSelectItem T="int" Value="@c.Id">
-                    @c.Name @(c.AcademicYear is not null ? $"({c.AcademicYear})" : "")
-                </MudSelectItem>
-            }
-        </MudSelect>
+            <div style="padding:1.75rem 2rem">
+                @if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+                }
 
-        <MudNumericField T="int" @bind-Value="_numLlista" Label="Número de llista"
-                         Variant="Variant.Outlined" Min="1" Max="99" Class="mb-3" />
+                <MudSelect T="int" @bind-Value="_classId" Label="Classe" Variant="Variant.Outlined"
+                           Class="mb-3" Disabled="_loading">
+                    <MudSelectItem T="int" Value="0">-- Selecciona la classe --</MudSelectItem>
+                    @foreach (var c in _classes)
+                    {
+                        <MudSelectItem T="int" Value="@c.Id">
+                            @c.Name @(c.AcademicYear is not null ? $"({c.AcademicYear})" : "")
+                        </MudSelectItem>
+                    }
+                </MudSelect>
 
-        <MudTextField @bind-Value="_pin" Label="PIN" Variant="Variant.Outlined"
-                      InputType="@_pinType"
-                      Adornment="Adornment.End" AdornmentIcon="@_pinIcon"
-                      OnAdornmentClick="TogglePin"
-                      Class="mb-4" />
+                <MudNumericField T="int" @bind-Value="_numLlista" Label="Número de llista"
+                                 Variant="Variant.Outlined" Min="1" Max="99" Class="mb-3" />
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                   Size="Size.Large" OnClick="Login" Disabled="_loading">
-            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-            Entrar
-        </MudButton>
+                <MudTextField @bind-Value="_pin" Label="PIN"
+                              Variant="Variant.Outlined" Class="mb-5"
+                              InputType="@_pinType"
+                              Adornment="Adornment.End" AdornmentIcon="@_pinIcon"
+                              OnAdornmentClick="TogglePin" />
 
-        <MudLink Href="/" Class="d-block text-center mt-4">← Tornar</MudLink>
-    </MudPaper>
-</MudContainer>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           FullWidth="true" Size="Size.Large"
+                           OnClick="Login" Disabled="_loading">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Entrar
+                </MudButton>
+
+                <MudLink Href="/" Class="d-block text-center mt-4" Color="Color.Secondary">
+                    ← Tornar
+                </MudLink>
+            </div>
+
+        </MudPaper>
+    </MudContainer>
+</div>
 
 @code {
     private List<ClassDto> _classes = [];

@@ -5,36 +5,59 @@
 
 <PageTitle>Accés Professor – AutoCo</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="mt-10">
-    <MudPaper Elevation="3" Class="pa-8">
-        <MudStack AlignItems="AlignItems.Center" Spacing="2" Class="mb-6">
-            <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Primary" Size="Size.Large" />
-            <MudText Typo="Typo.h5" Align="Align.Center">Accés Professor</MudText>
-        </MudStack>
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center">
+    <MudContainer MaxWidth="MaxWidth.ExtraSmall">
+        <MudPaper Elevation="4" Style="overflow:hidden;border-radius:12px">
 
-        @if (_error is not null)
-        {
-            <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
-        }
+            <div style="background:#1e293b;padding:1.5rem 2rem;display:flex;align-items:center;gap:1rem">
+                <MudIcon Icon="@Icons.Material.Filled.School"
+                         Style="color:rgba(255,255,255,.9);font-size:2rem;flex-shrink:0" />
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h6" Style="color:white;font-weight:700;line-height:1.2">
+                        Accés Professor
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.55)">
+                        AutoCo · Avaluació entre iguals
+                    </MudText>
+                </MudStack>
+            </div>
 
-        <MudTextField @bind-Value="_username" Label="Nom d'usuari" Variant="Variant.Outlined"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
-                      Class="mb-3" @onkeydown="OnKeyDown" />
-        <MudTextField @bind-Value="_password" Label="Contrasenya" Variant="Variant.Outlined"
-                      InputType="@_pwdType"
-                      Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
-                      OnAdornmentClick="TogglePassword"
-                      Class="mb-4" @onkeydown="OnKeyDown" />
+            <div style="padding:1.75rem 2rem">
+                @if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+                }
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                   Size="Size.Large" OnClick="Login" Disabled="_loading">
-            @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-            Entrar
-        </MudButton>
+                <MudTextField @bind-Value="_username" Label="Nom d'usuari"
+                              Variant="Variant.Outlined" Class="mb-3"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Person"
+                              @onkeydown="OnKeyDown" />
+                <MudTextField @bind-Value="_password" Label="Contrasenya"
+                              Variant="Variant.Outlined" Class="mb-5"
+                              InputType="@_pwdType"
+                              Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
+                              OnAdornmentClick="TogglePassword"
+                              @onkeydown="OnKeyDown" />
 
-        <MudLink Href="/" Class="d-block text-center mt-4">← Tornar</MudLink>
-    </MudPaper>
-</MudContainer>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           FullWidth="true" Size="Size.Large"
+                           OnClick="Login" Disabled="_loading">
+                    @if (_loading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Entrar
+                </MudButton>
+
+                <MudLink Href="/" Class="d-block text-center mt-4" Color="Color.Secondary">
+                    ← Tornar
+                </MudLink>
+            </div>
+
+        </MudPaper>
+    </MudContainer>
+</div>
 
 @code {
     private string _username = "";
@@ -42,8 +65,9 @@
     private string? _error;
     private bool _loading;
     private bool _showPwd;
-    private InputType _pwdType  => _showPwd ? InputType.Text : InputType.Password;
-    private string   _pwdIcon   => _showPwd ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+    private InputType _pwdType => _showPwd ? InputType.Text     : InputType.Password;
+    private string   _pwdIcon  => _showPwd ? Icons.Material.Filled.VisibilityOff
+                                           : Icons.Material.Filled.Visibility;
 
     protected override void OnInitialized()
     {
@@ -62,18 +86,12 @@
     {
         if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_password))
         {
-            _error = "Omple tots els camps.";
-            return;
+            _error = "Omple tots els camps."; return;
         }
-        _loading = true;
-        _error   = null;
+        _loading = true; _error = null;
         var result = await Api.LoginProfessorAsync(_username.Trim(), _password);
         _loading = false;
-        if (result is null)
-        {
-            _error = "Credencials incorrectes.";
-            return;
-        }
+        if (result is null) { _error = "Credencials incorrectes."; return; }
         UserState.SetLogin(result);
         Nav.NavigateTo("/professor/dashboard");
     }
