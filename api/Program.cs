@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using System.Threading.RateLimiting;
 using AutoCo.Api.Data;
-using AutoCo.Api.DTOs;
+using AutoCo.Shared.DTOs;
 using AutoCo.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -47,6 +49,20 @@ builder.Services.AddStackExchangeRedisCache(opt =>
     opt.InstanceName  = "autoco:";
 });
 
+// ── Rate limiting (protecció contra força bruta) ───────────────────────────
+builder.Services.AddRateLimiter(opt =>
+{
+    // Màxim 10 intents per minut per IP als endpoints d'autenticació
+    opt.AddFixedWindowLimiter("auth", o =>
+    {
+        o.PermitLimit         = 10;
+        o.Window              = TimeSpan.FromMinutes(1);
+        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        o.QueueLimit          = 0;
+    });
+    opt.RejectionStatusCode = 429;
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -67,6 +83,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -88,13 +105,13 @@ app.MapPost("/api/auth/professor", async (ProfessorLoginRequest req, IAuthServic
 {
     var result = await svc.ProfessorLoginAsync(req);
     return result is null ? Results.Unauthorized() : Results.Ok(result);
-});
+}).RequireRateLimiting("auth");
 
 app.MapPost("/api/auth/student", async (StudentLoginRequest req, IAuthService svc) =>
 {
     var result = await svc.StudentLoginAsync(req);
     return result is null ? Results.Unauthorized() : Results.Ok(result);
-});
+}).RequireRateLimiting("auth");
 
 // ════════════════════════════════════════════════════════════════════════════
 // PROFESSORS  (Admin only)

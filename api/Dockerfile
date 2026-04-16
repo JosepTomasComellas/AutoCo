@@ -4,9 +4,12 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["AutoCo.Api.csproj", "."]
-RUN dotnet restore
-COPY . .
+COPY ["shared/AutoCo.Shared.csproj", "shared/"]
+COPY ["api/AutoCo.Api.csproj", "api/"]
+RUN dotnet restore "api/AutoCo.Api.csproj"
+COPY shared/ shared/
+COPY api/ api/
+WORKDIR /src/api
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 FROM base AS final

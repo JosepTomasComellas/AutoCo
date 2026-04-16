@@ -1,5 +1,5 @@
 using AutoCo.Api.Data;
-using AutoCo.Api.DTOs;
+using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Distributed;
 using System.Text;
@@ -59,7 +59,23 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
 
         if (activity is null) return null;
 
-        // Tots els alumnes assignats a grups d'aquesta activitat, ordenats per NumLlista
+        // Carrega TOTES les avaluacions de l'activitat en una sola consulta (elimina N+1)
+        var allEvals = await db.Evaluations
+            .Include(e => e.Scores)
+            .Include(e => e.Evaluator)
+            .Where(e => e.ActivityId == activityId)
+            .ToListAsync();
+
+        // Indexos en memòria per accés O(1)
+        var selfEvalByStudentId = allEvals
+            .Where(e => e.IsSelf)
+            .ToDictionary(e => e.EvaluatorId);
+
+        var peerEvalsByStudentId = allEvals
+            .Where(e => !e.IsSelf)
+            .GroupBy(e => e.EvaluatedId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var allMembers = activity.Groups
             .SelectMany(g => g.Members.Select(m => new { m.Student, GroupName = g.Name }))
             .OrderBy(x => x.GroupName).ThenBy(x => x.Student.NumLlista)
@@ -71,21 +87,11 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
         {
             var s = member.Student;
 
-            // Autoavaluació
-            var selfEval = await db.Evaluations
-                .Include(e => e.Scores)
-                .FirstOrDefaultAsync(e => e.ActivityId == activityId
-                    && e.EvaluatorId == s.Id && e.IsSelf);
-
+            var selfEval = selfEvalByStudentId.GetValueOrDefault(s.Id);
             var selfScores = selfEval?.Scores.ToDictionary(sc => sc.CriteriaKey, sc => (int?)sc.Score)
                 ?? Data.Criteria.Keys.ToDictionary(k => k, _ => (int?)null);
 
-            // CoAvaluació rebuda
-            var peerEvals = await db.Evaluations
-                .Include(e => e.Scores)
-                .Include(e => e.Evaluator)
-                .Where(e => e.ActivityId == activityId && e.EvaluatedId == s.Id && !e.IsSelf)
-                .ToListAsync();
+            var peerEvals = peerEvalsByStudentId.GetValueOrDefault(s.Id) ?? [];
 
             var peerDtos = peerEvals.Select(e => new PeerEvaluationDto(
                 e.EvaluatorId,
@@ -93,7 +99,6 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 e.Scores.ToDictionary(sc => sc.CriteriaKey, sc => sc.Score),
                 e.Comment)).ToList();
 
-            // Mitjanes de la CoAvaluació per criteri
             var avgCoScores = Data.Criteria.Keys.ToDictionary(
                 k => k,
                 k => {
@@ -103,10 +108,9 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                     return vals.Count > 0 ? (double?)vals.Average() : null;
                 });
 
-            var allCoVals  = avgCoScores.Values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
-            var avgGlobal  = allCoVals.Count > 0 ? (double?)allCoVals.Average() : null;
-
-            var allAutVals = selfScores.Values.Where(v => v.HasValue).Select(v => (double)v!.Value).ToList();
+            var allCoVals    = avgCoScores.Values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
+            var avgGlobal    = allCoVals.Count > 0 ? (double?)allCoVals.Average() : null;
+            var allAutVals   = selfScores.Values.Where(v => v.HasValue).Select(v => (double)v!.Value).ToList();
             var autAvgGlobal = allAutVals.Count > 0 ? (double?)allAutVals.Average() : null;
 
             studentResults.Add(new StudentResultDto(
@@ -145,42 +149,52 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
     {
         var activity = await db.Activities
             .Include(a => a.Class).ThenInclude(c => c.Professor)
-            .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
+            .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
                 (isAdmin || a.Class.ProfessorId == professorId));
         if (activity is null) return null;
 
-        var criteriaKeys = Data.Criteria.Keys.ToList();
-        var criteriaAll  = Data.Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
+        var criteriaAll = Data.Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
+
+        // Carrega TOTES les avaluacions en una sola consulta (elimina N+1)
+        var allEvals = await db.Evaluations
+            .Include(e => e.Scores)
+            .Where(e => e.ActivityId == activityId)
+            .ToListAsync();
+
+        var selfEvalsByStudentId = allEvals
+            .Where(e => e.IsSelf)
+            .GroupBy(e => e.EvaluatorId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var peerEvalsByStudentId = allEvals
+            .Where(e => !e.IsSelf)
+            .GroupBy(e => e.EvaluatedId)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         var groupCharts = new List<GroupChartDto>();
-        var criteriaDetail = criteriaKeys.Select(k => new CriteriaGroupChartDto(
-            k, Data.Criteria.All.First(c => c.Key == k).Label, [])).ToList();
+        var criteriaDetail = Data.Criteria.All
+            .Select(c => new CriteriaGroupChartDto(c.Key, c.Label, [])).ToList();
 
         foreach (var g in activity.Groups.OrderBy(g => g.Name))
         {
-            var studentIds = g.Members.Select(m => m.StudentId).ToList();
+            var studentIds = g.Members.Select(m => m.StudentId).ToHashSet();
 
-            // Auto-eval per alumne d'aquest grup
-            var selfEvals = await db.Evaluations
-                .Include(e => e.Scores)
-                .Where(e => e.ActivityId == activityId && e.IsSelf && studentIds.Contains(e.EvaluatorId))
-                .ToListAsync();
+            var selfEvals = studentIds
+                .SelectMany(id => selfEvalsByStudentId.GetValueOrDefault(id) ?? [])
+                .ToList();
 
-            // Co-eval rebuda per alumnes d'aquest grup
-            var peerEvals = await db.Evaluations
-                .Include(e => e.Scores)
-                .Where(e => e.ActivityId == activityId && !e.IsSelf && studentIds.Contains(e.EvaluatedId))
-                .ToListAsync();
+            var peerEvals = studentIds
+                .SelectMany(id => peerEvalsByStudentId.GetValueOrDefault(id) ?? [])
+                .ToList();
 
-            // Mitjana global auto i co per grup
             double? avgAuto = selfEvals.Count > 0
-                ? selfEvals.SelectMany(e => e.Scores).Select(s => (double)s.Score).DefaultIfEmpty().Average()
-                    .NullIfZero()
+                ? selfEvals.SelectMany(e => e.Scores).Select(s => (double)s.Score)
+                    .DefaultIfEmpty().Average().NullIfZero()
                 : null;
             double? avgCo = peerEvals.Count > 0
-                ? peerEvals.SelectMany(e => e.Scores).Select(s => (double)s.Score).DefaultIfEmpty().Average()
-                    .NullIfZero()
+                ? peerEvals.SelectMany(e => e.Scores).Select(s => (double)s.Score)
+                    .DefaultIfEmpty().Average().NullIfZero()
                 : null;
 
             groupCharts.Add(new GroupChartDto(
@@ -189,7 +203,6 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 selfEvals.Select(e => e.EvaluatorId).Distinct().Count(),
                 peerEvals.Select(e => e.EvaluatedId).Distinct().Count()));
 
-            // Detall per criteri
             foreach (var cd in criteriaDetail)
             {
                 double? autoK = selfEvals.Count > 0
@@ -218,7 +231,6 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
 
         var sb = new StringBuilder();
 
-        // Capçalera amb dades de la classe i l'activitat
         var curs = string.IsNullOrWhiteSpace(results.Activity.ClassAcademicYear)
             ? "" : $" ({results.Activity.ClassAcademicYear})";
         sb.AppendLine(string.Join(";", Escape("Classe"),     Escape(results.Activity.ClassName + curs)));
@@ -227,7 +239,6 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
         sb.AppendLine(string.Join(";", Escape("Data"),       Escape(DateTime.Now.ToString("dd/MM/yyyy HH:mm"))));
         sb.AppendLine();
 
-        // Llista única d'alumnes amb el grup com a columna
         sb.AppendLine(string.Join(";",
             new[] { "NumAlumne", "Nom", "Cognoms", "Correu", "Grup", "CoEval", "AutEval" }
             .Select(Escape)));

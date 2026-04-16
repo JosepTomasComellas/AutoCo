@@ -1,4 +1,4 @@
-namespace AutoCo.Api.DTOs;
+namespace AutoCo.Shared.DTOs;
 
 // ─── Autenticació ────────────────────────────────────────────────────────────
 

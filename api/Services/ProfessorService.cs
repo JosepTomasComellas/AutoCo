@@ -1,6 +1,6 @@
 using AutoCo.Api.Data;
 using AutoCo.Api.Data.Models;
-using AutoCo.Api.DTOs;
+using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace AutoCo.Api.Services;

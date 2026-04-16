@@ -4,9 +4,12 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["AutoCo.Web.csproj", "."]
-RUN dotnet restore
-COPY . .
+COPY ["shared/AutoCo.Shared.csproj", "shared/"]
+COPY ["web/AutoCo.Web.csproj", "web/"]
+RUN dotnet restore "web/AutoCo.Web.csproj"
+COPY shared/ shared/
+COPY web/ web/
+WORKDIR /src/web
 RUN dotnet publish -c Release -o /app/publish --no-restore
 
 FROM base AS final

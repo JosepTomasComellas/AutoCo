@@ -2,7 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AutoCo.Api.Data;
-using AutoCo.Api.DTOs;
+using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -35,7 +35,7 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
             .Include(s => s.Class)
             .FirstOrDefaultAsync(s => s.NumLlista == req.NumLlista && s.ClassId == req.ClassId);
 
-        if (student is null || student.Pin != req.Pin.Trim())
+        if (student is null || !PinService.Verify(req.Pin.Trim(), student.Pin))
             return null;
 
         var token = GenerateToken(student.Id.ToString(), student.NomComplet, "Student",

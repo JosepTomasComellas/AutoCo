@@ -11,6 +11,9 @@ obj/
 # ASP.NET
 appsettings.Development.json
 
+# Credencials locals (mai al repositori)
+.env
+
 # Docker / dades locals
 backups/
 data/

@@ -1,6 +1,6 @@
 using AutoCo.Api.Data;
 using AutoCo.Api.Data.Models;
-using AutoCo.Api.DTOs;
+using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace AutoCo.Api.Services;
@@ -112,7 +112,7 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
 
     public async Task<StudentWithPinDto> AddStudentAsync(int classId, CreateStudentRequest req)
     {
-        var pin = string.IsNullOrWhiteSpace(req.Pin) ? GeneratePin() : req.Pin.Trim();
+        var plainPin = string.IsNullOrWhiteSpace(req.Pin) ? PinService.Generate() : req.Pin.Trim();
         var student = new Student
         {
             ClassId          = classId,
@@ -120,11 +120,12 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
             Nom              = req.Nom.Trim(),
             Cognoms          = req.Cognoms.Trim(),
             CorreuElectronic = req.CorreuElectronic?.Trim(),
-            Pin              = pin
+            Pin              = PinService.Hash(plainPin)
         };
         db.Students.Add(student);
         await db.SaveChangesAsync();
-        return ToStudentDto(student);
+        // Retornem el PIN en text pla una sola vegada (per mostrar-lo o enviar per email)
+        return ToStudentDto(student) with { Pin = plainPin };
     }
 
     public async Task<StudentWithPinDto?> UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req)
@@ -137,11 +138,16 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         student.Cognoms          = req.Cognoms.Trim();
         student.CorreuElectronic = req.CorreuElectronic?.Trim();
 
+        string? plainPinReturned = null;
         if (!string.IsNullOrWhiteSpace(req.NewPin))
-            student.Pin = req.NewPin.Trim();
+        {
+            plainPinReturned = req.NewPin.Trim();
+            student.Pin = PinService.Hash(plainPinReturned);
+        }
 
         await db.SaveChangesAsync();
-        return ToStudentDto(student);
+        var dto = ToStudentDto(student);
+        return plainPinReturned is not null ? dto with { Pin = plainPinReturned } : dto;
     }
 
     public async Task<bool> DeleteStudentAsync(int classId, int studentId)
@@ -173,7 +179,7 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
                     continue;
                 }
 
-                var pin = string.IsNullOrWhiteSpace(s.Pin) ? GeneratePin() : s.Pin.Trim();
+                var plainPin = string.IsNullOrWhiteSpace(s.Pin) ? PinService.Generate() : s.Pin.Trim();
                 var student = new Student
                 {
                     ClassId          = classId,
@@ -181,7 +187,7 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
                     Nom              = s.Nom.Trim(),
                     Cognoms          = s.Cognoms.Trim(),
                     CorreuElectronic = s.CorreuElectronic?.Trim(),
-                    Pin              = pin
+                    Pin              = PinService.Hash(plainPin)
                 };
                 db.Students.Add(student);
                 created++;
@@ -206,9 +212,10 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
             .FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
         if (student is null) return null;
 
-        student.Pin = GeneratePin();
+        var plainPin = PinService.Generate();
+        student.Pin  = PinService.Hash(plainPin);
         await db.SaveChangesAsync();
-        return new ResetPinResult(student.Pin);
+        return new ResetPinResult(plainPin);
     }
 
     public async Task<SendPinResult?> SendPinAsync(int classId, int studentId)
@@ -224,8 +231,13 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         if (!email.IsEnabled)
             return new SendPinResult(false, "El servei de correu no està configurat.");
 
+        // Genera un PIN nou (el PIN actual pot estar hashejat i no és recuperable)
+        var plainPin = PinService.Generate();
+        student.Pin  = PinService.Hash(plainPin);
+        await db.SaveChangesAsync();
+
         var sent = await email.SendPinAsync(student.CorreuElectronic, student.NomComplet,
-            student.Class.Name, student.Id, student.Pin);
+            student.Class.Name, student.Id, plainPin);
         return new SendPinResult(sent, sent ? null : "Error en l'enviament.");
     }
 
@@ -247,12 +259,18 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         foreach (var s in students)
         {
             if (string.IsNullOrWhiteSpace(s.CorreuElectronic)) { skipped++; continue; }
+
+            // Genera PIN nou per poder enviar-lo en text pla
+            var plainPin = PinService.Generate();
+            s.Pin = PinService.Hash(plainPin);
+
             var ok = await email.SendPinAsync(s.CorreuElectronic, s.NomComplet,
-                s.Class.Name, s.Id, s.Pin);
+                s.Class.Name, s.Id, plainPin);
             if (ok) sent++;
             else { skipped++; details.Add($"{s.NomComplet}: error d'enviament."); }
         }
 
+        if (sent > 0) await db.SaveChangesAsync();
         return new SendAllResult(sent, skipped, details);
     }
 
@@ -304,7 +322,6 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         return (bytes, nom);
     }
 
-    private static string GeneratePin() => Random.Shared.Next(1000, 9999).ToString();
     private static string Esc(string v) => $"\"{v.Replace("\"", "\"\"")}\"";
 
     // ── Helpers ──────────────────────────────────────────────────────────────

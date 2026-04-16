@@ -13,4 +13,8 @@
     <PackageReference Include="MudBlazor" Version="8.6.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\shared\AutoCo.Shared.csproj" />
+  </ItemGroup>
+
 </Project>

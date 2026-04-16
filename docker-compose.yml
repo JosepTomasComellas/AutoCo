@@ -13,7 +13,7 @@ services:
     container_name: autoco-db
     environment:
       ACCEPT_EULA:        "Y"
-      MSSQL_SA_PASSWORD:  "AutoCo_Pass123!"
+      MSSQL_SA_PASSWORD:  "${MSSQL_SA_PASSWORD}"
       MSSQL_PID:          "Express"
     expose:
       - "1433"
@@ -24,7 +24,7 @@ services:
       - autoco-net
     healthcheck:
       test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd",
-             "-S", "localhost", "-U", "sa", "-P", "AutoCo_Pass123!",
+             "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}",
              "-Q", "SELECT 1", "-No"]
       interval: 10s
       timeout:  5s
@@ -51,31 +51,31 @@ services:
 
   api:
     build:
-      context:    ./api
-      dockerfile: Dockerfile
+      context:    .
+      dockerfile: api/Dockerfile
     container_name: autoco-api
     environment:
       ASPNETCORE_ENVIRONMENT:          Production
       ConnectionStrings__DefaultConnection: >
         Server=db;Database=AutoCoAvaluacio;
-        User Id=sa;Password=AutoCo_Pass123!;
+        User Id=sa;Password=${MSSQL_SA_PASSWORD};
         TrustServerCertificate=True
-      JwtSettings__Secret:          "AutoCoAvaluacio_JWT_Secret_ChangeThis_2024"
-      JwtSettings__ExpiryHours:     "8"
-      Admin__Username:              "admin"
-      Admin__Password:              "Admin12345aA."
-      Admin__Nom:                   "Josep"
-      Admin__Cognoms:               "Tomàs Comellas"
-      Smtp__Host:                   "smtp.gmail.com"
-      Smtp__Port:                   "587"
-      Smtp__Username:               "josep.tomas.comellas@gmail.com"
-      Smtp__Password:               "egrw tgyz yxco rlsy"
-      Smtp__FromAddress:            "josep.tomas.comellas@gmail.com"
-      Smtp__FromName:               "Salesians de Sarrià - Dept. Informàtica"
-      App__WebUrl:                  "https://localhost"
+      JwtSettings__Secret:          "${JWT_SECRET}"
+      JwtSettings__ExpiryHours:     "${JWT_EXPIRY_HOURS}"
+      Admin__Username:              "${ADMIN_USERNAME}"
+      Admin__Password:              "${ADMIN_PASSWORD}"
+      Admin__Nom:                   "${ADMIN_NOM}"
+      Admin__Cognoms:               "${ADMIN_COGNOMS}"
+      Smtp__Host:                   "${SMTP_HOST}"
+      Smtp__Port:                   "${SMTP_PORT}"
+      Smtp__Username:               "${SMTP_USERNAME}"
+      Smtp__Password:               "${SMTP_PASSWORD}"
+      Smtp__FromAddress:            "${SMTP_FROM_ADDRESS}"
+      Smtp__FromName:               "${SMTP_FROM_NAME}"
+      App__WebUrl:                  "${APP_WEB_URL}"
       Redis__ConnectionString:      "redis:6379"
     expose:
-      - "8080"   # API accessible directament (Swagger, debug)
+      - "8080"
     networks:
       - autoco-net
     depends_on:
@@ -87,14 +87,13 @@ services:
 
   web:
     build:
-      context:    ./web
-      dockerfile: Dockerfile
+      context:    .
+      dockerfile: web/Dockerfile
     container_name: autoco-web
     environment:
       ASPNETCORE_ENVIRONMENT:  Production
       ApiSettings__BaseUrl:    "http://api:8080"
       Redis__ConnectionString: "redis:6379"
-    # Sense ports externs: tot passa per nginx
     networks:
       - autoco-net
     depends_on:
@@ -111,8 +110,6 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # Els certificats es guarden al sistema de fitxers local (./nginx/ssl/)
-      # Per usar certificats reals, substitueix server.crt i server.key per la teva CA
       - ./nginx/ssl:/etc/nginx/ssl
     networks:
       - autoco-net
