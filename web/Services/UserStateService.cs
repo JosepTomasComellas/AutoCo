@@ -1,3 +1,5 @@
+using AutoCo.Shared.DTOs;
+
 namespace AutoCo.Web.Services;
 
 /// <summary>

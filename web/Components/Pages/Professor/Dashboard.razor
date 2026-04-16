@@ -66,27 +66,22 @@ else
         </MudItem>
     </MudGrid>
 
-    @{
-        var obertes  = _filtrades.Where(a =>  a.IsOpen).ToList();
-        var tancades = _filtrades.Where(a => !a.IsOpen).ToList();
-    }
-
-    @if (!obertes.Any() && !tancades.Any())
+    @if (!_obertes.Any() && !_tancades.Any())
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
             Cap activitat coincideix amb el filtre.
         </MudAlert>
     }
 
-    @if (obertes.Any())
+    @if (_obertes.Any())
     {
         <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
             <MudIcon Icon="@Icons.Material.Filled.LockOpen" Size="Size.Small"
                      Color="Color.Success" Class="mr-1" Style="vertical-align:middle" />
-            Activitats obertes (@obertes.Count)
+            Activitats obertes (@_obertes.Count)
         </MudText>
         <MudGrid Class="mb-6">
-            @foreach (var act in obertes)
+            @foreach (var act in _obertes)
             {
                 <MudItem xs="12" sm="6" lg="4">
                     <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" />
@@ -95,16 +90,16 @@ else
         </MudGrid>
     }
 
-    @if (tancades.Any())
+    @if (_tancades.Any())
     {
         <MudText Typo="Typo.subtitle1" Class="mb-3"
                  Style="font-weight:600;color:var(--mud-palette-text-secondary)">
             <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
                      Color="Color.Default" Class="mr-1" Style="vertical-align:middle" />
-            Activitats tancades (@tancades.Count)
+            Activitats tancades (@_tancades.Count)
         </MudText>
         <MudGrid>
-            @foreach (var act in tancades)
+            @foreach (var act in _tancades)
             {
                 <MudItem xs="12" sm="6" lg="4">
                     <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" />
@@ -122,6 +117,9 @@ else
     private int    _classeId = 0;
 
     private Dictionary<int, string> _classes = [];
+
+    private List<ActivityDto> _obertes  => _filtrades.Where(a =>  a.IsOpen).ToList();
+    private List<ActivityDto> _tancades => _filtrades.Where(a => !a.IsOpen).ToList();
 
     private List<ActivityDto> _filtrades => _activities
         .Where(a => (string.IsNullOrWhiteSpace(_cerca) ||
