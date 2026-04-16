@@ -9,9 +9,10 @@
 
 <MudLayout>
     <MudAppBar Elevation="2" Color="Color.Error" Dense="true">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-            <MudImage Src="/images/Logo.png" Height="28" Style="filter:brightness(0) invert(1)" />
-            <MudStack Spacing="0">
+        <!-- Marca: visible sempre -->
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="min-width:0;flex-shrink:0">
+            <MudImage Src="/images/Logo.png" Height="28" Style="filter:brightness(0) invert(1);flex-shrink:0" />
+            <MudStack Spacing="0" Class="d-none d-sm-flex">
                 <MudText Typo="Typo.subtitle1" Style="font-weight:700;line-height:1.1;color:white">
                     Salesians de Sarrià
                 </MudText>
@@ -23,14 +24,19 @@
         <MudSpacer />
         @if (UserState.IsLoggedIn)
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                <MudChip T="string" Color="Color.Default" Size="Size.Small" Style="color:white;background:rgba(255,255,255,.15)">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Style="min-width:0">
+                <MudChip T="string" Color="Color.Default" Size="Size.Small"
+                         Style="color:white;background:rgba(255,255,255,.15);flex-shrink:0">
                     @UserState.Role
                 </MudChip>
-                <MudText Typo="Typo.body2" Style="color:white">@UserState.NomComplet</MudText>
+                <!-- Nom: truncat i ocult en pantalles molt petites -->
+                <MudText Typo="Typo.body2" Style="color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px"
+                         Class="d-none d-sm-block">
+                    @UserState.NomComplet
+                </MudText>
                 <MudIconButton Icon="@Icons.Material.Filled.Logout"
                                Color="Color.Inherit"
-                               title="Sortir"
+                               title="@($"Sortir ({UserState.NomComplet})")"
                                OnClick="Logout" />
             </MudStack>
         }

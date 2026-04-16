@@ -18,56 +18,94 @@ else if (_form is null)
 }
 else
 {
-    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-        <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/alumne/dashboard" Variant="Variant.Text">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
+        <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/alumne/dashboard"
+                   Variant="Variant.Text">
             Tornar
         </MudButton>
-        <MudText Typo="Typo.h5">@_form.Activity.Name</MudText>
-        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-            Grup: @_form.Group.Name
-        </MudChip>
+        <MudStack Spacing="0" Style="flex:1;min-width:0">
+            <MudText Typo="Typo.h6" Style="font-weight:700">@_form.Activity.Name</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Grup: @_form.Group.Name</MudText>
+        </MudStack>
     </MudStack>
+
     @if (_form.Activity.Description is not null)
     {
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">@_form.Activity.Description</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            @_form.Activity.Description
+        </MudText>
     }
 
     @foreach (var entry in _form.Entries)
     {
         var isSelf = entry.IsSelf;
-        <MudPaper Elevation="2" Class="@($"pa-4 mb-4 {(isSelf ? "border-l-4" : "")}")"
-                  Style="@(isSelf ? "border-left:4px solid var(--mud-palette-primary)" : "")">
-            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
-                <MudText Typo="Typo.h6">@entry.StudentName</MudText>
+        <MudPaper Elevation="2" Class="pa-4 mb-4"
+                  Style="@(isSelf ? "border-left:4px solid var(--mud-palette-primary)" : "border-left:4px solid var(--mud-palette-grey-400)")">
+
+            <!-- Capçalera de la persona avaluada -->
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-4"
+                      Wrap="Wrap.Wrap">
+                <MudAvatar Color="@(isSelf ? Color.Primary : Color.Secondary)"
+                           Variant="Variant.Filled" Size="Size.Small" Style="flex-shrink:0">
+                    @entry.StudentName[0]
+                </MudAvatar>
+                <MudText Typo="Typo.subtitle1" Style="font-weight:600;flex:1">
+                    @entry.StudentName
+                </MudText>
                 <MudChip T="string" Size="Size.Small"
                          Color="@(isSelf ? Color.Primary : Color.Secondary)">
                     @(isSelf ? "Autoavaluació" : "Coavaluació")
                 </MudChip>
             </MudStack>
 
+            <!-- Criteris amb MudRating (5 estrelles × 2 = escala 1-10) -->
             @foreach (var criteri in _criteria)
             {
                 var key     = criteri.Key;
                 var current = _scores.TryGetValue((entry.StudentId, key), out var v) ? v : 0;
-                <MudStack Row="false" Class="mb-3">
-                    <MudText Typo="Typo.subtitle2">@criteri.Label</MudText>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                        @for (int i = 1; i <= 10; i++)
+                var stars   = current > 0 ? (int)Math.Ceiling(current / 2.0) : 0;
+
+                <MudStack Class="mb-4">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"
+                              Wrap="Wrap.Wrap">
+                        <MudText Typo="Typo.subtitle2" Style="flex:1;min-width:120px">
+                            @criteri.Label
+                        </MudText>
+                        @if (current > 0)
                         {
-                            var val = i;
-                            var sid = entry.StudentId;
-                            <MudIconButton Icon="@(val <= current ? Icons.Material.Filled.Star : Icons.Material.Outlined.StarBorder)"
-                                           Color="@(val <= current ? Color.Warning : Color.Default)"
-                                           Size="Size.Small"
-                                           OnClick="() => SetScore(sid, key, val)" />
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                     Variant="Variant.Filled"
+                                     Style="font-weight:700;min-width:52px;justify-content:center">
+                                @current / 10
+                            </MudChip>
                         }
-                        <MudText Typo="Typo.body2" Style="min-width:24px">
-                            @(current > 0 ? current.ToString() : "–")
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Default"
+                                     Variant="Variant.Outlined"
+                                     Style="min-width:52px;justify-content:center">
+                                –
+                            </MudChip>
+                        }
+                    </MudStack>
+
+                    <!-- 5 estrelles: 1★=2, 2★=4, 3★=6, 4★=8, 5★=10 -->
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        <MudRating SelectedValue="stars"
+                                   SelectedValueChanged="val => SetScore(entry.StudentId, key, val)"
+                                   MaxValue="5"
+                                   Color="Color.Warning"
+                                   Size="Size.Large"
+                                   HoveredValueChanged="val => OnHover(entry.StudentId, key, val)" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary"
+                                 Style="white-space:nowrap;font-size:.75rem">
+                            @ScaleHint(entry.StudentId, key, stars)
                         </MudText>
                     </MudStack>
                 </MudStack>
             }
 
+            <!-- Comentari -->
             <MudTextField @bind-Value="_comments[entry.StudentId]"
                           Label="Comentari (opcional)" Variant="Variant.Outlined"
                           Lines="2" MaxLength="500" />
@@ -76,10 +114,27 @@ else
 
     <MudStack Row="true" Class="mt-4">
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Large"
+                   FullWidth="true"
                    OnClick="SaveAsync" Disabled="_saving">
-            @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
             Guardar avaluació
         </MudButton>
+    </MudStack>
+
+    <!-- Llegenda de puntuació -->
+    <MudStack Row="true" Spacing="1" Class="mt-3 mb-6" Wrap="Wrap.Wrap"
+              Style="justify-content:center">
+        @foreach (var (s, label) in new[] { (1,"2 – Insuficient"), (2,"4 – Regular"),
+            (3,"6 – Bé"), (4,"8 – Notable"), (5,"10 – Excel·lent") })
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Default"
+                     Variant="Variant.Outlined" Style="font-size:.72rem">
+                @(new string('★', s))@(new string('☆', 5 - s)) @label
+            </MudChip>
+        }
     </MudStack>
 }
 
@@ -91,9 +146,11 @@ else
     private bool _loading = true;
     private bool _saving  = false;
 
-    // Puntuacions i comentaris: (studentId, criteriaKey) -> score
+    // Puntuació 1-10 per (studentId, criteriaKey)
     private Dictionary<(int, string), int> _scores   = new();
     private Dictionary<int, string>        _comments = new();
+    // Valor hovered per mostrar l'hint en temps real
+    private Dictionary<(int, string), int> _hovered  = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,21 +165,47 @@ else
             {
                 _comments[entry.StudentId] = entry.Comment ?? "";
                 foreach (var c in _criteria)
-                    _scores[(entry.StudentId, c.Key)] = entry.Scores.TryGetValue(c.Key, out var sv) ? sv : 0;
+                    _scores[(entry.StudentId, c.Key)] =
+                        entry.Scores.TryGetValue(c.Key, out var sv) ? sv : 0;
             }
         }
         _loading = false;
     }
 
-    private void SetScore(int studentId, string key, int val)
+    // Converteix estrelles (1-5) a puntuació (2-10)
+    private void SetScore(int studentId, string key, int stars)
     {
         var current = _scores.TryGetValue((studentId, key), out var v) ? v : 0;
-        _scores[(studentId, key)] = current == val ? 0 : val;
+        var newScore = stars * 2;
+        // Clic sobre la mateixa estrella → desselecciona
+        _scores[(studentId, key)] = (current == newScore) ? 0 : newScore;
+        _hovered.Remove((studentId, key));
+    }
+
+    private void OnHover(int studentId, string key, int stars)
+    {
+        if (stars > 0)
+            _hovered[(studentId, key)] = stars;
+        else
+            _hovered.Remove((studentId, key));
+    }
+
+    private string ScaleHint(int studentId, string key, int currentStars)
+    {
+        var stars = _hovered.TryGetValue((studentId, key), out var h) ? h : currentStars;
+        return stars switch
+        {
+            1 => "2 – Insuficient",
+            2 => "4 – Regular",
+            3 => "6 – Bé",
+            4 => "8 – Notable",
+            5 => "10 – Excel·lent",
+            _ => "Sense puntuar"
+        };
     }
 
     private async Task SaveAsync()
     {
-        // Validar que tots els criteris tinguin puntuació
         var missing = new List<string>();
         if (_form is not null)
         {
@@ -133,7 +216,9 @@ else
         }
         if (missing.Any())
         {
-            Snackbar.Add($"Falta puntuar: {string.Join(", ", missing.Take(3))}{(missing.Count > 3 ? "..." : "")}", Severity.Warning);
+            Snackbar.Add(
+                $"Falta puntuar: {string.Join(", ", missing.Take(3))}{(missing.Count > 3 ? "..." : "")}",
+                Severity.Warning);
             return;
         }
 
@@ -142,8 +227,10 @@ else
         var request = new SaveEvaluationsRequest(
             _form!.Entries.Select(entry => new EvaluationEntryRequest(
                 entry.StudentId,
-                _criteria.ToDictionary(c => c.Key, c => _scores.TryGetValue((entry.StudentId, c.Key), out var sv) ? sv : 0),
-                string.IsNullOrWhiteSpace(_comments[entry.StudentId]) ? null : _comments[entry.StudentId].Trim()
+                _criteria.ToDictionary(c => c.Key,
+                    c => _scores.TryGetValue((entry.StudentId, c.Key), out var sv) ? sv : 0),
+                string.IsNullOrWhiteSpace(_comments[entry.StudentId])
+                    ? null : _comments[entry.StudentId].Trim()
             )).ToList());
 
         var ok = await Api.SaveEvaluationsAsync(ActivityId, request);
@@ -155,6 +242,7 @@ else
             Nav.NavigateTo("/alumne/dashboard");
         }
         else
-            Snackbar.Add("No s'ha pogut guardar. Comprova que l'activitat estigui oberta.", Severity.Error);
+            Snackbar.Add("No s'ha pogut guardar. Comprova que l'activitat estigui oberta.",
+                Severity.Error);
     }
 }
