@@ -92,11 +92,11 @@ else
                     <!-- 5 estrelles: 1★=2, 2★=4, 3★=6, 4★=8, 5★=10 -->
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudRating SelectedValue="stars"
-                                   SelectedValueChanged="val => SetScore(entry.StudentId, key, val ?? 0)"
+                                   SelectedValueChanged="val => SetScore(entry.StudentId, key, val)"
                                    MaxValue="5"
                                    Color="Color.Warning"
                                    Size="Size.Large"
-                                   HoveredValueChanged="val => OnHover(entry.StudentId, key, val)" />
+                                   HoveredValueChanged="val => OnHover(entry.StudentId, key, val ?? 0)" />
                         <MudText Typo="Typo.caption" Color="Color.Secondary"
                                  Style="white-space:nowrap;font-size:.75rem">
                             @ScaleHint(entry.StudentId, key, stars)
