@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <PageTitle>Alumnes – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
@@ -35,7 +36,7 @@
     </MudButton>
     <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
                StartIcon="@Icons.Material.Filled.Download"
-               Href="@($"/professor/export-students?classId={ClassId}")">
+               OnClick="ExportCsvAsync">
         Exportar llista
     </MudButton>
 </MudStack>
@@ -114,7 +115,7 @@
                     Importar
                 </MudButton>
                 <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
-                           Href="/professor/download-csv-template"
+                           Href="/templates/alumnes-plantilla.csv" download="alumnes-plantilla.csv"
                            StartIcon="@Icons.Material.Filled.Download">
                     Plantilla
                 </MudButton>
@@ -223,18 +224,20 @@
 
         var students    = new List<CreateStudentRequest>();
         var parseErrors = new List<string>();
-        int lineNum     = 0;
 
         using var stream = _csvFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
         using var reader = new System.IO.StreamReader(stream);
+        var content = await reader.ReadToEndAsync();
+        var lines   = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
-        while (!reader.EndOfStream)
+        int lineNum = 0;
+        foreach (var rawLine in lines)
         {
-            var line = await reader.ReadLineAsync();
             lineNum++;
+            var line = rawLine.TrimEnd('\r');
             if (string.IsNullOrWhiteSpace(line)) continue;
             var cols = line.Split(';');
-            if (lineNum == 1 && !int.TryParse(cols[0].Trim(), out _)) continue;
+            if (lineNum == 1 && !int.TryParse(cols[0].Trim(), out _)) continue; // capçalera
             if (cols.Length < 3) { parseErrors.Add($"Línia {lineNum}: calen almenys 3 columnes."); continue; }
             if (!int.TryParse(cols[0].Trim(), out var num)) { parseErrors.Add($"Línia {lineNum}: NumLlista invàlid."); continue; }
             var nom     = cols[1].Trim();
@@ -311,5 +314,25 @@
         await Api.DeleteStudentAsync(ClassId, s.Id);
         _students.RemoveAll(x => x.Id == s.Id);
         Snackbar.Add("Alumne eliminat.", Severity.Info);
+    }
+
+    private async Task ExportCsvAsync()
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("NumLlista;Nom;Cognoms;Correu;PIN");
+        foreach (var s in _students.OrderBy(x => x.NumLlista))
+            sb.AppendLine($"{s.NumLlista};{s.Nom};{s.Cognoms};{s.CorreuElectronic};{s.Pin}");
+        var fileName = $"alumnes-{_classe?.Name ?? ClassId.ToString()}.csv"
+            .Replace(" ", "_").Replace("/", "-");
+        await JS.InvokeVoidAsync("eval", $@"
+            (function(){{
+                var blob = new Blob([{System.Text.Json.JsonSerializer.Serialize(sb.ToString())}],
+                    {{type:'text/csv;charset=utf-8;'}});
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url; a.download = {System.Text.Json.JsonSerializer.Serialize(fileName)};
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); URL.revokeObjectURL(url);
+            }})()");
     }
 }
