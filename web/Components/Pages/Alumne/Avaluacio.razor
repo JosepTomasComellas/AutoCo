@@ -92,7 +92,7 @@ else
                     <!-- 5 estrelles: 1★=2, 2★=4, 3★=6, 4★=8, 5★=10 -->
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudRating SelectedValue="stars"
-                                   SelectedValueChanged="val => SetScore(entry.StudentId, key, val)"
+                                   SelectedValueChanged="val => SetScore(entry.StudentId, key, val ?? 0)"
                                    MaxValue="5"
                                    Color="Color.Warning"
                                    Size="Size.Large"
