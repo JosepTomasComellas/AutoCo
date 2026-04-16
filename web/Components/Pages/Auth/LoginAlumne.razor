@@ -44,6 +44,7 @@
 
                 <MudTextField @bind-Value="_pin" Label="PIN"
                               Variant="Variant.Outlined" Class="mb-5"
+                              Immediate="true"
                               InputType="@_pinType"
                               Adornment="Adornment.End" AdornmentIcon="@_pinIcon"
                               OnAdornmentClick="TogglePin" />

@@ -30,11 +30,13 @@
 
                 <MudTextField @bind-Value="_username" Label="Nom d'usuari"
                               Variant="Variant.Outlined" Class="mb-3"
+                              Immediate="true"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Person"
                               @onkeydown="OnKeyDown" />
                 <MudTextField @bind-Value="_password" Label="Contrasenya"
                               Variant="Variant.Outlined" Class="mb-5"
+                              Immediate="true"
                               InputType="@_pwdType"
                               Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
                               OnAdornmentClick="TogglePassword"
