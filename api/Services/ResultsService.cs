@@ -52,10 +52,10 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
     private async Task<ActivityResultsDto?> ComputeResultsAsync(int activityId, int professorId, bool isAdmin)
     {
         var activity = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.Class.ProfessorId == professorId));
 
         if (activity is null) return null;
 
@@ -119,11 +119,13 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 peerDtos, avgCoScores, avgGlobal, autAvgGlobal, peerEvals.Count));
         }
 
-        var actDto = new ActivityDto(activity.Id, activity.ClassId, activity.Class.Name,
-            activity.Class.AcademicYear, activity.Class.Professor.NomComplet, activity.Name, activity.Description,
-            activity.IsOpen, activity.CreatedAt,
-            activity.Groups.Count,
-            allMembers.Count);
+        var actDto = new ActivityDto(
+            activity.Id,
+            activity.ModuleId, activity.Module.Code, activity.Module.Name,
+            activity.Module.ClassId, activity.Module.Class.Name, activity.Module.Class.AcademicYear,
+            activity.Module.Class.Professor.NomComplet,
+            activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
+            activity.Groups.Count, allMembers.Count);
 
         var criteriaDto = Data.Criteria.All
             .Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
@@ -148,10 +150,10 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
     private async Task<ActivityChartDto?> ComputeChartAsync(int activityId, int professorId, bool isAdmin)
     {
         var activity = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.Class.ProfessorId == professorId));
         if (activity is null) return null;
 
         var criteriaAll = Data.Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
@@ -219,7 +221,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
 
         return new ActivityChartDto(
             activity.Id, activity.Name,
-            activity.Class.Name, activity.Class.AcademicYear,
+            activity.Module.Class.Name, activity.Module.Class.AcademicYear,
             groupCharts, criteriaAll, criteriaDetail);
     }
 

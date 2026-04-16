@@ -34,12 +34,12 @@ public class ActivityService(AppDbContext db) : IActivityService
     public async Task<List<ActivityDto>> GetAllAsync(int? professorId)
     {
         var q = db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .AsQueryable();
 
         if (professorId.HasValue)
-            q = q.Where(a => a.Class.ProfessorId == professorId.Value);
+            q = q.Where(a => a.Module.Class.ProfessorId == professorId.Value);
 
         return await q.OrderByDescending(a => a.CreatedAt)
             .Select(a => ToDto(a))
@@ -49,41 +49,44 @@ public class ActivityService(AppDbContext db) : IActivityService
     public async Task<ActivityDto?> GetByIdAsync(int id, int? professorId)
     {
         var a = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == id &&
-                (!professorId.HasValue || a.Class.ProfessorId == professorId.Value));
+                (!professorId.HasValue || a.Module.Class.ProfessorId == professorId.Value));
 
         return a is null ? null : ToDto(a);
     }
 
     public async Task<ActivityDto> CreateAsync(int professorId, bool isAdmin, CreateActivityRequest req)
     {
-        var classe = await db.Classes
-            .Include(c => c.Professor)
-            .FirstOrDefaultAsync(c => c.Id == req.ClassId && (isAdmin || c.ProfessorId == professorId))
-            ?? throw new UnauthorizedAccessException("La classe no pertany a aquest professor.");
+        var modul = await db.Modules
+            .Include(m => m.Class).ThenInclude(c => c.Professor)
+            .FirstOrDefaultAsync(m => m.Id == req.ModuleId && (isAdmin || m.Class.ProfessorId == professorId))
+            ?? throw new UnauthorizedAccessException("El mòdul no pertany a aquest professor.");
 
         var activity = new Activity
         {
-            ClassId     = req.ClassId,
+            ModuleId    = req.ModuleId,
             Name        = req.Name.Trim(),
             Description = req.Description?.Trim()
         };
         db.Activities.Add(activity);
         await db.SaveChangesAsync();
 
-        return new ActivityDto(activity.Id, activity.ClassId, classe.Name, classe.AcademicYear, classe.Professor.NomComplet,
+        return new ActivityDto(activity.Id,
+            modul.Id, modul.Code, modul.Name,
+            modul.ClassId, modul.Class.Name, modul.Class.AcademicYear,
+            modul.Class.Professor.NomComplet,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt, 0, 0);
     }
 
     public async Task<ActivityDto?> UpdateAsync(int id, int professorId, bool isAdmin, UpdateActivityRequest req)
     {
         var a = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == id &&
-                (isAdmin || a.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.Class.ProfessorId == professorId));
         if (a is null) return null;
 
         a.Name        = req.Name.Trim();
@@ -94,9 +97,9 @@ public class ActivityService(AppDbContext db) : IActivityService
 
     public async Task<bool> DeleteAsync(int id, int professorId, bool isAdmin)
     {
-        var a = await db.Activities.Include(a => a.Class)
+        var a = await db.Activities.Include(a => a.Module).ThenInclude(m => m.Class)
             .FirstOrDefaultAsync(a => a.Id == id &&
-                (isAdmin || a.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.Class.ProfessorId == professorId));
         if (a is null) return false;
         db.Activities.Remove(a);
         await db.SaveChangesAsync();
@@ -106,10 +109,10 @@ public class ActivityService(AppDbContext db) : IActivityService
     public async Task<ActivityDto?> ToggleOpenAsync(int id, int professorId, bool isAdmin)
     {
         var a = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == id &&
-                (isAdmin || a.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.Class.ProfessorId == professorId));
         if (a is null) return null;
 
         a.IsOpen = !a.IsOpen;
@@ -122,15 +125,15 @@ public class ActivityService(AppDbContext db) : IActivityService
     public async Task<ActivityDto> DuplicateAsync(int activityId, int professorId, bool isAdmin, DuplicateActivityRequest req)
     {
         var original = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Class.ProfessorId == professorId))
+                (isAdmin || a.Module.Class.ProfessorId == professorId))
             ?? throw new UnauthorizedAccessException("Activitat no trobada o sense permisos.");
 
         var nova = new Activity
         {
-            ClassId     = original.ClassId,
+            ModuleId    = original.ModuleId,
             Name        = req.Name.Trim(),
             Description = req.Description?.Trim(),
             IsOpen      = true
@@ -149,8 +152,10 @@ public class ActivityService(AppDbContext db) : IActivityService
         await db.SaveChangesAsync();
 
         var numStudents = original.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count();
-        return new ActivityDto(nova.Id, nova.ClassId,
-            original.Class.Name, original.Class.AcademicYear, original.Class.Professor.NomComplet,
+        return new ActivityDto(nova.Id,
+            original.Module.Id, original.Module.Code, original.Module.Name,
+            original.Module.ClassId, original.Module.Class.Name, original.Module.Class.AcademicYear,
+            original.Module.Class.Professor.NomComplet,
             nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
             original.Groups.Count, numStudents);
     }
@@ -158,10 +163,10 @@ public class ActivityService(AppDbContext db) : IActivityService
     public async Task<(byte[] Content, string FileName)?> ExportGroupsAsync(int activityId, int professorId, bool isAdmin)
     {
         var activity = await db.Activities
-            .Include(a => a.Class)
+            .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.Class.ProfessorId == professorId));
         if (activity is null) return null;
 
         var sb = new System.Text.StringBuilder();
@@ -178,10 +183,10 @@ public class ActivityService(AppDbContext db) : IActivityService
     public async Task<ImportGroupsResult> ImportGroupsAsync(int activityId, int professorId, bool isAdmin, string csvContent)
     {
         var activity = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Students)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Students)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Class.ProfessorId == professorId))
+                (isAdmin || a.Module.Class.ProfessorId == professorId))
             ?? throw new UnauthorizedAccessException("Activitat no trobada o sense permisos.");
 
         var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -197,7 +202,7 @@ public class ActivityService(AppDbContext db) : IActivityService
             var email     = parts[1].Trim();
             if (string.IsNullOrEmpty(groupName) || string.IsNullOrEmpty(email)) continue;
 
-            var student = activity.Class.Students.FirstOrDefault(s =>
+            var student = activity.Module.Class.Students.FirstOrDefault(s =>
                 s.CorreuElectronic != null &&
                 s.CorreuElectronic.Equals(email, StringComparison.OrdinalIgnoreCase));
 
@@ -301,8 +306,9 @@ public class ActivityService(AppDbContext db) : IActivityService
     public async Task<List<StudentActivityDto>> GetStudentActivitiesAsync(int studentId, int classId)
     {
         var activities = await db.Activities
-            .Where(a => a.ClassId == classId)
+            .Where(a => a.Module.ClassId == classId)
             .Where(a => a.Groups.Any(g => g.Members.Any(m => m.StudentId == studentId)))
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .OrderByDescending(a => a.IsOpen)
             .ThenByDescending(a => a.CreatedAt)
@@ -330,7 +336,11 @@ public class ActivityService(AppDbContext db) : IActivityService
     {
         var numGroups   = a.Groups.Count;
         var numStudents = a.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count();
-        return new ActivityDto(a.Id, a.ClassId, a.Class.Name, a.Class.AcademicYear, a.Class.Professor.NomComplet,
+        return new ActivityDto(
+            a.Id,
+            a.ModuleId, a.Module.Code, a.Module.Name,
+            a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
+            a.Module.Class.Professor.NomComplet,
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents);
     }
 

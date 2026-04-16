@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AutoCo.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -19,8 +19,9 @@ namespace AutoCo.Api.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Username = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Nom = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Cognoms = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    CorreuElectronic = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
                     IsAdmin = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
@@ -52,22 +53,21 @@ namespace AutoCo.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Activities",
+                name: "Modules",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ClassId = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsOpen = table.Column<bool>(type: "bit", nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(4)", maxLength: 4, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Activities", x => x.Id);
+                    table.PrimaryKey("PK_Modules", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Activities_Classes_ClassId",
+                        name: "FK_Modules_Classes_ClassId",
                         column: x => x.ClassId,
                         principalTable: "Classes",
                         principalColumn: "Id",
@@ -81,8 +81,11 @@ namespace AutoCo.Api.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     ClassId = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Pin = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    NumLlista = table.Column<int>(type: "int", nullable: false),
+                    Nom = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Cognoms = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    CorreuElectronic = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Pin = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -97,21 +100,24 @@ namespace AutoCo.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Groups",
+                name: "Activities",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ActivityId = table.Column<int>(type: "int", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                    ModuleId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsOpen = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Groups", x => x.Id);
+                    table.PrimaryKey("PK_Activities", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Groups_Activities_ActivityId",
-                        column: x => x.ActivityId,
-                        principalTable: "Activities",
+                        name: "FK_Activities_Modules_ModuleId",
+                        column: x => x.ModuleId,
+                        principalTable: "Modules",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -151,6 +157,47 @@ namespace AutoCo.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Groups",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ActivityId = table.Column<int>(type: "int", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Groups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Groups_Activities_ActivityId",
+                        column: x => x.ActivityId,
+                        principalTable: "Activities",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "EvaluationScores",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EvaluationId = table.Column<int>(type: "int", nullable: false),
+                    CriteriaKey = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    Score = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EvaluationScores", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_EvaluationScores_Evaluations_EvaluationId",
+                        column: x => x.EvaluationId,
+                        principalTable: "Evaluations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "GroupMembers",
                 columns: table => new
                 {
@@ -175,31 +222,10 @@ namespace AutoCo.Api.Migrations
                         principalColumn: "Id");
                 });
 
-            migrationBuilder.CreateTable(
-                name: "EvaluationScores",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    EvaluationId = table.Column<int>(type: "int", nullable: false),
-                    CriteriaKey = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Score = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_EvaluationScores", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_EvaluationScores_Evaluations_EvaluationId",
-                        column: x => x.EvaluationId,
-                        principalTable: "Evaluations",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
             migrationBuilder.CreateIndex(
-                name: "IX_Activities_ClassId",
+                name: "IX_Activities_ModuleId",
                 table: "Activities",
-                column: "ClassId");
+                column: "ModuleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Classes_ProfessorId",
@@ -245,6 +271,12 @@ namespace AutoCo.Api.Migrations
                 column: "ActivityId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Modules_ClassId_Code",
+                table: "Modules",
+                columns: new[] { "ClassId", "Code" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Professors_Username",
                 table: "Professors",
                 column: "Username",
@@ -276,6 +308,9 @@ namespace AutoCo.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "Activities");
+
+            migrationBuilder.DropTable(
+                name: "Modules");
 
             migrationBuilder.DropTable(
                 name: "Classes");

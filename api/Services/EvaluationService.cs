@@ -16,7 +16,7 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
     public async Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId)
     {
         var activity = await db.Activities
-            .Include(a => a.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == activityId);
 
@@ -46,9 +46,13 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
             return new EvaluationEntryDto(s.Id, s.NomComplet, s.Id == studentId, scores, eval?.Comment);
         }).ToList();
 
-        var actDto   = new ActivityDto(activity.Id, activity.ClassId, activity.Class.Name,
-            activity.Class.AcademicYear, activity.Class.Professor.NomComplet, activity.Name, activity.Description,
-            activity.IsOpen, activity.CreatedAt, activity.Groups.Count,
+        var actDto   = new ActivityDto(
+            activity.Id,
+            activity.ModuleId, activity.Module.Code, activity.Module.Name,
+            activity.Module.ClassId, activity.Module.Class.Name, activity.Module.Class.AcademicYear,
+            activity.Module.Class.Professor.NomComplet,
+            activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
+            activity.Groups.Count,
             activity.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count());
 
         var groupDto = new GroupDto(group.Id, group.ActivityId, group.Name,

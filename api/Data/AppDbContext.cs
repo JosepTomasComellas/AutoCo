@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Professor>       Professors       => Set<Professor>();
     public DbSet<Class>           Classes          => Set<Class>();
+    public DbSet<Module>          Modules          => Set<Module>();
     public DbSet<Student>         Students         => Set<Student>();
     public DbSet<Activity>        Activities       => Set<Activity>();
     public DbSet<Group>           Groups           => Set<Group>();
@@ -48,11 +49,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Ignore(s => s.NomComplet);
         });
 
-        // Activity → Class (1:N, cascade)
+        // Module → Class (1:N, cascade)
+        b.Entity<Module>(e => {
+            e.HasOne(m => m.Class)
+             .WithMany(c => c.Modules)
+             .HasForeignKey(m => m.ClassId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.Property(m => m.Code).HasMaxLength(4);
+            e.Property(m => m.Name).HasMaxLength(200);
+            e.HasIndex(m => new { m.ClassId, m.Code }).IsUnique();
+        });
+
+        // Activity → Module (1:N, cascade)
         b.Entity<Activity>(e => {
-            e.HasOne(a => a.Class)
-             .WithMany(c => c.Activities)
-             .HasForeignKey(a => a.ClassId)
+            e.HasOne(a => a.Module)
+             .WithMany(m => m.Activities)
+             .HasForeignKey(a => a.ModuleId)
              .OnDelete(DeleteBehavior.Cascade);
             e.Property(a => a.Name).HasMaxLength(300);
         });

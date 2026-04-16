@@ -93,6 +93,20 @@ public class ApiClient
         return (bytes, fileName.Trim('"'));
     }
 
+    // ── Mòduls ────────────────────────────────────────────────────────────────
+
+    public Task<List<ModuleDto>?> GetModulesAsync(int classId) =>
+        GetAsync<List<ModuleDto>>($"/api/classes/{classId}/modules");
+
+    public Task<ModuleDto?> CreateModuleAsync(int classId, CreateModuleRequest req) =>
+        PostAsync<ModuleDto>($"/api/classes/{classId}/modules", req);
+
+    public Task<ModuleDto?> UpdateModuleAsync(int classId, int id, UpdateModuleRequest req) =>
+        PutAsync<ModuleDto>($"/api/classes/{classId}/modules/{id}", req);
+
+    public Task<bool> DeleteModuleAsync(int classId, int id) =>
+        DeleteAsync($"/api/classes/{classId}/modules/{id}");
+
     // ── Activitats ────────────────────────────────────────────────────────────
 
     public Task<List<ActivityDto>?> GetActivitiesAsync() =>

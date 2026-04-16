@@ -36,6 +36,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthService,       AuthService>();
 builder.Services.AddScoped<IProfessorService,  ProfessorService>();
 builder.Services.AddScoped<IClassService,      ClassService>();
+builder.Services.AddScoped<IModuleService,     ModuleService>();
 builder.Services.AddScoped<IActivityService,   ActivityService>();
 builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IResultsService,    ResultsService>();
@@ -299,6 +300,57 @@ app.MapGet("/api/students/export", async (IClassService svc, ClaimsPrincipal use
     if (result is null) return Results.NotFound();
     var (content, fileName) = result.Value;
     return Results.File(content, "text/csv; charset=utf-8", fileName);
+}).RequireAuthorization();
+
+// ════════════════════════════════════════════════════════════════════════════
+// MÒDULS
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/classes/{classId:int}/modules", async (int classId,
+    IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var list = await svc.GetByClassAsync(classId, GetUserId(user), IsAdmin(user));
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapGet("/api/classes/{classId:int}/modules/{id:int}", async (int classId, int id,
+    IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var m = await svc.GetByIdAsync(id, GetUserId(user), IsAdmin(user));
+    return m is null ? Results.NotFound() : Results.Ok(m);
+}).RequireAuthorization();
+
+app.MapPost("/api/classes/{classId:int}/modules", async (int classId,
+    CreateModuleRequest req, IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    try
+    {
+        var m = await svc.CreateAsync(classId, GetUserId(user), IsAdmin(user), req);
+        return Results.Created($"/api/classes/{classId}/modules/{m.Id}", m);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapPut("/api/classes/{classId:int}/modules/{id:int}", async (int classId, int id,
+    UpdateModuleRequest req, IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var m = await svc.UpdateAsync(id, GetUserId(user), IsAdmin(user), req);
+    return m is null ? Results.NotFound() : Results.Ok(m);
+}).RequireAuthorization();
+
+app.MapDelete("/api/classes/{classId:int}/modules/{id:int}", async (int classId, int id,
+    IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var ok = await svc.DeleteAsync(id, GetUserId(user), IsAdmin(user));
+    return ok ? Results.NoContent() : Results.NotFound();
 }).RequireAuthorization();
 
 // ════════════════════════════════════════════════════════════════════════════

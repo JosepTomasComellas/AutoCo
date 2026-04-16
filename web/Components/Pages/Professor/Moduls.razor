@@ -1,0 +1,176 @@
+@page "/professor/moduls/{ClassId:int}"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+
+<PageTitle>Mòduls – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+@if (_classe is null && !_loading)
+{
+    <MudAlert Severity="Severity.Error">Classe no trobada.</MudAlert>
+    <MudButton Href="/professor/classes" Class="mt-2">← Tornar</MudButton>
+    return;
+}
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/classes"
+               Variant="Variant.Text" Color="Color.Default">Classes</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Class="mr-1" />
+    <MudStack Spacing="0">
+        <MudText Typo="Typo.h5" Style="font-weight:700">Mòduls – @_classe?.Name</MudText>
+        @if (_classe?.AcademicYear is not null)
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@_classe.AcademicYear</MudText>
+        }
+    </MudStack>
+</MudStack>
+
+@if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" /> }
+
+<MudGrid>
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:600">
+                        @(_editId == 0 ? "Nou mòdul" : "Editar mòdul")
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTextField @bind-Value="_code" Label="Codi (4 car.)" Variant="Variant.Outlined"
+                              Class="mb-3" MaxLength="4" Immediate="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Tag" />
+                <MudTextField @bind-Value="_name" Label="Nom del mòdul" Variant="Variant.Outlined"
+                              Immediate="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.MenuBook" />
+            </MudCardContent>
+            <MudCardActions Class="px-4 pb-4 gap-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           OnClick="SaveAsync" Disabled="_saving"
+                           StartIcon="@Icons.Material.Filled.Save">
+                    @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    @(_editId == 0 ? "Afegir" : "Guardar")
+                </MudButton>
+                @if (_editId != 0)
+                {
+                    <MudButton Variant="Variant.Text" OnClick="CancelEdit">Cancel·lar</MudButton>
+                }
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="8">
+        @if (!_loading && _moduls.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
+                Encara no hi ha mòduls. Afegeix-ne un per començar.
+            </MudAlert>
+        }
+        <MudStack Spacing="2">
+            @foreach (var m in _moduls)
+            {
+                <MudPaper Elevation="2" Class="pa-3">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                        <MudChip T="string" Color="Color.Primary" Variant="Variant.Filled"
+                                 Size="Size.Small" Style="font-weight:700;font-family:monospace">
+                            @m.Code
+                        </MudChip>
+                        <MudStack Spacing="0" Style="flex:1;min-width:0">
+                            <MudText Typo="Typo.subtitle1" Style="font-weight:600">@m.Name</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @m.ActivityCount activitat@(m.ActivityCount != 1 ? "s" : "")
+                            </MudText>
+                        </MudStack>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Add"
+                                   Href="@($"/professor/nova-activitat?moduleId={m.Id}")">
+                            Nova activitat
+                        </MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                       Color="Color.Default" title="Editar"
+                                       OnClick="() => StartEdit(m)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error" title="Eliminar"
+                                       OnClick="() => DeleteAsync(m)" />
+                    </MudStack>
+                </MudPaper>
+            }
+        </MudStack>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public int ClassId { get; set; }
+
+    private ClassDto?        _classe  = null;
+    private List<ModuleDto>  _moduls  = [];
+    private bool _loading = true;
+    private bool _saving  = false;
+
+    private string _code   = "";
+    private string _name   = "";
+    private int    _editId = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+        _classe = await Api.GetClassAsync(ClassId);
+        _moduls = await Api.GetModulesAsync(ClassId) ?? [];
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_code) || _code.Trim().Length > 4 ||
+            string.IsNullOrWhiteSpace(_name))
+        {
+            Snackbar.Add("El codi (màx. 4 car.) i el nom són obligatoris.", Severity.Warning);
+            return;
+        }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        if (_editId == 0)
+        {
+            var m = await Api.CreateModuleAsync(ClassId, new CreateModuleRequest(_code.Trim(), _name.Trim()));
+            if (m is not null) { _moduls.Add(m); _moduls = [.. _moduls.OrderBy(x => x.Code)]; _code = ""; _name = ""; Snackbar.Add($"Mòdul «{m.Code} – {m.Name}» creat.", Severity.Success); }
+            else Snackbar.Add("Error en crear el mòdul.", Severity.Error);
+        }
+        else
+        {
+            var m = await Api.UpdateModuleAsync(ClassId, _editId, new UpdateModuleRequest(_code.Trim(), _name.Trim()));
+            if (m is not null)
+            {
+                var idx = _moduls.FindIndex(x => x.Id == _editId);
+                if (idx >= 0) _moduls[idx] = m;
+                _moduls = [.. _moduls.OrderBy(x => x.Code)];
+                CancelEdit();
+                Snackbar.Add("Mòdul actualitzat.", Severity.Success);
+            }
+            else Snackbar.Add("Error en actualitzar el mòdul.", Severity.Error);
+        }
+        _saving = false;
+    }
+
+    private void StartEdit(ModuleDto m) { _editId = m.Id; _code = m.Code; _name = m.Name; }
+    private void CancelEdit() { _editId = 0; _code = ""; _name = ""; }
+
+    private async Task DeleteAsync(ModuleDto m)
+    {
+        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
+            $"Eliminar el mòdul «{m.Code} – {m.Name}»? S'eliminaran totes les seves activitats.",
+            yesText: "Eliminar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.DeleteModuleAsync(ClassId, m.Id);
+        if (ok) { _moduls.RemoveAll(x => x.Id == m.Id); Snackbar.Add("Mòdul eliminat.", Severity.Info); }
+        else Snackbar.Add("Error en eliminar el mòdul.", Severity.Error);
+    }
+}

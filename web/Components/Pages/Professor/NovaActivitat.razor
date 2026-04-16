@@ -25,9 +25,10 @@
             </CardHeaderContent>
         </MudCardHeader>
         <MudCardContent>
-            <MudSelect T="int" @bind-Value="_classId" Label="Classe" Variant="Variant.Outlined"
+            <MudSelect T="int" Value="_classId" Label="Classe" Variant="Variant.Outlined"
                        Class="mb-4" Adornment="Adornment.Start"
-                       AdornmentIcon="@Icons.Material.Filled.Class">
+                       AdornmentIcon="@Icons.Material.Filled.Class"
+                       ValueChanged="OnClassChanged">
                 <MudSelectItem T="int" Value="0">-- Selecciona la classe --</MudSelectItem>
                 @foreach (var c in _classes)
                 {
@@ -36,11 +37,32 @@
                     </MudSelectItem>
                 }
             </MudSelect>
+
+            <MudSelect T="int" @bind-Value="_moduleId" Label="Mòdul" Variant="Variant.Outlined"
+                       Class="mb-4" Adornment="Adornment.Start"
+                       Disabled="_classId == 0 || _loadingModules"
+                       AdornmentIcon="@Icons.Material.Filled.MenuBook">
+                <MudSelectItem T="int" Value="0">-- Selecciona el mòdul --</MudSelectItem>
+                @foreach (var m in _modules)
+                {
+                    <MudSelectItem T="int" Value="@m.Id">
+                        @m.Code – @m.Name
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            @if (_classId > 0 && !_loadingModules && _modules.Count == 0)
+            {
+                <MudAlert Severity="Severity.Warning" Class="mb-3" Dense="true">
+                    Aquesta classe no té mòduls.
+                    <MudLink Href="@($"/professor/moduls/{_classId}")">Afegir mòduls</MudLink>
+                </MudAlert>
+            }
+
             <MudTextField @bind-Value="_nom" Label="Nom de l'activitat" Variant="Variant.Outlined"
-                          Class="mb-4" Adornment="Adornment.Start"
+                          Class="mb-4" Immediate="true" Adornment="Adornment.Start"
                           AdornmentIcon="@Icons.Material.Filled.Assignment" />
             <MudTextField @bind-Value="_desc" Label="Descripció (opcional)" Variant="Variant.Outlined"
-                          Lines="3" />
+                          Lines="3" Immediate="true" />
         </MudCardContent>
         <MudCardActions Class="px-4 pb-4">
             <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
@@ -54,30 +76,62 @@
 </MudContainer>
 
 @code {
-    private List<ClassDto> _classes = [];
-    private int    _classId = 0;
-    private string _nom     = "";
-    private string _desc    = "";
-    private bool   _saving  = false;
+    [SupplyParameterFromQuery] public int ModuleId { get; set; }
+
+    private List<ClassDto>  _classes        = [];
+    private List<ModuleDto> _modules        = [];
+    private int    _classId       = 0;
+    private int    _moduleId      = 0;
+    private string _nom           = "";
+    private string _desc          = "";
+    private bool   _saving        = false;
+    private bool   _loadingModules = false;
 
     protected override async Task OnInitializedAsync()
     {
         if (!UserState.IsProfessor) return;
         Api.SetToken(UserState.Token!);
         _classes = await Api.GetClassesAsync() ?? [];
+
+        if (ModuleId > 0)
+        {
+            foreach (var c in _classes)
+            {
+                var mods = await Api.GetModulesAsync(c.Id) ?? [];
+                if (mods.Any(m => m.Id == ModuleId))
+                {
+                    _classId = c.Id;
+                    _modules = mods;
+                    _moduleId = ModuleId;
+                    break;
+                }
+            }
+        }
+    }
+
+    private async Task OnClassChanged(int classId)
+    {
+        _classId  = classId;
+        _moduleId = 0;
+        _modules  = [];
+        if (classId <= 0) return;
+        _loadingModules = true;
+        Api.SetToken(UserState.Token!);
+        _modules = await Api.GetModulesAsync(classId) ?? [];
+        _loadingModules = false;
     }
 
     private async Task CreateAsync()
     {
-        if (_classId <= 0 || string.IsNullOrWhiteSpace(_nom))
+        if (_moduleId <= 0 || string.IsNullOrWhiteSpace(_nom))
         {
-            Snackbar.Add("Selecciona una classe i indica el nom.", Severity.Warning);
+            Snackbar.Add("Selecciona un mòdul i indica el nom.", Severity.Warning);
             return;
         }
         _saving = true;
         Api.SetToken(UserState.Token!);
         var act = await Api.CreateActivityAsync(new CreateActivityRequest(
-            _classId, _nom.Trim(),
+            _moduleId, _nom.Trim(),
             string.IsNullOrWhiteSpace(_desc) ? null : _desc.Trim()));
         _saving = false;
         if (act is not null)

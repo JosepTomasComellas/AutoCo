@@ -100,6 +100,11 @@
                                         </MudStack>
                                     </MudStack>
                                     <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
+                                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary"
+                                                   StartIcon="@Icons.Material.Filled.MenuBook"
+                                                   Href="@($"/professor/moduls/{c.Id}")" Class="mr-1">
+                                            Mòduls
+                                        </MudButton>
                                         <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
                                                    StartIcon="@Icons.Material.Filled.People"
                                                    Href="@($"/professor/alumnes/{c.Id}")">

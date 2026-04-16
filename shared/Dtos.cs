@@ -51,14 +51,24 @@ public record SendPinResult(bool Sent, string? Reason);
 public record SendAllResult(int Sent, int Skipped, List<string> Details);
 public record SendCredentialsResult(bool Sent, string? Reason);
 
+// ─── Mòduls ──────────────────────────────────────────────────────────────────
+
+public record ModuleDto(
+    int Id, int ClassId, string ClassName, string? ClassAcademicYear,
+    string Code, string Name, int ActivityCount);
+public record CreateModuleRequest(string Code, string Name);
+public record UpdateModuleRequest(string Code, string Name);
+
 // ─── Activitats ──────────────────────────────────────────────────────────────
 
 public record ActivityDto(
-    int Id, int ClassId, string ClassName, string? ClassAcademicYear, string ProfessorName,
+    int Id,
+    int ModuleId, string ModuleCode, string ModuleName,
+    int ClassId, string ClassName, string? ClassAcademicYear, string ProfessorName,
     string Name, string? Description, bool IsOpen,
     DateTime CreatedAt, int NumGroups, int NumStudents);
 
-public record CreateActivityRequest(int ClassId, string Name, string? Description);
+public record CreateActivityRequest(int ModuleId, string Name, string? Description);
 public record UpdateActivityRequest(string Name, string? Description);
 public record DuplicateActivityRequest(string Name, string? Description);
 public record ImportGroupsRequest(string CsvContent);

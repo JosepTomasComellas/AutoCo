@@ -30,9 +30,6 @@ namespace AutoCo.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("ClassId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -42,6 +39,9 @@ namespace AutoCo.Api.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
+                    b.Property<int>("ModuleId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -49,7 +49,7 @@ namespace AutoCo.Api.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ClassId");
+                    b.HasIndex("ModuleId");
 
                     b.ToTable("Activities");
                 });
@@ -195,6 +195,38 @@ namespace AutoCo.Api.Migrations
                     b.ToTable("GroupMembers");
                 });
 
+            modelBuilder.Entity("AutoCo.Api.Data.Models.Module", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClassId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("nvarchar(4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClassId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("Modules");
+                });
+
             modelBuilder.Entity("AutoCo.Api.Data.Models.Professor", b =>
                 {
                     b.Property<int>("Id")
@@ -285,13 +317,13 @@ namespace AutoCo.Api.Migrations
 
             modelBuilder.Entity("AutoCo.Api.Data.Models.Activity", b =>
                 {
-                    b.HasOne("AutoCo.Api.Data.Models.Class", "Class")
+                    b.HasOne("AutoCo.Api.Data.Models.Module", "Module")
                         .WithMany("Activities")
-                        .HasForeignKey("ClassId")
+                        .HasForeignKey("ModuleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Class");
+                    b.Navigation("Module");
                 });
 
             modelBuilder.Entity("AutoCo.Api.Data.Models.Class", b =>
@@ -373,6 +405,17 @@ namespace AutoCo.Api.Migrations
                     b.Navigation("Student");
                 });
 
+            modelBuilder.Entity("AutoCo.Api.Data.Models.Module", b =>
+                {
+                    b.HasOne("AutoCo.Api.Data.Models.Class", "Class")
+                        .WithMany("Modules")
+                        .HasForeignKey("ClassId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Class");
+                });
+
             modelBuilder.Entity("AutoCo.Api.Data.Models.Student", b =>
                 {
                     b.HasOne("AutoCo.Api.Data.Models.Class", "Class")
@@ -391,7 +434,7 @@ namespace AutoCo.Api.Migrations
 
             modelBuilder.Entity("AutoCo.Api.Data.Models.Class", b =>
                 {
-                    b.Navigation("Activities");
+                    b.Navigation("Modules");
 
                     b.Navigation("Students");
                 });
@@ -404,6 +447,11 @@ namespace AutoCo.Api.Migrations
             modelBuilder.Entity("AutoCo.Api.Data.Models.Group", b =>
                 {
                     b.Navigation("Members");
+                });
+
+            modelBuilder.Entity("AutoCo.Api.Data.Models.Module", b =>
+                {
+                    b.Navigation("Activities");
                 });
 
             modelBuilder.Entity("AutoCo.Api.Data.Models.Professor", b =>
