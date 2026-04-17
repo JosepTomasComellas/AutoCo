@@ -288,12 +288,10 @@
         if (_draggingFromGroupId.HasValue)
             await Api.RemoveMemberAsync(ActivityId, _draggingFromGroupId.Value, _draggingStudentId.Value);
 
-        var ok = await Api.AddMemberAsync(ActivityId, groupId, _draggingStudentId.Value);
+        await Api.AddMemberAsync(ActivityId, groupId, _draggingStudentId.Value);
 
         OnDragEnd();
         _dragBusy = false;
-
-        if (!ok) Snackbar.Add("No s'ha pogut assignar l'alumne.", Severity.Warning);
         await LoadAsync();
     }
 
