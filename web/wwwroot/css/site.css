@@ -39,8 +39,9 @@ html { scroll-behavior: smooth; }
     transition: border-color .15s, background .15s;
 }
 .dnd-zone--over {
-    border-color: #CC0000;
-    background: rgba(204,0,0,.06);
+    border-color: #16a34a;
+    border-style: solid;
+    background: rgba(22,163,74,.08);
 }
 .dnd-zone--source {
     opacity: .7;
