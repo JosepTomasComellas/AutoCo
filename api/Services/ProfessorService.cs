@@ -30,11 +30,11 @@ public class ProfessorService(AppDbContext db, IEmailService email) : IProfessor
 
     public async Task<ProfessorDto> CreateAsync(CreateProfessorRequest req)
     {
-        var password = GeneratePassword();
+        var password = PasswordHelper.Generate();
         var professor = new Professor
         {
             Email        = req.Email.Trim().ToLower(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+            PasswordHash = PasswordHelper.Hash(password),
             Nom          = req.Nom.Trim(),
             Cognoms      = req.Cognoms.Trim(),
             IsAdmin      = req.IsAdmin
@@ -55,7 +55,7 @@ public class ProfessorService(AppDbContext db, IEmailService email) : IProfessor
         professor.IsAdmin = req.IsAdmin;
 
         if (!string.IsNullOrWhiteSpace(req.NewPassword))
-            professor.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            professor.PasswordHash = PasswordHelper.Hash(req.NewPassword);
 
         await db.SaveChangesAsync();
         return ToDto(professor);
@@ -78,8 +78,8 @@ public class ProfessorService(AppDbContext db, IEmailService email) : IProfessor
         if (professor is null) return new SendCredentialsResult(false, "Professor no trobat.");
         if (!email.IsEnabled) return new SendCredentialsResult(false, "Correu no configurat.");
 
-        var newPassword = GeneratePassword();
-        professor.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        var newPassword = PasswordHelper.Generate();
+        professor.PasswordHash = PasswordHelper.Hash(newPassword);
         await db.SaveChangesAsync();
 
         var sent = await email.SendProfessorCredentialsAsync(professor.Email, professor.NomComplet, newPassword);
@@ -94,8 +94,8 @@ public class ProfessorService(AppDbContext db, IEmailService email) : IProfessor
 
         foreach (var p in professors)
         {
-            var newPassword = GeneratePassword();
-            p.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            var newPassword = PasswordHelper.Generate();
+            p.PasswordHash = PasswordHelper.Hash(newPassword);
             await db.SaveChangesAsync();
 
             if (!email.IsEnabled) { skipped++; continue; }
@@ -108,10 +108,4 @@ public class ProfessorService(AppDbContext db, IEmailService email) : IProfessor
     private static ProfessorDto ToDto(Professor p) => new(
         p.Id, p.Email, p.Nom, p.Cognoms, p.NomComplet, p.IsAdmin, p.CreatedAt);
 
-    private static string GeneratePassword()
-    {
-        const string chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
-        return new string(Enumerable.Range(0, 10)
-            .Select(_ => chars[Random.Shared.Next(chars.Length)]).ToArray());
-    }
 }

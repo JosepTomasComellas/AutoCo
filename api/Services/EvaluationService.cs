@@ -83,63 +83,63 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
 
         var validMemberIds = group.Members.Select(m => m.StudentId).ToHashSet();
 
-        foreach (var entry in req.Evaluations)
+        // Carregar totes les avaluacions existents d'un sol cop (evita N+1 i race conditions)
+        var existingEvals = await db.Evaluations
+            .Include(e => e.Scores)
+            .Where(e => e.ActivityId == activityId && e.EvaluatorId == studentId)
+            .ToListAsync();
+        var evalByEvaluated = existingEvals.ToDictionary(e => e.EvaluatedId);
+
+        await using var tx = await db.Database.BeginTransactionAsync();
+        try
         {
-            // Només es pot avaluar membres del grup
-            if (!validMemberIds.Contains(entry.EvaluatedId)) continue;
-
-            var isSelf = entry.EvaluatedId == studentId;
-
-            // Inserir o actualitzar l'avaluació
-            var eval = await db.Evaluations
-                .Include(e => e.Scores)
-                .FirstOrDefaultAsync(e => e.ActivityId == activityId
-                    && e.EvaluatorId == studentId
-                    && e.EvaluatedId == entry.EvaluatedId);
-
-            if (eval is null)
+            foreach (var entry in req.Evaluations)
             {
-                eval = new Evaluation
+                if (!validMemberIds.Contains(entry.EvaluatedId)) continue;
+
+                var isSelf = entry.EvaluatedId == studentId;
+
+                if (!evalByEvaluated.TryGetValue(entry.EvaluatedId, out var eval))
                 {
-                    ActivityId  = activityId,
-                    EvaluatorId = studentId,
-                    EvaluatedId = entry.EvaluatedId,
-                    IsSelf      = isSelf,
-                    Comment     = entry.Comment?.Trim(),
-                    UpdatedAt   = DateTime.UtcNow
-                };
-                db.Evaluations.Add(eval);
-                await db.SaveChangesAsync(); // necessitem l'Id
-            }
-            else
-            {
-                eval.Comment   = entry.Comment?.Trim();
-                eval.UpdatedAt = DateTime.UtcNow;
-            }
-
-            // Actualitzar puntuacions per criteri
-            foreach (var (key, score) in entry.Scores)
-            {
-                if (!ValidScores.Contains(score)) continue;
-
-                var existing = eval.Scores.FirstOrDefault(s => s.CriteriaKey == key);
-                if (existing is not null)
-                {
-                    existing.Score = score;
+                    eval = new Evaluation
+                    {
+                        ActivityId  = activityId,
+                        EvaluatorId = studentId,
+                        EvaluatedId = entry.EvaluatedId,
+                        IsSelf      = isSelf,
+                        Comment     = entry.Comment?.Trim(),
+                        UpdatedAt   = DateTime.UtcNow
+                    };
+                    db.Evaluations.Add(eval);
+                    await db.SaveChangesAsync(); // necessitem l'Id per als scores
+                    evalByEvaluated[entry.EvaluatedId] = eval;
                 }
                 else
                 {
-                    db.EvaluationScores.Add(new EvaluationScore
-                    {
-                        EvaluationId = eval.Id,
-                        CriteriaKey  = key,
-                        Score        = score
-                    });
+                    eval.Comment   = entry.Comment?.Trim();
+                    eval.UpdatedAt = DateTime.UtcNow;
+                }
+
+                foreach (var (key, score) in entry.Scores)
+                {
+                    if (!ValidScores.Contains(score)) continue;
+                    var existing = eval.Scores.FirstOrDefault(s => s.CriteriaKey == key);
+                    if (existing is not null)
+                        existing.Score = score;
+                    else
+                        db.EvaluationScores.Add(new EvaluationScore
+                            { EvaluationId = eval.Id, CriteriaKey = key, Score = score });
                 }
             }
-        }
 
-        await db.SaveChangesAsync();
-        return true;
+            await db.SaveChangesAsync();
+            await tx.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            return false;
+        }
     }
 }

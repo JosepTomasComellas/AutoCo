@@ -238,6 +238,10 @@
 
     private async Task RemoveMemberAsync(int groupId, int studentId)
     {
+        var confirm = await Dialog.ShowMessageBox(
+            "Treure alumne", "Segur que vols treure aquest alumne del grup?",
+            yesText: "Treure", cancelText: "Cancel·lar");
+        if (confirm != true) return;
         Api.SetToken(UserState.Token!);
         await Api.RemoveMemberAsync(ActivityId, groupId, studentId);
         await LoadAsync();

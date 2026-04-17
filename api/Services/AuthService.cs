@@ -20,7 +20,7 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
     {
         var professor = await db.Professors
             .FirstOrDefaultAsync(p => p.Email == req.Email.Trim().ToLower());
-        if (professor is null || !BCrypt.Net.BCrypt.Verify(req.Password, professor.PasswordHash))
+        if (professor is null || !PasswordHelper.Verify(req.Password, professor.PasswordHash))
             return null;
 
         var role  = professor.IsAdmin ? "Admin" : "Professor";
@@ -32,7 +32,7 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
     {
         var student = await db.Students
             .FirstOrDefaultAsync(s => s.Email == req.Email.Trim().ToLower());
-        if (student is null || !BCrypt.Net.BCrypt.Verify(req.Password, student.PasswordHash))
+        if (student is null || !PasswordHelper.Verify(req.Password, student.PasswordHash))
             return null;
 
         var token = GenerateToken(student.Id.ToString(), student.NomComplet, "Student",

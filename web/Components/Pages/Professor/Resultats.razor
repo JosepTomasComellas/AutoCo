@@ -42,6 +42,20 @@ else if (!_results.Students.Any())
 }
 else
 {
+    var totalAlumnes = _results.Students.Count;
+    var ambCoaval    = _results.Students.Count(s => s.NumPeerEvaluators > 0);
+    var pctCompletat = totalAlumnes > 0 ? (double)ambCoaval / totalAlumnes * 100 : 0;
+    var totCompletat = ambCoaval == totalAlumnes;
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+        <MudProgressLinear Value="pctCompletat" Color="@(totCompletat ? Color.Success : Color.Primary)"
+                           Rounded="true" Style="flex:1;height:8px" />
+        <MudText Typo="Typo.caption" Color="@(totCompletat ? Color.Success : Color.Secondary)">
+            @ambCoaval / @totalAlumnes avaluats (@pctCompletat.ToString("F0")%)
+        </MudText>
+    </MudStack>
+}
+else
+{
     <MudDataGrid T="StudentResultDto" Items="_results.Students" Dense="true" Hover="true"
                  SortMode="SortMode.Single" Class="mb-6">
         <Columns>

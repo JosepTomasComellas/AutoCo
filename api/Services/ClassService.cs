@@ -76,7 +76,7 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
 
     public async Task<StudentDto> AddStudentAsync(int classId, CreateStudentRequest req)
     {
-        var password = GeneratePassword();
+        var password = PasswordHelper.Generate();
         var student = new Student
         {
             ClassId      = classId,
@@ -84,7 +84,7 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
             Nom          = req.Nom.Trim(),
             Cognoms      = req.Cognoms.Trim(),
             Email        = req.Email.Trim().ToLower(),
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
+            PasswordHash = PasswordHelper.Hash(password)
         };
         db.Students.Add(student);
         await db.SaveChangesAsync();
@@ -141,7 +141,7 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
             }
             batchEmails.Add(emailNorm);
 
-            var password = GeneratePassword();
+            var password = PasswordHelper.Generate();
             var student  = new Student
             {
                 ClassId      = classId,
@@ -149,7 +149,7 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
                 Nom          = s.Nom.Trim(),
                 Cognoms      = s.Cognoms.Trim(),
                 Email        = emailNorm,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
+                PasswordHash = PasswordHelper.Hash(password)
             };
             db.Students.Add(student);
             toEmail.Add((student, password));
@@ -179,8 +179,8 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
     {
         var student = await db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
         if (student is null) return null;
-        var newPassword = GeneratePassword();
-        student.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        var newPassword = PasswordHelper.Generate();
+        student.PasswordHash = PasswordHelper.Hash(newPassword);
         await db.SaveChangesAsync();
         return new ResetPasswordResult(newPassword);
     }
@@ -192,8 +192,8 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         if (student is null) return new SendPasswordResult(false, "Alumne no trobat.");
         if (!email.IsEnabled) return new SendPasswordResult(false, "Correu no configurat.");
 
-        var newPassword = GeneratePassword();
-        student.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        var newPassword = PasswordHelper.Generate();
+        student.PasswordHash = PasswordHelper.Hash(newPassword);
         await db.SaveChangesAsync();
 
         var sent = await email.SendStudentPasswordAsync(student.Email, student.NomComplet,
@@ -210,8 +210,8 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
 
         foreach (var s in students)
         {
-            var newPassword = GeneratePassword();
-            s.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            var newPassword = PasswordHelper.Generate();
+            s.PasswordHash = PasswordHelper.Hash(newPassword);
             await db.SaveChangesAsync();
 
             if (!email.IsEnabled) { skipped++; continue; }
@@ -229,10 +229,4 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
     private static StudentDto ToStudentDto(Student s) => new(
         s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt);
 
-    private static string GeneratePassword()
-    {
-        const string chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
-        return new string(Enumerable.Range(0, 10)
-            .Select(_ => chars[Random.Shared.Next(chars.Length)]).ToArray());
-    }
 }

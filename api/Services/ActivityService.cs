@@ -2,6 +2,7 @@ using AutoCo.Api.Data;
 using AutoCo.Api.Data.Models;
 using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace AutoCo.Api.Services;
 
@@ -27,7 +28,7 @@ public interface IActivityService
     Task<List<StudentActivityDto>> GetStudentActivitiesAsync(int studentId, int classId);
 }
 
-public class ActivityService(AppDbContext db) : IActivityService
+public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivityService
 {
     // ── Activitats ───────────────────────────────────────────────────────────
 
@@ -292,6 +293,7 @@ public class ActivityService(AppDbContext db) : IActivityService
 
         db.GroupMembers.Add(new GroupMember { GroupId = groupId, StudentId = studentId });
         await db.SaveChangesAsync();
+        await InvalidateResultsCacheAsync(activityId);
         return true;
     }
 
@@ -303,8 +305,15 @@ public class ActivityService(AppDbContext db) : IActivityService
         if (member is null) return false;
         db.GroupMembers.Remove(member);
         await db.SaveChangesAsync();
+        await InvalidateResultsCacheAsync(activityId);
         return true;
     }
+
+    private Task InvalidateResultsCacheAsync(int activityId) =>
+        Task.WhenAll(
+            cache.RemoveAsync($"autoco:results:{activityId}"),
+            cache.RemoveAsync($"autoco:chart:{activityId}")
+        );
 
     // ── Dashboard de l'alumne ────────────────────────────────────────────────
 
@@ -326,19 +335,24 @@ public class ActivityService(AppDbContext db) : IActivityService
             .ThenByDescending(a => a.CreatedAt)
             .ToListAsync();
 
+        // Carregar totes les avaluacions de l'alumne d'un sol cop (evita N+1)
+        var activityIds  = activities.Select(a => a.Id).ToList();
+        var evalCounts   = await db.Evaluations
+            .Where(e => activityIds.Contains(e.ActivityId) && e.EvaluatorId == studentId)
+            .GroupBy(e => e.ActivityId)
+            .Select(g => new { ActivityId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ActivityId, x => x.Count);
+
         var result = new List<StudentActivityDto>();
         foreach (var act in activities)
         {
             var myGroup = act.Groups.FirstOrDefault(g => g.Members.Any(m => m.StudentId == studentId));
             if (myGroup is null) continue;
-            var totalToEval = myGroup.Members.Count;
-            var alreadyEval = await db.Evaluations
-                .CountAsync(e => e.ActivityId == act.Id && e.EvaluatorId == studentId);
-
+            evalCounts.TryGetValue(act.Id, out var alreadyEval);
             result.Add(new StudentActivityDto(
                 act.Id, act.Name, act.Description, act.IsOpen,
                 myGroup.Name, myGroup.Id,
-                totalToEval, alreadyEval));
+                myGroup.Members.Count, alreadyEval));
         }
         return result;
     }
