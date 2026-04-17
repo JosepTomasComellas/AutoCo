@@ -40,7 +40,14 @@
 
     <MudMainContent>
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4 mb-8">
-            @Body
+            @if (!_sessionChecked)
+            {
+                <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mt-8" />
+            }
+            else
+            {
+                @Body
+            }
         </MudContainer>
     </MudMainContent>
 
@@ -57,6 +64,8 @@
 </MudLayout>
 
 @code {
+    private bool _sessionChecked = false;
+
     private MudTheme _theme = new()
     {
         PaletteLight = new PaletteLight
@@ -74,18 +83,22 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || UserState.IsLoggedIn) return;
+        if (!firstRender) return;
         try
         {
-            var stored = await LocalStorage.GetAsync<LoginResponse>("autoco_session");
-            if (stored.Success && stored.Value is not null)
+            if (!UserState.IsLoggedIn)
             {
-                UserState.SetLogin(stored.Value);
-                // Torna a navegar a la mateixa URL perquè les pàgines recarreguin les dades
-                Nav.NavigateTo(Nav.Uri, forceLoad: false);
+                var stored = await LocalStorage.GetAsync<LoginResponse>("autoco_session");
+                if (stored.Success && stored.Value is not null)
+                    UserState.SetLogin(stored.Value);
             }
         }
         catch { /* clau caducada o dades invàlides → ignora */ }
+        finally
+        {
+            _sessionChecked = true;
+            StateHasChanged();
+        }
     }
 
     private async Task Logout()

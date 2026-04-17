@@ -76,7 +76,7 @@ else
                             <MudChip T="string" Size="Size.Small" Color="Color.Warning"
                                      Variant="Variant.Filled"
                                      Style="font-weight:700;min-width:62px;justify-content:center">
-                                @ScoreLabel(stars) – @current.ToString("G")
+                                @ScoreLabel(stars)
                             </MudChip>
                         }
                         else
@@ -127,8 +127,7 @@ else
     <!-- Llegenda de puntuació -->
     <MudStack Row="true" Spacing="1" Class="mt-3 mb-6" Wrap="Wrap.Wrap"
               Style="justify-content:center">
-        @foreach (var (s, label) in new[] { (1,"E – 1"), (2,"D – 3.5"),
-            (3,"C – 5"), (4,"B – 7.5"), (5,"A – 10") })
+        @foreach (var (s, label) in new[] { (1,"E"), (2,"D"), (3,"C"), (4,"B"), (5,"A") })
         {
             <MudChip T="string" Size="Size.Small" Color="Color.Default"
                      Variant="Variant.Outlined" Style="font-size:.72rem">
