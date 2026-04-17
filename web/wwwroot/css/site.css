@@ -47,6 +47,8 @@ html, body {
     flex-direction: column;
 }
 .mud-main-content {
-    background: #ffffff !important;
+    background: rgba(255, 255, 255, 0.82) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
     flex: 1;
 }
