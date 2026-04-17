@@ -81,9 +81,11 @@
 </MudStack>
 
 <MudGrid Spacing="3" Class="@(_draggingStudentId != null ? "is-dragging" : "")">
-    <!-- Zona "Sense grup" (drop zone) -->
-    <MudItem xs="12" sm="6" md="4" lg="3">
+
+    <!-- Columna esquerra: "Sense grup" (fixa) -->
+    <MudItem xs="12" md="3">
         <div class="dnd-zone @(_dragOverUnassigned ? "dnd-zone--over" : "") @(_draggingFromGroupId == null && _draggingStudentId != null ? "dnd-zone--source" : "")"
+             style="height:100%"
              @ondragenter="() => _dragOverUnassigned = true"
              @ondragleave="OnDragLeaveUnassigned"
              @ondrop:preventDefault
@@ -118,30 +120,36 @@
         </div>
     </MudItem>
 
-    <!-- Grups -->
-    @foreach (var g in _groups)
-    {
-        var gid = g.Id;
-        var isOver = _dragOverGroupId == gid;
-        var isSameSource = _draggingFromGroupId == gid;
+    <!-- Columna dreta: grid de grups (3 columnes) -->
+    <MudItem xs="12" md="9">
+        @if (!_groups.Any())
+        {
+            <MudAlert Severity="Severity.Info">No hi ha grups. Crea'n un primer.</MudAlert>
+        }
+        <MudGrid Spacing="3">
+        @foreach (var g in _groups)
+        {
+            var gid = g.Id;
+            var isOver = _dragOverGroupId == gid;
+            var isSameSource = _draggingFromGroupId == gid;
 
-        <MudItem xs="12" sm="6" md="4" lg="3">
-            <div class="dnd-zone @(isOver ? "dnd-zone--over" : "") @(isSameSource ? "dnd-zone--source" : "")"
-                 @ondragenter="() => _dragOverGroupId = gid"
-                 @ondragleave="() => { if (_dragOverGroupId == gid) _dragOverGroupId = null; }"
-                 @ondrop:preventDefault
-                 @ondrop="() => OnDropToGroup(gid)">
+            <MudItem xs="12" sm="6" md="4">
+                <div class="dnd-zone @(isOver ? "dnd-zone--over" : "") @(isSameSource ? "dnd-zone--source" : "")"
+                     @ondragenter="() => _dragOverGroupId = gid"
+                     @ondragleave="() => { if (_dragOverGroupId == gid) _dragOverGroupId = null; }"
+                     @ondrop:preventDefault
+                     @ondrop="() => OnDropToGroup(gid)">
 
-                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-                    <MudText Typo="Typo.subtitle2" Style="font-weight:700;flex:1">@g.Name</MudText>
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                             Style="height:20px;font-size:.7rem">
-                        @g.Members.Count
-                    </MudChip>
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                   Color="Color.Error" title="Eliminar grup"
-                                   OnClick="() => DeleteGroupAsync(g)" />
-                </MudStack>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                        <MudText Typo="Typo.subtitle2" Style="font-weight:700;flex:1">@g.Name</MudText>
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                 Style="height:20px;font-size:.7rem">
+                            @g.Members.Count
+                        </MudChip>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error" title="Eliminar grup"
+                                       OnClick="() => DeleteGroupAsync(g)" />
+                    </MudStack>
 
                 <div class="dnd-members">
                     @foreach (var m in g.Members)
@@ -171,7 +179,10 @@
                 </div>
             </div>
         </MudItem>
-    }
+        }
+        </MudGrid>
+    </MudItem>
+
 </MudGrid>
 
 @code {
