@@ -126,12 +126,23 @@ if ((Test-Path $certPath) -and (Get-Item $certPath).Length -gt 64) {
 }
 
 # =============================================================================
-# 6. CREAR .env A PARTIR DE .env.example
+# 6. CREAR .env A PARTIR DE .env.example (només si no existeix ja)
 # =============================================================================
-Write-Host "[6/7] Creant .env..."
+Write-Host "[6/7] Comprovant .env..."
 $envSrc  = Join-Path $Dest ".env.example"
 $envDest = Join-Path $Dest ".env"
-Copy-Item $envSrc -Destination $envDest -Force
+
+# Si existia un .env al directori font, el preservem
+$existingEnv = Join-Path $RepoRoot ".env"
+if (Test-Path $existingEnv) {
+    Copy-Item $existingEnv -Destination $envDest -Force
+    Write-Host "    -> .env copiat des del directori font (preservat)."
+} elseif (-not (Test-Path $envDest)) {
+    Copy-Item $envSrc -Destination $envDest -Force
+    Write-Host "    -> .env creat a partir de .env.example. Edita'l abans de desplegar!"
+} else {
+    Write-Host "    -> .env ja existia al destí, no s'ha modificat."
+}
 
 # =============================================================================
 # 7. GENERAR SCRIPTS PER AL SERVIDOR LINUX
