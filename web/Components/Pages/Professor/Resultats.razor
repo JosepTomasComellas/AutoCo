@@ -53,9 +53,7 @@ else
             @ambCoaval / @totalAlumnes avaluats (@pctCompletat.ToString("F0")%)
         </MudText>
     </MudStack>
-}
-else
-{
+
     <MudDataGrid T="StudentResultDto" Items="_results.Students" Dense="true" Hover="true"
                  SortMode="SortMode.Single" Class="mb-6">
         <Columns>
