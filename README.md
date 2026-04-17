@@ -4,16 +4,29 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 ---
 
-## Funcionalitats principals
+## Funcionalitats
 
-- **Professors** creen classes, alumnes, activitats i grups
-- **Alumnes** avaluen els companys del seu grup i s'autoavaluen, amb puntuació 1–10 per 5 criteris
-- **Resultats** en temps real: mitjanes per criteri, gràfiques comparatives auto vs. co-avaluació per grup
-- **Exportació CSV** de resultats i llistats d'alumnes
-- **Duplicació d'activitats** amb importació/exportació de configuració de grups per correu
-- **Enviament automàtic** de credencials i PINs per correu electrònic
+### Professor / Administrador
+- Gestió de **classes**, **alumnes** i **mòduls** (UF/MP)
+- Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual
+- Configuració de **grups** (manual, per CSV o importació/exportació)
+- **Duplicació d'activitats** reutilitzant la configuració de grups
+- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri, autoavaluació vs. coavaluació, barra de progrés de participació
+- **Gràfiques comparatives** per grup (auto vs. co-avaluació, desglossament per criteri)
+- **Exportació CSV** de resultats
+- **Còpies de seguretat** del servidor: exportació/importació JSON de tota la base de dades
+- Enviament de **credencials per correu** (alumnes i professors)
+- Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
+- **Exclusions per mòdul**: alumnes que no participen en un mòdul concret
 
-### Criteris d'avaluació (fixes)
+### Alumne
+- Accés amb correu electrònic i contrasenya
+- Avaluació de tots els membres del grup (inclosa autoavaluació) per 5 criteris
+- Puntuació amb **escala de 5 estrelles** (E / D / C / B / A)
+- Barra de progrés d'avaluació completada
+- Filtre d'activitats pendents al dashboard
+
+### Criteris d'avaluació (fixes per a totes les activitats)
 
 | Clau | Descripció |
 |------|------------|
@@ -23,6 +36,16 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 | `collaboracio` | Col·laboració i treball en equip |
 | `comunicacio` | Comunicació |
 
+### Escala de puntuació
+
+| Estrelles | Lletra | Valor numèric |
+|:---------:|:------:|:-------------:|
+| ★☆☆☆☆ | E | 1 |
+| ★★☆☆☆ | D | 3.5 |
+| ★★★☆☆ | C | 5 |
+| ★★★★☆ | B | 7.5 |
+| ★★★★★ | A | 10 |
+
 ---
 
 ## Arquitectura
@@ -30,115 +53,210 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 ```
 AutoCo/
 ├── api/          # API REST — ASP.NET Core 9 Minimal API
-├── web/          # Frontend — Blazor Server + MudBlazor 8
-├── nginx/        # Proxy invers amb SSL
+│   ├── Data/     # EF Core DbContext, models i seed
+│   ├── Services/ # Lògica de negoci
+│   ├── Migrations/
+│   └── Dockerfile
+├── web/          # Frontend — Blazor Server + MudBlazor
+│   ├── Components/
+│   │   ├── Pages/   # Alumne/, Professor/, Admin/, Auth/
+│   │   ├── Shared/  # Diàlegs i components reutilitzables
+│   │   └── Layout/
+│   ├── Services/    # ApiClient, UserStateService
+│   └── Dockerfile
+├── shared/       # DTOs compartits entre api i web
+├── nginx/        # Proxy invers amb SSL automàtic
+├── deploy/       # Script de generació del paquet de desplegament
 └── docker-compose.yml
 ```
 
 ### Serveis Docker
 
-| Servei | Imatge | Descripció |
-|--------|--------|------------|
-| `db` | SQL Server 2022 Express | Base de dades principal |
-| `redis` | Redis 7 Alpine | Caché de resultats + backplane SignalR |
-| `api` | ASP.NET Core 9 | API REST + JWT |
-| `web` | ASP.NET Core 9 | Blazor Server + MudBlazor |
-| `nginx` | nginx | Proxy SSL, WebSocket per Blazor |
+| Servei | Imatge | Port | Descripció |
+|--------|--------|------|------------|
+| `db` | SQL Server 2022 Express | intern | Base de dades principal |
+| `redis` | Redis 7 Alpine | intern | Caché de resultats + backplane SignalR |
+| `api` | ASP.NET Core 9 | intern | API REST + JWT |
+| `web` | ASP.NET Core 9 | intern | Blazor Server + MudBlazor |
+| `nginx` | nginx Alpine | 80 / 443 | Proxy SSL, WebSocket per Blazor |
 
 ### Model de dades
 
 ```
-Professor ──< Class ──< Student
-                 └──< Activity ──< Group ──< GroupMember (Student)
-                                       └──< Evaluation (Evaluator→Evaluated)
-                                                  └──< EvaluationScore (per criteri)
+Professor ──< Module ──< Activity ──< Group ──< GroupMember (Student)
+              │                            └──< Evaluation (Evaluator→Evaluated)
+              │                                        └──< EvaluationScore (per criteri)
+Class ────────┘
+  └──< Student
+  └──< ModuleExclusion (alumnes exclosos d'un mòdul)
 ```
+
+- Un `Module` pertany a una `Class` i a un `Professor`
+- Una `Activity` pertany a un `Module`
+- Un alumne avalua tots els membres del seu grup (inclòs ell mateix — `IsSelf = true`)
 
 ---
 
 ## Tecnologies
 
-- **Backend:** C# / ASP.NET Core 9, Entity Framework Core, SQL Server 2022
-- **Frontend:** Blazor Server, [MudBlazor 8](https://mudblazor.com/)
-- **Autenticació:** JWT (professors) · PIN de 4 dígits (alumnes)
-- **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació en guardar)
-- **Email:** SMTP (Gmail) per enviar PINs i credencials
-- **Desplegament:** Docker Compose, nginx (SSL/TLS)
+- **Backend:** C# / ASP.NET Core 9 · Entity Framework Core · SQL Server 2022
+- **Frontend:** Blazor Server · [MudBlazor](https://mudblazor.com/)
+- **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage` per a persistència de sessió
+- **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació automàtica)
+- **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters
+- **Email:** SMTP configurable (Gmail, etc.) per enviar credencials
+- **Desplegament:** Docker Compose · nginx (SSL/TLS auto-signat o certificat propi)
 
 ---
 
-## Desplegament ràpid
+## Desplegament
 
-### Requisits
+### Opció A — Entorn local (desenvolupament)
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/macOS/Linux)
-
-### Passos
+**Requisits:** Docker Desktop
 
 ```bash
-# 1. Clona el repositori
 git clone https://github.com/JosepTomasComellas/AutoCo.git
 cd AutoCo
-
-# 2. (Opcional) Genera certificats SSL autosignats per a nginx
-mkdir -p nginx/ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout nginx/ssl/server.key -out nginx/ssl/server.crt \
-  -subj "/CN=localhost"
-
-# 3. Construeix i aixeca tots els serveis
-docker-compose up --build
-
-# 4. Accedeix a l'aplicació
-#    https://localhost
+cp .env.example .env        # edita les variables si cal
+docker compose up --build
 ```
 
-### Credencials per defecte
+Accedeix a **https://localhost** (accepta l'avís del certificat auto-signat).
 
-| Rol | Usuari | Contrasenya |
-|-----|--------|-------------|
-| Administrador | `admin` | `Admin12345aA.` |
+### Opció B — Servidor Linux (producció)
 
-> ⚠️ Per a producció, canvia `JwtSettings__Secret`, `MSSQL_SA_PASSWORD` i `Admin__Password` al `docker-compose.yml`.
+**Requisits:** Windows amb PowerShell, accés SSH al servidor Linux amb Docker Engine >= 24.
 
-### Altres comandes
+**1. Generar el paquet de desplegament** (Windows):
+
+```powershell
+# Des del directori arrel del projecte
+.\deploy\generar-deploy.ps1
+
+# O amb ruta personalitzada
+.\deploy\generar-deploy.ps1 -Dest "C:\Users\usuari\Desktop\autoco-deploy"
+```
+
+Genera un directori `autoco-deploy-YYYYMMDD` amb tot el codi i els scripts d'instal·lació.
+
+**2. Copiar al servidor:**
 
 ```bash
-docker-compose up           # Aixecar sense reconstruir
-docker-compose down         # Aturar
-docker-compose down -v      # Aturar i esborrar totes les dades
+scp -r autoco-deploy-20260417 usuari@servidor:/opt/autoco
 ```
+
+**3. Editar les variables d'entorn al servidor:**
+
+```bash
+nano /opt/autoco/.env
+```
+
+**4. Instal·lar:**
+
+```bash
+sudo bash /opt/autoco/install.sh
+```
+
+`install.sh` valida les variables crítiques, construeix les imatges i arrenca tots els contenidors.
+
+### Comandes útils
+
+```bash
+docker compose up           # Aixecar sense reconstruir
+docker compose up --build   # Reconstruir i aixecar
+docker compose down         # Aturar (dades preservades)
+docker compose down -v      # Aturar i esborrar totes les dades
+docker compose logs -f      # Logs en temps real
+bash /opt/autoco/update.sh  # Actualitzar (reconstrueix imatges)
+bash /opt/autoco/backup.sh  # Backup manual de la BD
+```
+
+---
+
+## Configuració (.env)
+
+Copia `.env.example` a `.env` i ajusta els valors:
+
+| Variable | Descripció | Obligatori |
+|----------|------------|:----------:|
+| `MSSQL_SA_PASSWORD` | Contrasenya SQL Server (mínim 8 car., majúsc., número i símbol) | ✓ |
+| `JWT_SECRET` | Secret JWT (mínim 32 caràcters) | ✓ |
+| `JWT_EXPIRY_HOURS` | Durada del token en hores (per defecte: 8) | |
+| `ADMIN_EMAIL` | Correu de l'administrador inicial | ✓ |
+| `ADMIN_PASSWORD` | Contrasenya de l'administrador inicial | ✓ |
+| `ADMIN_NOM` | Nom de l'administrador | ✓ |
+| `ADMIN_COGNOMS` | Cognoms de l'administrador | ✓ |
+| `SMTP_HOST` | Servidor SMTP (p.ex. `smtp.gmail.com`) | |
+| `SMTP_PORT` | Port SMTP (p.ex. `587`) | |
+| `SMTP_USERNAME` | Usuari SMTP | |
+| `SMTP_PASSWORD` | Contrasenya SMTP (o app password) | |
+| `SMTP_FROM_ADDRESS` | Adreça remitent dels correus | |
+| `SMTP_FROM_NAME` | Nom remitent dels correus | |
+| `APP_WEB_URL` | URL pública de l'aplicació (p.ex. `https://autoco.centre.cat`) | |
+
+> El SMTP és opcional. Si no es configura, les funcions d'enviament de credencials per correu quedaran desactivades però la resta de l'aplicació funciona amb normalitat.
+
+### SSL
+
+- **Sense certificat:** nginx genera automàticament un certificat auto-signat vàlid 10 anys.
+- **Amb certificat propi:** col·loca `server.crt` i `server.key` al directori `nginx/ssl/` abans d'arrencar.
 
 ---
 
 ## Rols
 
-### Administrador
-- Gestiona tots els professors
-- Veu i accedeix a totes les classes i activitats
-- Envia credencials per correu
-
-### Professor
-- Crea i gestiona les seves classes i alumnes
-- Crea activitats, configura grups, obre/tanca avaluacions
-- Consulta resultats i exporta a CSV
-- Duplica activitats i importa/exporta configuració de grups
-
-### Alumne
-- Accedeix amb el seu identificador i PIN de 4 dígits
-- Avalua tots els membres del seu grup (inclòs ell mateix)
-- Veu les activitats disponibles del seu grup
+| Rol | Accés |
+|-----|-------|
+| **Admin** | Tot. Gestiona professors, veu totes les classes i activitats, còpies de seguretat |
+| **Professor** | Les seves pròpies classes, mòduls, activitats i resultats |
+| **Alumne** | Les activitats del seu grup. Pot avaluar mentre l'activitat és oberta |
 
 ---
 
-## Captures de pantalla
+## Endpoints principals de l'API
 
-| Dashboard professor | Resultats i gràfiques |
-|--------------------|-----------------------|
-| *(pendent)* | *(pendent)* |
+```
+POST /api/auth/professor                              # Login professor/admin
+POST /api/auth/student                                # Login alumne
+
+GET/POST/PUT/DELETE /api/professors                   # Gestió professors (admin)
+GET/POST/PUT/DELETE /api/classes                      # Gestió classes
+GET/POST/PUT/DELETE /api/classes/{id}/students        # Gestió alumnes
+POST /api/classes/{id}/students/bulk                  # Importació massiva CSV
+POST /api/classes/{id}/students/{sid}/reset-password  # Reset contrasenya
+POST /api/classes/{id}/students/{sid}/send-password   # Enviar credencials per correu
+GET/POST/PUT/DELETE /api/classes/{id}/modules         # Gestió mòduls
+GET/POST/PUT/DELETE /api/modules/{id}/exclusions      # Exclusions per mòdul
+
+GET/POST/PUT/DELETE /api/activities                   # Gestió activitats
+POST /api/activities/{id}/toggle                      # Obrir/tancar activitat
+POST /api/activities/{id}/duplicate                   # Duplicar activitat
+GET  /api/activities/{id}/groups/export               # Exportar grups (CSV)
+POST /api/activities/{id}/groups/import               # Importar grups (CSV)
+GET/POST/DELETE /api/activities/{id}/groups           # Gestió grups
+POST/DELETE /api/activities/{id}/groups/{gid}/members # Membres de grup
+
+GET  /api/evaluations/{activityId}                    # Formulari d'avaluació (alumne)
+POST /api/evaluations/{activityId}                    # Guardar avaluació
+GET  /api/student/activities                          # Dashboard alumne
+
+GET  /api/results/{activityId}                        # Resultats (professor)
+GET  /api/results/{activityId}/chart                  # Dades gràfica
+GET  /api/results/{activityId}/csv                    # Exportar CSV
+
+GET  /api/admin/backup/export                         # Exportar backup JSON
+POST /api/admin/backup/import                         # Importar backup JSON
+GET/POST /api/admin/backup/files                      # Backups al servidor
+GET/DELETE /api/admin/backup/files/{name}             # Descarregar/eliminar backup
+POST /api/admin/backup/files/{name}/restore           # Restaurar backup del servidor
+
+GET  /api/health                                      # Estat DB + Redis
+GET  /api/criteria                                    # Llista de criteris
+```
 
 ---
 
 ## Llicència
 
-Projecte de codi obert per a ús educatiu.
+Projecte de codi obert per a ús educatiu — Salesians de Sarrià, Departament d'Informàtica.
