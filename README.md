@@ -2,6 +2,8 @@
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
+![AutoCo — Visió general](Imatges/autoco-overview.svg)
+
 ---
 
 ## Funcionalitats
