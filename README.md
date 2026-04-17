@@ -9,9 +9,10 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 ### Professor / Administrador
 - Gestió de **classes**, **alumnes** i **mòduls** (UF/MP)
 - Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual des del tauler
-- Configuració de **grups** (manual, per CSV o importació/exportació)
+- Configuració de **grups** per **arrossegar i deixar anar** (drag & drop): alumnes sense grup a l'esquerra, grups en 3 columnes a la dreta
+- Importació/exportació de grups per CSV
 - **Duplicació d'activitats** reutilitzant la configuració de grups i membres
-- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri (Auto / Co), nota global d'autoavaluació i coavaluació, barra de progrés de participació
+- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri (Auto / Co), nota global, barra de progrés de participació
 - **Gràfiques comparatives** per grup (auto vs. co-avaluació, desglossament per criteri)
 - **Exportació CSV** de resultats
 - **Còpies de seguretat** del servidor: exportació/importació JSON de tota la base de dades
@@ -23,7 +24,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - Accés amb correu electrònic i contrasenya
 - Avaluació de tots els membres del grup (inclosa autoavaluació) per 5 criteris
 - Puntuació amb **escala de 5 estrelles** (E / D / C / B / A)
-- **Barra de progrés** d'avaluació completada en temps real
+- **Barra de progrés** d'avaluació completada en temps real (X/Y criteris puntuats)
 - Filtre d'activitats pendents al dashboard
 
 ### Criteris d'avaluació (fixes per a totes les activitats)
@@ -63,6 +64,9 @@ AutoCo/
 │   │   ├── Shared/  # Diàlegs i components reutilitzables
 │   │   └── Layout/
 │   ├── Services/    # ApiClient, UserStateService
+│   ├── wwwroot/
+│   │   ├── css/site.css   # Estils globals + DnD
+│   │   └── js/app.js      # Utilitats JS (download, dragover síncron)
 │   └── Dockerfile
 ├── shared/       # DTOs compartits entre api i web
 ├── nginx/        # Proxy invers amb SSL automàtic
@@ -230,7 +234,7 @@ GET/POST/PUT/DELETE /api/classes/{id}/students        # Gestió alumnes
 POST /api/classes/{id}/students/bulk                  # Importació massiva CSV
 POST /api/classes/{id}/students/{sid}/reset-password  # Reset contrasenya
 POST /api/classes/{id}/students/{sid}/send-password   # Enviar credencials per correu
-GET/POST/DELETE    /api/classes/{id}/students/send-all # Enviar credencials a tots
+POST /api/classes/{id}/students/send-all-passwords    # Enviar credencials a tots
 GET/POST/PUT/DELETE /api/classes/{id}/modules         # Gestió mòduls
 GET/POST/DELETE    /api/modules/{id}/exclusions       # Exclusions per mòdul
 
