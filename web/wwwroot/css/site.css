@@ -88,6 +88,11 @@ html { scroll-behavior: smooth; }
     border: 1px dashed #cbd5e1;
     border-radius: 4px;
 }
+/* Durant un drag, tots els fills de les zones perden pointer-events
+   perquè els events dragover/drop arribin directament a la zona pare */
+.is-dragging .dnd-zone * {
+    pointer-events: none !important;
+}
 
 /* ── Fons de pantalla ────────────────────────────────────────────────────── */
 html, body {

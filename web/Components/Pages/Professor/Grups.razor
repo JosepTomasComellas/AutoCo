@@ -80,7 +80,7 @@
     </MudText>
 </MudStack>
 
-<MudGrid Spacing="3">
+<MudGrid Spacing="3" Class="@(_draggingStudentId != null ? "is-dragging" : "")">
     <!-- Zona "Sense grup" (drop zone) -->
     <MudItem xs="12" sm="6" md="4" lg="3">
         <div class="dnd-zone @(_dragOverUnassigned ? "dnd-zone--over" : "") @(_draggingFromGroupId == null && _draggingStudentId != null ? "dnd-zone--source" : "")"
