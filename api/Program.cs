@@ -12,6 +12,9 @@ using AutoCo.Api.Data.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// L'API usa JWT (no DataProtection). Silencia l'avís de claus no persistides.
+builder.Logging.AddFilter("Microsoft.AspNetCore.DataProtection", LogLevel.Error);
+
 // ── Base de dades ─────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -41,6 +44,7 @@ builder.Services.AddScoped<IActivityService,   ActivityService>();
 builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IResultsService,    ResultsService>();
 builder.Services.AddScoped<IEmailService,      EmailService>();
+builder.Services.AddScoped<IBackupService,     BackupService>();
 
 // ── Redis (caché de resultats) ─────────────────────────────────────────────────
 var redisConn = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
@@ -53,7 +57,6 @@ builder.Services.AddStackExchangeRedisCache(opt =>
 // ── Rate limiting (protecció contra força bruta) ───────────────────────────
 builder.Services.AddRateLimiter(opt =>
 {
-    // Màxim 10 intents per minut per IP als endpoints d'autenticació
     opt.AddFixedWindowLimiter("auth", o =>
     {
         o.PermitLimit         = 10;
@@ -75,6 +78,14 @@ using (var scope = app.Services.CreateScope())
     var db     = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     db.Database.Migrate();
+    // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
+    // que la BD s'aturi entre peticions i torna a arrencar amb cada connexió nova.
+    try
+    {
+        var dbName = db.Database.GetDbConnection().Database;
+        await db.Database.ExecuteSqlRawAsync($"ALTER DATABASE [{dbName}] SET AUTO_CLOSE OFF");
+    }
+    catch { /* ignora si no té permisos o si ja està desactivat */ }
     await SeedData.InitializeAsync(db, config);
 }
 
@@ -115,7 +126,7 @@ app.MapPost("/api/auth/student", async (StudentLoginRequest req, IAuthService sv
 }).RequireRateLimiting("auth");
 
 // ════════════════════════════════════════════════════════════════════════════
-// PROFESSORS  (Admin only)
+// PROFESSORS  (Admin only per a escriptura)
 // ════════════════════════════════════════════════════════════════════════════
 
 app.MapGet("/api/professors", async (IProfessorService svc) =>
@@ -159,114 +170,6 @@ app.MapDelete("/api/professors/{id:int}", async (int id, IProfessorService svc,
     }
 }).RequireAuthorization();
 
-// ════════════════════════════════════════════════════════════════════════════
-// CLASSES
-// ════════════════════════════════════════════════════════════════════════════
-
-app.MapGet("/api/classes", async (IClassService svc, ClaimsPrincipal user) =>
-{
-    var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
-    return Results.Ok(await svc.GetAllAsync(profId));
-}).RequireAuthorization();
-
-app.MapGet("/api/classes/{id:int}", async (int id, IClassService svc, ClaimsPrincipal user) =>
-{
-    var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
-    var c = await svc.GetByIdAsync(id, profId);
-    return c is null ? Results.NotFound() : Results.Ok(c);
-}).RequireAuthorization();
-
-app.MapPost("/api/classes", async (CreateClassRequest req, IClassService svc,
-    ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var c = await svc.CreateAsync(GetUserId(user), req);
-    return Results.Created($"/api/classes/{c.Id}", c);
-}).RequireAuthorization();
-
-app.MapPut("/api/classes/{id:int}", async (int id, UpdateClassRequest req,
-    IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var c = await svc.UpdateAsync(id, GetUserId(user), IsAdmin(user), req);
-    return c is null ? Results.NotFound() : Results.Ok(c);
-}).RequireAuthorization();
-
-app.MapDelete("/api/classes/{id:int}", async (int id, IClassService svc,
-    ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var ok = await svc.DeleteAsync(id, GetUserId(user), IsAdmin(user));
-    return ok ? Results.NoContent() : Results.NotFound();
-}).RequireAuthorization();
-
-// ── Alumnes dins d'una classe ─────────────────────────────────────────────────
-
-app.MapGet("/api/classes/{classId:int}/students", async (int classId,
-    IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var list = await svc.GetStudentsAsync(classId, GetUserId(user), IsAdmin(user));
-    return Results.Ok(list);
-}).RequireAuthorization();
-
-app.MapPost("/api/classes/{classId:int}/students", async (int classId,
-    CreateStudentRequest req, IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var s = await svc.AddStudentAsync(classId, req);
-    return Results.Created($"/api/classes/{classId}/students/{s.Id}", s);
-}).RequireAuthorization();
-
-app.MapPut("/api/classes/{classId:int}/students/{studentId:int}", async (
-    int classId, int studentId, UpdateStudentRequest req,
-    IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var s = await svc.UpdateStudentAsync(classId, studentId, req);
-    return s is null ? Results.NotFound() : Results.Ok(s);
-}).RequireAuthorization();
-
-app.MapDelete("/api/classes/{classId:int}/students/{studentId:int}", async (
-    int classId, int studentId, IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var ok = await svc.DeleteStudentAsync(classId, studentId);
-    return ok ? Results.NoContent() : Results.NotFound();
-}).RequireAuthorization();
-
-app.MapPost("/api/classes/{classId:int}/students/bulk", async (
-    int classId, BulkCreateStudentsRequest req, IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.BulkAddStudentsAsync(classId, req);
-    return Results.Ok(result);
-}).RequireAuthorization();
-
-app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/reset-pin", async (
-    int classId, int studentId, IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.ResetPinAsync(classId, studentId);
-    return result is null ? Results.NotFound() : Results.Ok(result);
-}).RequireAuthorization();
-
-app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/send-pin", async (
-    int classId, int studentId, IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.SendPinAsync(classId, studentId);
-    return result is null ? Results.NotFound() : Results.Ok(result);
-}).RequireAuthorization();
-
-app.MapPost("/api/classes/{classId:int}/students/send-all-pins", async (
-    int classId, IClassService svc, ClaimsPrincipal user) =>
-{
-    if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.SendAllPinsAsync(classId, GetUserId(user), IsAdmin(user));
-    return Results.Ok(result);
-}).RequireAuthorization();
-
 app.MapPost("/api/professors/{professorId:int}/send-credentials", async (
     int professorId, IProfessorService svc, ClaimsPrincipal user) =>
 {
@@ -283,23 +186,112 @@ app.MapPost("/api/professors/send-all-credentials", async (
     return Results.Ok(result);
 }).RequireAuthorization();
 
-app.MapGet("/api/classes/{classId:int}/students/export", async (
-    int classId, IClassService svc, ClaimsPrincipal user) =>
+// ════════════════════════════════════════════════════════════════════════════
+// CLASSES  (lectura per a tots els professors; escriptura admin only)
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/classes", async (IClassService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.ExportStudentsAsync(classId, GetUserId(user), IsAdmin(user));
-    if (result is null) return Results.NotFound();
-    var (content, fileName) = result.Value;
-    return Results.File(content, "text/csv; charset=utf-8", fileName);
+    return Results.Ok(await svc.GetAllAsync());
 }).RequireAuthorization();
 
-app.MapGet("/api/students/export", async (IClassService svc, ClaimsPrincipal user) =>
+app.MapGet("/api/classes/{id:int}", async (int id, IClassService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.ExportStudentsAsync(null, GetUserId(user), IsAdmin(user));
-    if (result is null) return Results.NotFound();
-    var (content, fileName) = result.Value;
-    return Results.File(content, "text/csv; charset=utf-8", fileName);
+    var c = await svc.GetByIdAsync(id);
+    return c is null ? Results.NotFound() : Results.Ok(c);
+}).RequireAuthorization();
+
+app.MapPost("/api/classes", async (CreateClassRequest req, IClassService svc,
+    ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var c = await svc.CreateAsync(req);
+    return Results.Created($"/api/classes/{c.Id}", c);
+}).RequireAuthorization();
+
+app.MapPut("/api/classes/{id:int}", async (int id, UpdateClassRequest req,
+    IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var c = await svc.UpdateAsync(id, req);
+    return c is null ? Results.NotFound() : Results.Ok(c);
+}).RequireAuthorization();
+
+app.MapDelete("/api/classes/{id:int}", async (int id, IClassService svc,
+    ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var ok = await svc.DeleteAsync(id);
+    return ok ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+// ── Alumnes dins d'una classe ─────────────────────────────────────────────────
+
+app.MapGet("/api/classes/{classId:int}/students", async (int classId,
+    IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var list = await svc.GetStudentsAsync(classId);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapPost("/api/classes/{classId:int}/students", async (int classId,
+    CreateStudentRequest req, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var s = await svc.AddStudentAsync(classId, req);
+    return Results.Created($"/api/classes/{classId}/students/{s.Id}", s);
+}).RequireAuthorization();
+
+app.MapPut("/api/classes/{classId:int}/students/{studentId:int}", async (
+    int classId, int studentId, UpdateStudentRequest req,
+    IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var s = await svc.UpdateStudentAsync(classId, studentId, req);
+    return s is null ? Results.NotFound() : Results.Ok(s);
+}).RequireAuthorization();
+
+app.MapDelete("/api/classes/{classId:int}/students/{studentId:int}", async (
+    int classId, int studentId, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var ok = await svc.DeleteStudentAsync(classId, studentId);
+    return ok ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPost("/api/classes/{classId:int}/students/bulk", async (
+    int classId, BulkCreateStudentsRequest req, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var result = await svc.BulkAddStudentsAsync(classId, req);
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/reset-password", async (
+    int classId, int studentId, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var result = await svc.ResetPasswordAsync(classId, studentId);
+    return result is null ? Results.NotFound() : Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/send-password", async (
+    int classId, int studentId, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var result = await svc.SendPasswordAsync(classId, studentId);
+    return Results.Ok(result);
+}).RequireAuthorization();
+
+app.MapPost("/api/classes/{classId:int}/students/send-all-passwords", async (
+    int classId, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var result = await svc.SendAllPasswordsAsync(classId);
+    return Results.Ok(result);
 }).RequireAuthorization();
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -310,7 +302,7 @@ app.MapGet("/api/classes/{classId:int}/modules", async (int classId,
     IModuleService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var list = await svc.GetByClassAsync(classId, GetUserId(user), IsAdmin(user));
+    var list = await svc.GetByClassAsync(classId);
     return Results.Ok(list);
 }).RequireAuthorization();
 
@@ -328,10 +320,10 @@ app.MapPost("/api/classes/{classId:int}/modules", async (int classId,
     if (!IsProfessor(user)) return Results.Forbid();
     try
     {
-        var m = await svc.CreateAsync(classId, GetUserId(user), IsAdmin(user), req);
+        var m = await svc.CreateAsync(classId, GetUserId(user), req);
         return Results.Created($"/api/classes/{classId}/modules/{m.Id}", m);
     }
-    catch (UnauthorizedAccessException ex)
+    catch (InvalidOperationException ex)
     {
         return Results.BadRequest(new { error = ex.Message });
     }
@@ -353,12 +345,39 @@ app.MapDelete("/api/classes/{classId:int}/modules/{id:int}", async (int classId,
     return ok ? Results.NoContent() : Results.NotFound();
 }).RequireAuthorization();
 
+// ── Exclusions de mòdul ───────────────────────────────────────────────────────
+
+app.MapGet("/api/modules/{moduleId:int}/exclusions", async (int moduleId,
+    IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var list = await svc.GetExclusionsAsync(moduleId, GetUserId(user), IsAdmin(user));
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapPost("/api/modules/{moduleId:int}/exclusions/{studentId:int}", async (
+    int moduleId, int studentId, IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var ok = await svc.AddExclusionAsync(moduleId, studentId, GetUserId(user), IsAdmin(user));
+    return ok ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapDelete("/api/modules/{moduleId:int}/exclusions/{studentId:int}", async (
+    int moduleId, int studentId, IModuleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var ok = await svc.RemoveExclusionAsync(moduleId, studentId, GetUserId(user), IsAdmin(user));
+    return ok ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
 // ════════════════════════════════════════════════════════════════════════════
 // ACTIVITATS
 // ════════════════════════════════════════════════════════════════════════════
 
 app.MapGet("/api/activities", async (IActivityService svc, ClaimsPrincipal user) =>
 {
+    if (!IsProfessor(user)) return Results.Forbid();
     var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
     return Results.Ok(await svc.GetAllAsync(profId));
 }).RequireAuthorization();
@@ -366,6 +385,7 @@ app.MapGet("/api/activities", async (IActivityService svc, ClaimsPrincipal user)
 app.MapGet("/api/activities/{id:int}", async (int id, IActivityService svc,
     ClaimsPrincipal user) =>
 {
+    if (!IsProfessor(user)) return Results.Forbid();
     var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
     var a = await svc.GetByIdAsync(id, profId);
     return a is null ? Results.NotFound() : Results.Ok(a);
@@ -556,14 +576,64 @@ app.MapGet("/api/results/{activityId:int}/csv", async (int activityId,
 app.MapGet("/api/criteria", () =>
     Results.Ok(Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label))));
 
-// ── Endpoint públic per al formulari de login d'alumne ────────────────────────
-app.MapGet("/api/public/classes", async (AppDbContext db) =>
+// ════════════════════════════════════════════════════════════════════════════
+// BACKUP / RESTORE (admin only)
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/admin/backup/export", async (IBackupService svc, ClaimsPrincipal user) =>
 {
-    var classes = await db.Classes
-        .OrderBy(c => c.Name)
-        .Select(c => new { c.Id, c.Name, c.AcademicYear })
-        .ToListAsync();
-    return Results.Ok(classes);
-});
+    if (!IsAdmin(user)) return Results.Forbid();
+    var backup   = await svc.ExportAsync();
+    var json     = System.Text.Json.JsonSerializer.Serialize(backup,
+        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+    var bytes    = System.Text.Encoding.UTF8.GetBytes(json);
+    var fileName = $"autoco_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+    return Results.File(bytes, "application/json", fileName);
+}).RequireAuthorization();
+
+app.MapPost("/api/admin/backup/import", async (
+    BackupDto backup, IBackupService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var result = await svc.ImportAsync(backup);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}).RequireAuthorization();
+
+app.MapGet("/api/admin/backup/files", async (IBackupService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    return Results.Ok(await svc.ListFilesAsync());
+}).RequireAuthorization();
+
+app.MapPost("/api/admin/backup/files", async (IBackupService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var info = await svc.CreateFileAsync();
+    return Results.Ok(info);
+}).RequireAuthorization();
+
+app.MapGet("/api/admin/backup/files/{name}", async (
+    string name, IBackupService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var result = await svc.DownloadFileAsync(name);
+    if (result is null) return Results.NotFound();
+    return Results.File(result.Value.Data, "application/json", result.Value.Name);
+}).RequireAuthorization();
+
+app.MapDelete("/api/admin/backup/files/{name}", async (
+    string name, IBackupService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    return await svc.DeleteFileAsync(name) ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
+app.MapPost("/api/admin/backup/files/{name}/restore", async (
+    string name, IBackupService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var result = await svc.RestoreFileAsync(name);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}).RequireAuthorization();
 
 app.Run();

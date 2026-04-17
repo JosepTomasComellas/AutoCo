@@ -188,11 +188,15 @@
 
         _groups = await Api.GetGroupsAsync(ActivityId) ?? [];
         var allStudents = await Api.GetStudentsAsync(_activity.ClassId) ?? [];
+
+        // Exclou els alumnes exclosos del mòdul al qual pertany aquesta activitat
+        var exclusions = await Api.GetExclusionsAsync(_activity.ModuleId) ?? [];
+        var excludedIds = exclusions.Select(e => e.StudentId).ToHashSet();
+
         var assignedIds = _groups.SelectMany(g => g.Members).Select(m => m.Id).ToHashSet();
         _unassigned = allStudents
-            .Where(s => !assignedIds.Contains(s.Id))
+            .Where(s => !assignedIds.Contains(s.Id) && !excludedIds.Contains(s.Id))
             .OrderBy(s => s.NumLlista)
-            .Select(s => new StudentDto(s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.CreatedAt))
             .ToList();
 
         foreach (var g in _groups)

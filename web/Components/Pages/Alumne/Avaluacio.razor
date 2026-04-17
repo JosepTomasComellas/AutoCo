@@ -62,8 +62,8 @@ else
             @foreach (var criteri in _criteria)
             {
                 var key     = criteri.Key;
-                var current = _scores.TryGetValue((entry.StudentId, key), out var v) ? v : 0;
-                var stars   = current > 0 ? (int)Math.Ceiling(current / 2.0) : 0;
+                var current = _scores.TryGetValue((entry.StudentId, key), out var v) ? v : 0.0;
+                var stars   = StarsFromScore(current);
 
                 <MudStack Class="mb-4">
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1"
@@ -75,8 +75,8 @@ else
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Warning"
                                      Variant="Variant.Filled"
-                                     Style="font-weight:700;min-width:52px;justify-content:center">
-                                @current / 10
+                                     Style="font-weight:700;min-width:62px;justify-content:center">
+                                @ScoreLabel(stars) – @current.ToString("G")
                             </MudChip>
                         }
                         else
@@ -89,7 +89,7 @@ else
                         }
                     </MudStack>
 
-                    <!-- 5 estrelles: 1★=2, 2★=4, 3★=6, 4★=8, 5★=10 -->
+                    <!-- 5 estrelles: 1★=E(1), 2★=D(3.5), 3★=C(5), 4★=B(7.5), 5★=A(10) -->
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                         <MudRating SelectedValue="stars"
                                    SelectedValueChanged="val => SetScore(entry.StudentId, key, val)"
@@ -127,8 +127,8 @@ else
     <!-- Llegenda de puntuació -->
     <MudStack Row="true" Spacing="1" Class="mt-3 mb-6" Wrap="Wrap.Wrap"
               Style="justify-content:center">
-        @foreach (var (s, label) in new[] { (1,"2 – Insuficient"), (2,"4 – Regular"),
-            (3,"6 – Bé"), (4,"8 – Notable"), (5,"10 – Excel·lent") })
+        @foreach (var (s, label) in new[] { (1,"E – 1"), (2,"D – 3.5"),
+            (3,"C – 5"), (4,"B – 7.5"), (5,"A – 10") })
         {
             <MudChip T="string" Size="Size.Small" Color="Color.Default"
                      Variant="Variant.Outlined" Style="font-size:.72rem">
@@ -146,11 +146,11 @@ else
     private bool _loading = true;
     private bool _saving  = false;
 
-    // Puntuació 1-10 per (studentId, criteriaKey)
-    private Dictionary<(int, string), int> _scores   = new();
-    private Dictionary<int, string>        _comments = new();
+    // Puntuació per (studentId, criteriaKey): E=1, D=3.5, C=5, B=7.5, A=10
+    private Dictionary<(int, string), double> _scores   = new();
+    private Dictionary<int, string>           _comments = new();
     // Valor hovered per mostrar l'hint en temps real
-    private Dictionary<(int, string), int> _hovered  = new();
+    private Dictionary<(int, string), int>    _hovered  = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -166,19 +166,43 @@ else
                 _comments[entry.StudentId] = entry.Comment ?? "";
                 foreach (var c in _criteria)
                     _scores[(entry.StudentId, c.Key)] =
-                        entry.Scores.TryGetValue(c.Key, out var sv) ? sv : 0;
+                        entry.Scores.TryGetValue(c.Key, out var sv) ? sv : 0.0;
             }
         }
         _loading = false;
     }
 
-    // Converteix estrelles (1-5) a puntuació (2-10)
+    private static double ScoreFromStars(int stars) => stars switch
+    {
+        1 => 1.0,
+        2 => 3.5,
+        3 => 5.0,
+        4 => 7.5,
+        5 => 10.0,
+        _ => 0.0
+    };
+
+    private static int StarsFromScore(double score) => score switch
+    {
+        > 0 and <= 1.0 => 1,
+        > 1.0 and <= 3.5 => 2,
+        > 3.5 and <= 5.0 => 3,
+        > 5.0 and <= 7.5 => 4,
+        > 7.5 => 5,
+        _ => 0
+    };
+
+    private static string ScoreLabel(int stars) => stars switch
+    {
+        1 => "E", 2 => "D", 3 => "C", 4 => "B", 5 => "A", _ => "–"
+    };
+
     private void SetScore(int studentId, string key, int stars)
     {
-        var current = _scores.TryGetValue((studentId, key), out var v) ? v : 0;
-        var newScore = stars * 2;
+        var current  = _scores.TryGetValue((studentId, key), out var v) ? v : 0.0;
+        var newScore = ScoreFromStars(stars);
         // Clic sobre la mateixa estrella → desselecciona
-        _scores[(studentId, key)] = (current == newScore) ? 0 : newScore;
+        _scores[(studentId, key)] = (current == newScore) ? 0.0 : newScore;
         _hovered.Remove((studentId, key));
     }
 
@@ -195,11 +219,11 @@ else
         var stars = _hovered.TryGetValue((studentId, key), out var h) ? h : currentStars;
         return stars switch
         {
-            1 => "2 – Insuficient",
-            2 => "4 – Regular",
-            3 => "6 – Bé",
-            4 => "8 – Notable",
-            5 => "10 – Excel·lent",
+            1 => "E – Insuficient (1)",
+            2 => "D – Regular (3.5)",
+            3 => "C – Bé (5)",
+            4 => "B – Notable (7.5)",
+            5 => "A – Excel·lent (10)",
             _ => "Sense puntuar"
         };
     }
@@ -228,7 +252,7 @@ else
             _form!.Entries.Select(entry => new EvaluationEntryRequest(
                 entry.StudentId,
                 _criteria.ToDictionary(c => c.Key,
-                    c => _scores.TryGetValue((entry.StudentId, c.Key), out var sv) ? sv : 0),
+                    c => _scores.TryGetValue((entry.StudentId, c.Key), out var sv) ? sv : 0.0),
                 string.IsNullOrWhiteSpace(_comments[entry.StudentId])
                     ? null : _comments[entry.StudentId].Trim()
             )).ToList());

@@ -2,6 +2,7 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject ProtectedLocalStorage LocalStorage
 
 <PageTitle>Accés Professor – AutoCo</PageTitle>
 
@@ -28,11 +29,11 @@
                     <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
                 }
 
-                <MudTextField @bind-Value="_username" Label="Nom d'usuari"
+                <MudTextField @bind-Value="_email" Label="Correu electrònic"
                               Variant="Variant.Outlined" Class="mb-3"
-                              Immediate="true"
+                              Immediate="true" InputType="InputType.Email"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Person"
+                              AdornmentIcon="@Icons.Material.Filled.Email"
                               @onkeydown="OnKeyDown" />
                 <MudTextField @bind-Value="_password" Label="Contrasenya"
                               Variant="Variant.Outlined" Class="mb-5"
@@ -62,7 +63,7 @@
 </div>
 
 @code {
-    private string _username = "";
+    private string _email    = "";
     private string _password = "";
     private string? _error;
     private bool _loading;
@@ -86,14 +87,15 @@
 
     private async Task Login()
     {
-        if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_password))
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
         {
             _error = "Omple tots els camps."; return;
         }
         _loading = true; _error = null;
-        var result = await Api.LoginProfessorAsync(_username.Trim(), _password);
+        var result = await Api.LoginProfessorAsync(_email.Trim(), _password);
         _loading = false;
         if (result is null) { _error = "Credencials incorrectes."; return; }
+        await LocalStorage.SetAsync("autoco_session", result);
         UserState.SetLogin(result);
         Nav.NavigateTo("/professor/dashboard");
     }

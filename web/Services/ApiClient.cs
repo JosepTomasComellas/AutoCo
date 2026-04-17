@@ -24,11 +24,11 @@ public class ApiClient
 
     // ── Auth ──────────────────────────────────────────────────────────────────
 
-    public Task<LoginResponse?> LoginProfessorAsync(string username, string password) =>
-        PostAsync<LoginResponse>("/api/auth/professor", new ProfessorLoginRequest(username, password));
+    public Task<LoginResponse?> LoginProfessorAsync(string email, string password) =>
+        PostAsync<LoginResponse>("/api/auth/professor", new ProfessorLoginRequest(email, password));
 
-    public Task<LoginResponse?> LoginStudentAsync(int classId, int numLlista, string pin) =>
-        PostAsync<LoginResponse>("/api/auth/student", new StudentLoginRequest(classId, numLlista, pin));
+    public Task<LoginResponse?> LoginStudentAsync(string email, string password) =>
+        PostAsync<LoginResponse>("/api/auth/student", new StudentLoginRequest(email, password));
 
     // ── Classes ───────────────────────────────────────────────────────────────
 
@@ -49,14 +49,14 @@ public class ApiClient
 
     // ── Alumnes ───────────────────────────────────────────────────────────────
 
-    public Task<List<StudentWithPinDto>?> GetStudentsAsync(int classId) =>
-        GetAsync<List<StudentWithPinDto>>($"/api/classes/{classId}/students");
+    public Task<List<StudentDto>?> GetStudentsAsync(int classId) =>
+        GetAsync<List<StudentDto>>($"/api/classes/{classId}/students");
 
-    public Task<StudentWithPinDto?> AddStudentAsync(int classId, CreateStudentRequest req) =>
-        PostAsync<StudentWithPinDto>($"/api/classes/{classId}/students", req);
+    public Task<StudentDto?> AddStudentAsync(int classId, CreateStudentRequest req) =>
+        PostAsync<StudentDto>($"/api/classes/{classId}/students", req);
 
-    public Task<StudentWithPinDto?> UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req) =>
-        PutAsync<StudentWithPinDto>($"/api/classes/{classId}/students/{studentId}", req);
+    public Task<StudentDto?> UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req) =>
+        PutAsync<StudentDto>($"/api/classes/{classId}/students/{studentId}", req);
 
     public Task<bool> DeleteStudentAsync(int classId, int studentId) =>
         DeleteAsync($"/api/classes/{classId}/students/{studentId}");
@@ -64,34 +64,20 @@ public class ApiClient
     public Task<BulkCreateResult?> BulkAddStudentsAsync(int classId, BulkCreateStudentsRequest req) =>
         PostAsync<BulkCreateResult>($"/api/classes/{classId}/students/bulk", req);
 
-    public Task<ResetPinResult?> ResetPinAsync(int classId, int studentId) =>
-        PostAsync<ResetPinResult>($"/api/classes/{classId}/students/{studentId}/reset-pin", null);
+    public Task<ResetPasswordResult?> ResetPasswordAsync(int classId, int studentId) =>
+        PostAsync<ResetPasswordResult>($"/api/classes/{classId}/students/{studentId}/reset-password", null);
 
-    public Task<SendPinResult?> SendPinAsync(int classId, int studentId) =>
-        PostAsync<SendPinResult>($"/api/classes/{classId}/students/{studentId}/send-pin", null);
+    public Task<SendPasswordResult?> SendPasswordAsync(int classId, int studentId) =>
+        PostAsync<SendPasswordResult>($"/api/classes/{classId}/students/{studentId}/send-password", null);
 
-    public Task<SendAllResult?> SendAllPinsAsync(int classId) =>
-        PostAsync<SendAllResult>($"/api/classes/{classId}/students/send-all-pins", null);
+    public Task<SendAllResult?> SendAllPasswordsAsync(int classId) =>
+        PostAsync<SendAllResult>($"/api/classes/{classId}/students/send-all-passwords", null);
 
     public Task<SendCredentialsResult?> SendProfessorCredentialsAsync(int professorId) =>
         PostAsync<SendCredentialsResult>($"/api/professors/{professorId}/send-credentials", null);
 
     public Task<SendAllResult?> SendAllProfessorCredentialsAsync() =>
         PostAsync<SendAllResult>("/api/professors/send-all-credentials", null);
-
-    public async Task<(byte[] Content, string FileName)?> ExportStudentsAsync(int? classId)
-    {
-        var url = classId.HasValue
-            ? $"/api/classes/{classId}/students/export"
-            : "/api/students/export";
-        var resp = await _http.GetAsync(url);
-        if (!resp.IsSuccessStatusCode) return null;
-        var bytes    = await resp.Content.ReadAsByteArrayAsync();
-        var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
-            ?? resp.Content.Headers.ContentDisposition?.FileName
-            ?? "alumnes.csv";
-        return (bytes, fileName.Trim('"'));
-    }
 
     // ── Mòduls ────────────────────────────────────────────────────────────────
 
@@ -106,6 +92,15 @@ public class ApiClient
 
     public Task<bool> DeleteModuleAsync(int classId, int id) =>
         DeleteAsync($"/api/classes/{classId}/modules/{id}");
+
+    public Task<List<ModuleExclusionDto>?> GetExclusionsAsync(int moduleId) =>
+        GetAsync<List<ModuleExclusionDto>>($"/api/modules/{moduleId}/exclusions");
+
+    public Task<bool> AddExclusionAsync(int moduleId, int studentId) =>
+        PostNoContentAsync($"/api/modules/{moduleId}/exclusions/{studentId}", null);
+
+    public Task<bool> RemoveExclusionAsync(int moduleId, int studentId) =>
+        DeleteAsync($"/api/modules/{moduleId}/exclusions/{studentId}");
 
     // ── Activitats ────────────────────────────────────────────────────────────
 
@@ -210,8 +205,41 @@ public class ApiClient
     public Task<List<CriteriaDto>?> GetCriteriaAsync() =>
         GetAsync<List<CriteriaDto>>("/api/criteria");
 
-    public Task<List<ClassDto>?> GetPublicClassesAsync() =>
-        GetAsync<List<ClassDto>>("/api/public/classes");
+    // ── Backup / Restore (admin) ──────────────────────────────────────────────
+
+    public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()
+    {
+        var resp = await _http.GetAsync("/api/admin/backup/export");
+        if (!resp.IsSuccessStatusCode) return null;
+        var bytes    = await resp.Content.ReadAsByteArrayAsync();
+        var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
+            ?? resp.Content.Headers.ContentDisposition?.FileName
+            ?? $"autoco_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+        return (bytes, fileName.Trim('"'));
+    }
+
+    public Task<ImportResult?> ImportBackupAsync(BackupDto backup) =>
+        PostAsync<ImportResult>("/api/admin/backup/import", backup);
+
+    public Task<List<BackupFileInfoDto>?> ListBackupFilesAsync() =>
+        GetAsync<List<BackupFileInfoDto>>("/api/admin/backup/files");
+
+    public Task<BackupFileInfoDto?> CreateBackupFileAsync() =>
+        PostAsync<BackupFileInfoDto>("/api/admin/backup/files", null);
+
+    public async Task<(byte[] Content, string FileName)?> DownloadBackupFileAsync(string name)
+    {
+        var resp = await _http.GetAsync($"/api/admin/backup/files/{Uri.EscapeDataString(name)}");
+        if (!resp.IsSuccessStatusCode) return null;
+        var bytes = await resp.Content.ReadAsByteArrayAsync();
+        return (bytes, name);
+    }
+
+    public Task<bool> DeleteBackupFileAsync(string name) =>
+        DeleteAsync($"/api/admin/backup/files/{Uri.EscapeDataString(name)}");
+
+    public Task<ImportResult?> RestoreBackupFileAsync(string name) =>
+        PostAsync<ImportResult>($"/api/admin/backup/files/{Uri.EscapeDataString(name)}/restore", null);
 
     // ── Privats ───────────────────────────────────────────────────────────────
 

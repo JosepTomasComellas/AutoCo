@@ -3,8 +3,10 @@ networks:
     driver: bridge
 
 volumes:
-  db-data:    # Volum Docker per a SQL Server (NTFS via WSL2 no és compatible amb SQLPAL)
-  redis-data: # Volum per a Redis (persistència AOF)
+  db-data:      # Volum Docker per a SQL Server (NTFS via WSL2 no és compatible amb SQLPAL)
+  redis-data:   # Volum per a Redis (persistència AOF)
+  dp-keys:      # Claus de DataProtection (antiforgery, ProtectedLocalStorage)
+  api-backups:  # Còpies de seguretat JSON (exportació/importació)
 
 services:
 
@@ -35,7 +37,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: autoco-redis
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy volatile-lru
     expose:
       - "6379"
     volumes:
@@ -62,7 +64,7 @@ services:
         TrustServerCertificate=True
       JwtSettings__Secret:          "${JWT_SECRET}"
       JwtSettings__ExpiryHours:     "${JWT_EXPIRY_HOURS}"
-      Admin__Username:              "${ADMIN_USERNAME}"
+      Admin__Email:                 "${ADMIN_EMAIL}"
       Admin__Password:              "${ADMIN_PASSWORD}"
       Admin__Nom:                   "${ADMIN_NOM}"
       Admin__Cognoms:               "${ADMIN_COGNOMS}"
@@ -76,6 +78,8 @@ services:
       Redis__ConnectionString:      "redis:6379"
     expose:
       - "8080"
+    volumes:
+      - api-backups:/app/backups
     networks:
       - autoco-net
     depends_on:
@@ -94,6 +98,8 @@ services:
       ASPNETCORE_ENVIRONMENT:  Production
       ApiSettings__BaseUrl:    "http://api:8080"
       Redis__ConnectionString: "redis:6379"
+    volumes:
+      - dp-keys:/app/dp-keys
     networks:
       - autoco-net
     depends_on:

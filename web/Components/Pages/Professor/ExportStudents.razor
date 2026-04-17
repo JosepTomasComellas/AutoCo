@@ -1,33 +1,13 @@
 @page "/professor/export-students"
-@inject ApiClient Api
-@inject UserStateService UserState
 @inject NavigationManager Nav
-@inject IJSRuntime JS
 
-<PageTitle>Exportant alumnes...</PageTitle>
-
-@if (_error is not null)
-{
-    <MudAlert Severity="Severity.Error">@_error</MudAlert>
-    <MudButton Href="/professor/classes" Class="mt-2">← Tornar</MudButton>
-}
+<PageTitle>Redireccionant...</PageTitle>
 
 @code {
     [SupplyParameterFromQuery] public int? ClassId { get; set; }
-    private string? _error;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnInitialized()
     {
-        if (!firstRender) return;
-        if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
-
-        Api.SetToken(UserState.Token!);
-        var result = await Api.ExportStudentsAsync(ClassId);
-        if (result is null) { _error = "No s'ha pogut exportar."; StateHasChanged(); return; }
-
-        var (content, fileName) = result.Value;
-        var base64 = Convert.ToBase64String(content);
-        await JS.InvokeVoidAsync("downloadBase64File", base64, fileName, "text/csv;charset=utf-8");
         Nav.NavigateTo(ClassId.HasValue ? $"/professor/alumnes/{ClassId}" : "/professor/classes");
     }
 }

@@ -24,40 +24,43 @@
 </MudStack>
 
 <MudGrid>
-    <!-- Nova classe -->
-    <MudItem xs="12" md="4">
-        <MudCard Elevation="2">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
-                        <MudIcon Icon="@Icons.Material.Filled.Add" />
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Nova classe</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudTextField @bind-Value="_nom" Label="Nom de la classe" Variant="Variant.Outlined"
-                              Class="mb-3" Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Class" />
-                <MudTextField @bind-Value="_curs" Label="Curs acadèmic (opcional)"
-                              Placeholder="2024-2025" Variant="Variant.Outlined"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
-            </MudCardContent>
-            <MudCardActions Class="px-4 pb-4">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                           OnClick="CreateAsync" Disabled="_saving"
-                           StartIcon="@Icons.Material.Filled.AddCircle">
-                    Crear classe
-                </MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
+    @if (UserState.IsAdmin)
+    {
+        <!-- Nova classe -->
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
+                            <MudIcon Icon="@Icons.Material.Filled.Add" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Nova classe</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudTextField @bind-Value="_nom" Label="Nom de la classe" Variant="Variant.Outlined"
+                                  Class="mb-3" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Class" />
+                    <MudTextField @bind-Value="_curs" Label="Curs acadèmic (opcional)"
+                                  Placeholder="2024-2025" Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
+                </MudCardContent>
+                <MudCardActions Class="px-4 pb-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                               OnClick="CreateAsync" Disabled="_saving"
+                               StartIcon="@Icons.Material.Filled.AddCircle">
+                        Crear classe
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    }
 
     <!-- Llista de classes -->
-    <MudItem xs="12" md="8">
+    <MudItem xs="12" md="@(UserState.IsAdmin ? 8 : 12)">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
             <MudText Typo="Typo.h6" Style="font-weight:600">
                 Classes (@_classes.Count)
@@ -107,19 +110,31 @@
                                         </MudButton>
                                         <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
                                                    StartIcon="@Icons.Material.Filled.People"
-                                                   Href="@($"/professor/alumnes/{c.Id}")">
+                                                   Href="@($"/professor/alumnes/{c.Id}")" Class="mr-1">
                                             Alumnes
                                         </MudButton>
-                                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                                                       Size="Size.Small" title="Eliminar classe"
-                                                       OnClick="() => DeleteAsync(c)" />
+                                        @if (UserState.IsAdmin)
+                                        {
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                                           Size="Size.Small" title="Eliminar classe"
+                                                           OnClick="() => DeleteAsync(c)" />
+                                        }
                                     </MudStack>
                                 </MudStack>
                             </TitleContent>
                             <ChildContent>
                                 <MudDivider />
                                 <div class="pa-4">
-                                    <EditClassForm Class="c" OnSaved="OnClassSaved" />
+                                    @if (UserState.IsAdmin)
+                                    {
+                                        <EditClassForm Class="c" OnSaved="OnClassSaved" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            Creada: @c.CreatedAt.ToString("dd/MM/yyyy") · @c.NumStudents alumnes
+                                        </MudText>
+                                    }
                                 </div>
                             </ChildContent>
                         </MudExpansionPanel>

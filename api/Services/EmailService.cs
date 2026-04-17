@@ -7,8 +7,8 @@ namespace AutoCo.Api.Services;
 public interface IEmailService
 {
     bool IsEnabled { get; }
-    Task<bool> SendPinAsync(string toEmail, string toName, string className, int studentId, string pin);
-    Task<bool> SendProfessorCredentialsAsync(string toEmail, string toName, string username, string password);
+    Task<bool> SendStudentPasswordAsync(string toEmail, string toName, string className, string password);
+    Task<bool> SendProfessorCredentialsAsync(string toEmail, string toName, string password);
 }
 
 public class EmailService(IConfiguration config, ILogger<EmailService> logger) : IEmailService
@@ -23,77 +23,55 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
 
     public bool IsEnabled => !string.IsNullOrWhiteSpace(_host) && !string.IsNullOrWhiteSpace(_fromAddress);
 
-    public async Task<bool> SendPinAsync(
-        string toEmail, string toName, string className, int studentId, string pin)
+    public async Task<bool> SendStudentPasswordAsync(string toEmail, string toName, string className, string password)
     {
         if (!IsEnabled) return false;
-
-        var accesUrl = string.IsNullOrWhiteSpace(_webUrl) ? "(URL no configurada)" : $"{_webUrl}/Auth/LoginAlumne";
-
+        var url = string.IsNullOrWhiteSpace(_webUrl) ? "(URL no configurada)" : $"{_webUrl}/auth/login-alumne";
         var body = $"""
             Hola, {toName}!
 
-            T'enviem les teves credencials d'accés al sistema d'avaluació del
-            Departament d'Informàtica de Salesians de Sarrià.
+            T'enviem les teves credencials d'accés al sistema d'avaluació.
 
             ─────────────────────────────────────
              DADES D'ACCÉS
             ─────────────────────────────────────
-             Nom complet:          {toName}
-             Classe:               {className}
-             Número d'alumne (ID): {studentId}
-             PIN d'accés:          {pin}
+             Classe:       {className}
+             Correu:       {toEmail}
+             Contrasenya:  {password}
             ─────────────────────────────────────
 
-            Accedeix a la plataforma aquí:
-            {accesUrl}
+            Accedeix aquí: {url}
 
-            Guarda bé aquestes dades. Si tens qualsevol problema, contacta amb
-            el teu professor/a.
+            Si tens qualsevol problema, contacta amb el teu professor/a.
 
-            ─────────────────────────────────────
-            Departament d'Informàtica
-            Salesians de Sarrià
-            ─────────────────────────────────────
+            Departament d'Informàtica · Salesians de Sarrià
             """;
-
         return await SendAsync(toEmail, toName, $"Credencials d'accés – {className}", body);
     }
 
-    public async Task<bool> SendProfessorCredentialsAsync(
-        string toEmail, string toName, string username, string password)
+    public async Task<bool> SendProfessorCredentialsAsync(string toEmail, string toName, string password)
     {
         if (!IsEnabled) return false;
-
-        var accesUrl = string.IsNullOrWhiteSpace(_webUrl) ? "(URL no configurada)" : $"{_webUrl}/Auth/LoginProfessor";
-
+        var url = string.IsNullOrWhiteSpace(_webUrl) ? "(URL no configurada)" : $"{_webUrl}/auth/login-professor";
         var body = $"""
             Hola, {toName}!
 
-            T'enviem les teves credencials d'accés al sistema d'avaluació del
-            Departament d'Informàtica de Salesians de Sarrià.
+            T'enviem les teves credencials d'accés al sistema d'avaluació.
 
             ─────────────────────────────────────
              DADES D'ACCÉS
             ─────────────────────────────────────
-             Nom complet:          {toName}
-             Nom d'usuari:         {username}
-             Contrasenya:          {password}
+             Correu:       {toEmail}
+             Contrasenya:  {password}
             ─────────────────────────────────────
 
-            Accedeix a la plataforma aquí:
-            {accesUrl}
+            Accedeix aquí: {url}
 
             Es recomana canviar la contrasenya després del primer accés.
-            Si tens qualsevol problema, contacta amb l'administrador del sistema.
 
-            ─────────────────────────────────────
-            Departament d'Informàtica
-            Salesians de Sarrià
-            ─────────────────────────────────────
+            Departament d'Informàtica · Salesians de Sarrià
             """;
-
-        return await SendAsync(toEmail, toName, "Credencials d'accés – Plataforma d'Avaluació", body);
+        return await SendAsync(toEmail, toName, "Credencials d'accés – AutoCo", body);
     }
 
     private async Task<bool> SendAsync(string toEmail, string toName, string subject, string body)

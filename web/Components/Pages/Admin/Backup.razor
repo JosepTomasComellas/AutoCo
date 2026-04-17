@@ -1,0 +1,345 @@
+@page "/admin/backup"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService Dialog
+@inject IJSRuntime JS
+
+<PageTitle>Còpies de seguretat – AutoCo</PageTitle>
+@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+
+<!-- Capçalera -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">Còpies de seguretat</MudText>
+</MudStack>
+
+<MudGrid>
+    <!-- ── Exportar ─────────────────────────────────────────────── -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.FileDownload" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Exportar configuració</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Descarrega un fitxer JSON amb totes les dades
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2">
+                    Exporta professors, classes, alumnes, mòduls, activitats, grups i totes les avaluacions a un fitxer JSON que pots guardar localment.
+                </MudText>
+            </MudCardContent>
+            <MudCardActions Class="px-4 pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.FileDownload"
+                           OnClick="ExportAsync" Disabled="_exporting">
+                    @if (_exporting)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Exportar ara
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <!-- ── Importar ─────────────────────────────────────────────── -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.FileUpload" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Importar configuració</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Restaura des d'un fitxer JSON local
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                    Aquesta acció <strong>substitueix totes les dades existents</strong>.
+                </MudAlert>
+                <InputFile id="importFile" OnChange="OnFileSelected" accept=".json" style="display:none" />
+                <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.AttachFile"
+                           OnClick='() => JS.InvokeVoidAsync("eval", "document.getElementById(\"importFile\").click()")'>
+                    @(_importFile is null ? "Seleccionar fitxer JSON..." : _importFile.Name)
+                </MudButton>
+            </MudCardContent>
+            <MudCardActions Class="px-4 pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.RestorePage"
+                           OnClick="ImportAsync"
+                           Disabled="@(_importFile is null || _importing)">
+                    @if (_importing)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Importar i substituir
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <!-- ── Còpies al servidor ───────────────────────────────────── -->
+    <MudItem xs="12">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.CloudDone" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Còpies al servidor</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Emmagatzemades al volum de l'API
+                    </MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                               StartIcon="@Icons.Material.Filled.AddCircle"
+                               OnClick="CreateServerBackupAsync" Disabled="_creating">
+                        @if (_creating)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Crear còpia ara
+                    </MudButton>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_loadingFiles)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Secondary" />
+                }
+                else if (!_files.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        No hi ha còpies guardades al servidor.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudTable Items="_files" Dense="true" Hover="true" Elevation="0">
+                        <HeaderContent>
+                            <MudTh>Nom del fitxer</MudTh>
+                            <MudTh>Data</MudTh>
+                            <MudTh>Mida</MudTh>
+                            <MudTh Style="text-align:right">Accions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <MudText Typo="Typo.body2" Style="font-family:monospace">
+                                    @context.Name
+                                </MudText>
+                            </MudTd>
+                            <MudTd>@context.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudTd>
+                            <MudTd>@FormatSize(context.SizeBytes)</MudTd>
+                            <MudTd Style="text-align:right">
+                                <MudIconButton Icon="@Icons.Material.Filled.FileDownload"
+                                               Color="Color.Primary" Size="Size.Small"
+                                               title="Descarregar"
+                                               OnClick="() => DownloadServerBackupAsync(context.Name)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.RestorePage"
+                                               Color="Color.Warning" Size="Size.Small"
+                                               title="Restaurar (substitueix totes les dades)"
+                                               OnClick="() => RestoreServerBackupAsync(context.Name)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Color="Color.Error" Size="Size.Small"
+                                               title="Eliminar"
+                                               OnClick="() => DeleteServerBackupAsync(context.Name)" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool _exporting    = false;
+    private bool _importing    = false;
+    private bool _creating     = false;
+    private bool _loadingFiles = true;
+
+    private IBrowserFile? _importFile;
+    private List<BackupFileInfoDto> _files = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsAdmin) return;
+        Api.SetToken(UserState.Token!);
+        await LoadFilesAsync();
+    }
+
+    private async Task LoadFilesAsync()
+    {
+        _loadingFiles = true;
+        _files = await Api.ListBackupFilesAsync() ?? [];
+        _loadingFiles = false;
+    }
+
+    // ── Exportar ──────────────────────────────────────────────────────────────
+    private async Task ExportAsync()
+    {
+        _exporting = true;
+        var result = await Api.ExportBackupAsync();
+        _exporting = false;
+        if (result is null)
+        {
+            Snackbar.Add("Error en exportar", Severity.Error);
+            return;
+        }
+        await DownloadBytesAsync(result.Value.Content, result.Value.FileName);
+        Snackbar.Add("Exportació completada", Severity.Success);
+    }
+
+    // ── Importar ──────────────────────────────────────────────────────────────
+    private void OnFileSelected(InputFileChangeEventArgs e) => _importFile = e.File;
+
+    private async Task ImportAsync()
+    {
+        if (_importFile is null) return;
+
+        var confirmed = await Dialog.ShowMessageBox(
+            "Importar configuració",
+            "Això SUBSTITUIRÀ totes les dades existents (professors, classes, alumnes, activitats, avaluacions). Estàs segur?",
+            yesText: "Sí, importar", cancelText: "Cancel·lar");
+        if (confirmed != true) return;
+
+        _importing = true;
+        try
+        {
+            using var stream = _importFile.OpenReadStream(maxAllowedSize: 50 * 1024 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            var backup = System.Text.Json.JsonSerializer.Deserialize<BackupDto>(json,
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (backup is null)
+            {
+                Snackbar.Add("Format de fitxer invàlid", Severity.Error);
+                return;
+            }
+
+            var result = await Api.ImportBackupAsync(backup);
+            if (result?.Success == true)
+            {
+                Snackbar.Add(
+                    $"Importació correcta: {result.Professors} professors, {result.Classes} classes, " +
+                    $"{result.Students} alumnes, {result.Activities} activitats, {result.Evaluations} avaluacions",
+                    Severity.Success);
+                _importFile = null;
+            }
+            else
+                Snackbar.Add($"Error: {result?.Error ?? "desconegut"}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error llegint el fitxer: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _importing = false;
+        }
+    }
+
+    // ── Còpies servidor ───────────────────────────────────────────────────────
+    private async Task CreateServerBackupAsync()
+    {
+        _creating = true;
+        var info = await Api.CreateBackupFileAsync();
+        _creating = false;
+        if (info is null)
+            Snackbar.Add("Error en crear la còpia", Severity.Error);
+        else
+        {
+            Snackbar.Add($"Còpia creada: {info.Name}", Severity.Success);
+            await LoadFilesAsync();
+        }
+    }
+
+    private async Task DownloadServerBackupAsync(string name)
+    {
+        var result = await Api.DownloadBackupFileAsync(name);
+        if (result is null)
+            Snackbar.Add("Error en descarregar", Severity.Error);
+        else
+            await DownloadBytesAsync(result.Value.Content, result.Value.FileName);
+    }
+
+    private async Task RestoreServerBackupAsync(string name)
+    {
+        var confirmed = await Dialog.ShowMessageBox(
+            "Restaurar còpia",
+            $"Restaurar «{name}» SUBSTITUIRÀ totes les dades actuals. Estàs segur?",
+            yesText: "Sí, restaurar", cancelText: "Cancel·lar");
+        if (confirmed != true) return;
+
+        var result = await Api.RestoreBackupFileAsync(name);
+        if (result?.Success == true)
+            Snackbar.Add(
+                $"Restauració correcta: {result.Professors} professors, {result.Classes} classes, " +
+                $"{result.Students} alumnes, {result.Activities} activitats, {result.Evaluations} avaluacions",
+                Severity.Success);
+        else
+            Snackbar.Add($"Error: {result?.Error ?? "desconegut"}", Severity.Error);
+    }
+
+    private async Task DeleteServerBackupAsync(string name)
+    {
+        var confirmed = await Dialog.ShowMessageBox(
+            "Eliminar còpia",
+            $"Eliminar «{name}»?",
+            yesText: "Eliminar", cancelText: "Cancel·lar");
+        if (confirmed != true) return;
+
+        var ok = await Api.DeleteBackupFileAsync(name);
+        if (ok)
+        {
+            Snackbar.Add("Còpia eliminada", Severity.Success);
+            await LoadFilesAsync();
+        }
+        else
+            Snackbar.Add("Error en eliminar", Severity.Error);
+    }
+
+    // ── Utilitats ──────────────────────────────────────────────────────────────
+    private async Task DownloadBytesAsync(byte[] data, string fileName)
+    {
+        var base64 = Convert.ToBase64String(data);
+        await JS.InvokeVoidAsync("eval", $@"
+            (function(){{
+                var a = document.createElement('a');
+                a.href = 'data:application/json;base64,{base64}';
+                a.download = '{fileName}';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }})()");
+    }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024       => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        _             => $"{bytes / 1024.0 / 1024.0:F1} MB"
+    };
+}

@@ -8,7 +8,6 @@
 <PageTitle>Gestió de professors – AutoCo</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
 
-<!-- Capçalera -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
                Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
@@ -16,6 +15,11 @@
     <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Color="Color.Secondary" Class="mr-1" />
     <MudText Typo="Typo.h5" Style="font-weight:700">Gestió de professors</MudText>
     <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.CloudDone"
+               Href="/admin/backup">
+        Còpies de seguretat
+    </MudButton>
     <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                StartIcon="@Icons.Material.Filled.MarkEmailRead"
                OnClick="SendAllAsync">
@@ -26,7 +30,6 @@
 @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Secondary" Class="mb-4" /> }
 
 <MudGrid>
-    <!-- Formulari nou professor -->
     <MudItem xs="12" md="4">
         <MudCard Elevation="2">
             <MudCardHeader>
@@ -40,13 +43,10 @@
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
-                <MudTextField @bind-Value="_username" Label="Nom d'usuari" Variant="Variant.Outlined"
-                              Class="mb-3" Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.AccountCircle" />
-                <MudTextField @bind-Value="_password" Label="Contrasenya" Variant="Variant.Outlined"
-                              InputType="InputType.Password" Class="mb-3"
+                <MudTextField @bind-Value="_email" Label="Correu electrònic" Variant="Variant.Outlined"
+                              Class="mb-3" InputType="InputType.Email"
                               Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Lock" />
+                              AdornmentIcon="@Icons.Material.Filled.Email" />
                 <MudGrid Spacing="2">
                     <MudItem xs="6">
                         <MudTextField @bind-Value="_nom" Label="Nom" Variant="Variant.Outlined" />
@@ -55,11 +55,10 @@
                         <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" />
                     </MudItem>
                 </MudGrid>
-                <MudTextField @bind-Value="_correu" Label="Correu (opcional)" Class="mt-3"
-                              Variant="Variant.Outlined" InputType="InputType.Email"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Email" />
                 <MudCheckBox @bind-Value="_isAdmin" Label="Administrador" Color="Color.Warning" Class="mt-2" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                    La contrasenya es generarà automàticament i s'enviarà per correu.
+                </MudText>
             </MudCardContent>
             <MudCardActions Class="px-4 pb-4">
                 <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true"
@@ -71,7 +70,6 @@
         </MudCard>
     </MudItem>
 
-    <!-- Llista de professors -->
     <MudItem xs="12" md="8">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
             <MudText Typo="Typo.h6" Style="font-weight:600">
@@ -119,33 +117,17 @@
                                     </MudStack>
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle"
+                                            <MudIcon Icon="@Icons.Material.Filled.Email"
                                                      Size="Size.Small" Style="font-size:13px;vertical-align:middle" />
-                                            @p.Username
-                                        </MudText>
-                                        @if (p.CorreuElectronic is not null)
-                                        {
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                <MudIcon Icon="@Icons.Material.Filled.Email"
-                                                         Size="Size.Small" Style="font-size:13px;vertical-align:middle" />
-                                                @p.CorreuElectronic
-                                            </MudText>
-                                        }
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            <MudIcon Icon="@Icons.Material.Filled.Class"
-                                                     Size="Size.Small" Style="font-size:13px;vertical-align:middle" />
-                                            @p.NumClasses classe@(p.NumClasses != 1 ? "s" : "")
+                                            @p.Email
                                         </MudText>
                                     </MudStack>
                                 </MudStack>
                                 <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
-                                    @if (p.CorreuElectronic is not null)
-                                    {
-                                        <MudIconButton Icon="@Icons.Material.Filled.MarkEmailRead"
-                                                       Size="Size.Small" Color="Color.Secondary"
-                                                       title="Enviar credencials"
-                                                       OnClick="() => SendCredentialsAsync(p)" />
-                                    }
+                                    <MudIconButton Icon="@Icons.Material.Filled.MarkEmailRead"
+                                                   Size="Size.Small" Color="Color.Secondary"
+                                                   title="Enviar credencials"
+                                                   OnClick="() => SendCredentialsAsync(p)" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                    Size="Size.Small" Color="Color.Error"
                                                    title="Eliminar"
@@ -171,12 +153,10 @@
     private bool _loading = true;
     private bool _saving  = false;
 
-    private string _username = "";
-    private string _password = "";
-    private string _nom      = "";
-    private string _cognoms  = "";
-    private string _correu   = "";
-    private bool   _isAdmin  = false;
+    private string _email   = "";
+    private string _nom     = "";
+    private string _cognoms = "";
+    private bool   _isAdmin = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -188,24 +168,23 @@
 
     private async Task CreateAsync()
     {
-        if (string.IsNullOrWhiteSpace(_username) || string.IsNullOrWhiteSpace(_password)
-            || string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms))
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_nom)
+            || string.IsNullOrWhiteSpace(_cognoms))
         {
-            Snackbar.Add("Tots els camps obligatoris han d'estar omplerts.", Severity.Warning); return;
+            Snackbar.Add("Correu, Nom i Cognoms són obligatoris.", Severity.Warning); return;
         }
         _saving = true;
         Api.SetToken(UserState.Token!);
         var p = await Api.CreateProfessorAsync(new CreateProfessorRequest(
-            _username.Trim(), _password.Trim(), _nom.Trim(), _cognoms.Trim(),
-            string.IsNullOrWhiteSpace(_correu) ? null : _correu.Trim(), _isAdmin));
+            _email.Trim(), _nom.Trim(), _cognoms.Trim(), _isAdmin));
         if (p is not null)
         {
             _professors.Add(p);
             _professors = [.. _professors.OrderBy(x => x.Cognoms)];
-            _username = ""; _password = ""; _nom = ""; _cognoms = ""; _correu = ""; _isAdmin = false;
+            _email = ""; _nom = ""; _cognoms = ""; _isAdmin = false;
             Snackbar.Add($"Professor «{p.NomComplet}» creat.", Severity.Success);
         }
-        else Snackbar.Add("Error en crear el professor.", Severity.Error);
+        else Snackbar.Add("Error en crear el professor. Comprova que el correu no estigui duplicat.", Severity.Error);
         _saving = false;
     }
 
@@ -220,7 +199,7 @@
     private async Task SendAllAsync()
     {
         var confirm = await Dialog.ShowMessageBox("Confirmar",
-            "Enviar credencials a tots els professors amb correu?",
+            "Enviar credencials a tots els professors?",
             yesText: "Enviar", cancelText: "Cancel·lar");
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);

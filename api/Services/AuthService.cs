@@ -19,8 +19,7 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
     public async Task<LoginResponse?> ProfessorLoginAsync(ProfessorLoginRequest req)
     {
         var professor = await db.Professors
-            .FirstOrDefaultAsync(p => p.Username == req.Username);
-
+            .FirstOrDefaultAsync(p => p.Email == req.Email.Trim().ToLower());
         if (professor is null || !BCrypt.Net.BCrypt.Verify(req.Password, professor.PasswordHash))
             return null;
 
@@ -32,27 +31,21 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
     public async Task<LoginResponse?> StudentLoginAsync(StudentLoginRequest req)
     {
         var student = await db.Students
-            .Include(s => s.Class)
-            .FirstOrDefaultAsync(s => s.NumLlista == req.NumLlista && s.ClassId == req.ClassId);
-
-        if (student is null || !PinService.Verify(req.Pin.Trim(), student.Pin))
+            .FirstOrDefaultAsync(s => s.Email == req.Email.Trim().ToLower());
+        if (student is null || !BCrypt.Net.BCrypt.Verify(req.Password, student.PasswordHash))
             return null;
 
         var token = GenerateToken(student.Id.ToString(), student.NomComplet, "Student",
             new Claim("classId", student.ClassId.ToString()));
-
         return new LoginResponse(token, student.NomComplet, "Student", student.Id);
     }
 
-    // ── Generació JWT ────────────────────────────────────────────────────────
-
-    private string GenerateToken(string userId, string nomComplet, string role,
-        params Claim[] extraClaims)
+    private string GenerateToken(string userId, string nomComplet, string role, params Claim[] extraClaims)
     {
-        var secret  = config["JwtSettings:Secret"]!;
-        var hours   = int.TryParse(config["JwtSettings:ExpiryHours"], out var h) ? h : 8;
-        var key     = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
-        var creds   = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var secret = config["JwtSettings:Secret"]!;
+        var hours  = int.TryParse(config["JwtSettings:ExpiryHours"], out var h) ? h : 8;
+        var key    = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+        var creds  = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>
         {
@@ -63,10 +56,8 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
         claims.AddRange(extraClaims);
 
         var token = new JwtSecurityToken(
-            claims:  claims,
-            expires: DateTime.UtcNow.AddHours(hours),
+            claims: claims, expires: DateTime.UtcNow.AddHours(hours),
             signingCredentials: creds);
-
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }

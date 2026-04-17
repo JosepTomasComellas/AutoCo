@@ -7,88 +7,59 @@ namespace AutoCo.Api.Services;
 
 public interface IClassService
 {
-    Task<List<ClassDto>>    GetAllAsync(int? professorId);
-    Task<ClassDto?>         GetByIdAsync(int id, int? professorId);
-    Task<ClassDto>          CreateAsync(int professorId, CreateClassRequest req);
-    Task<ClassDto?>         UpdateAsync(int id, int professorId, bool isAdmin, UpdateClassRequest req);
-    Task<bool>              DeleteAsync(int id, int professorId, bool isAdmin);
+    Task<List<ClassDto>>  GetAllAsync();
+    Task<ClassDto?>       GetByIdAsync(int id);
+    Task<ClassDto>        CreateAsync(CreateClassRequest req);
+    Task<ClassDto?>       UpdateAsync(int id, UpdateClassRequest req);
+    Task<bool>            DeleteAsync(int id);
 
-    Task<List<StudentWithPinDto>> GetStudentsAsync(int classId, int professorId, bool isAdmin);
-    Task<StudentWithPinDto>       AddStudentAsync(int classId, CreateStudentRequest req);
-    Task<StudentWithPinDto?>      UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req);
-    Task<bool>                    DeleteStudentAsync(int classId, int studentId);
-    Task<BulkCreateResult>        BulkAddStudentsAsync(int classId, BulkCreateStudentsRequest req);
-    Task<ResetPinResult?>         ResetPinAsync(int classId, int studentId);
-    Task<SendPinResult?>          SendPinAsync(int classId, int studentId);
-    Task<SendAllResult>           SendAllPinsAsync(int classId, int professorId, bool isAdmin);
-    Task<(byte[] Content, string FileName)?> ExportStudentsAsync(int? classId, int professorId, bool isAdmin);
+    Task<List<StudentDto>>  GetStudentsAsync(int classId);
+    Task<StudentDto>        AddStudentAsync(int classId, CreateStudentRequest req);
+    Task<StudentDto?>       UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req);
+    Task<bool>              DeleteStudentAsync(int classId, int studentId);
+    Task<BulkCreateResult>  BulkAddStudentsAsync(int classId, BulkCreateStudentsRequest req);
+    Task<ResetPasswordResult?> ResetPasswordAsync(int classId, int studentId);
+    Task<SendPasswordResult>   SendPasswordAsync(int classId, int studentId);
+    Task<SendAllResult>        SendAllPasswordsAsync(int classId);
 }
 
 public class ClassService(AppDbContext db, IEmailService email) : IClassService
 {
     // ── Classes ──────────────────────────────────────────────────────────────
 
-    public async Task<List<ClassDto>> GetAllAsync(int? professorId)
-    {
-        var q = db.Classes
-            .Include(c => c.Professor)
-            .Include(c => c.Students)
-            .AsQueryable();
-
-        if (professorId.HasValue)
-            q = q.Where(c => c.ProfessorId == professorId.Value);
-
-        return await q.OrderBy(c => c.Name)
-            .Select(c => ToDto(c))
+    public async Task<List<ClassDto>> GetAllAsync() =>
+        await db.Classes.Include(c => c.Students)
+            .OrderBy(c => c.Name)
+            .Select(c => ToClassDto(c))
             .ToListAsync();
+
+    public async Task<ClassDto?> GetByIdAsync(int id)
+    {
+        var c = await db.Classes.Include(c => c.Students).FirstOrDefaultAsync(c => c.Id == id);
+        return c is null ? null : ToClassDto(c);
     }
 
-    public async Task<ClassDto?> GetByIdAsync(int id, int? professorId)
+    public async Task<ClassDto> CreateAsync(CreateClassRequest req)
     {
-        var c = await db.Classes
-            .Include(c => c.Professor)
-            .Include(c => c.Students)
-            .FirstOrDefaultAsync(c => c.Id == id &&
-                (!professorId.HasValue || c.ProfessorId == professorId.Value));
-
-        return c is null ? null : ToDto(c);
-    }
-
-    public async Task<ClassDto> CreateAsync(int professorId, CreateClassRequest req)
-    {
-        var classe = new Class
-        {
-            ProfessorId  = professorId,
-            Name         = req.Name.Trim(),
-            AcademicYear = req.AcademicYear?.Trim()
-        };
+        var classe = new Class { Name = req.Name.Trim(), AcademicYear = req.AcademicYear?.Trim() };
         db.Classes.Add(classe);
         await db.SaveChangesAsync();
-
-        var professor = await db.Professors.FindAsync(professorId);
-        return new ClassDto(classe.Id, classe.ProfessorId, professor!.NomComplet,
-            classe.Name, classe.AcademicYear, classe.CreatedAt, 0);
+        return ToClassDto(classe);
     }
 
-    public async Task<ClassDto?> UpdateAsync(int id, int professorId, bool isAdmin, UpdateClassRequest req)
+    public async Task<ClassDto?> UpdateAsync(int id, UpdateClassRequest req)
     {
-        var c = await db.Classes
-            .Include(c => c.Professor)
-            .Include(c => c.Students)
-            .FirstOrDefaultAsync(c => c.Id == id &&
-                (isAdmin || c.ProfessorId == professorId));
+        var c = await db.Classes.Include(c => c.Students).FirstOrDefaultAsync(c => c.Id == id);
         if (c is null) return null;
-
-        c.Name         = req.Name.Trim();
+        c.Name = req.Name.Trim();
         c.AcademicYear = req.AcademicYear?.Trim();
         await db.SaveChangesAsync();
-        return ToDto(c);
+        return ToClassDto(c);
     }
 
-    public async Task<bool> DeleteAsync(int id, int professorId, bool isAdmin)
+    public async Task<bool> DeleteAsync(int id)
     {
-        var c = await db.Classes.FirstOrDefaultAsync(c => c.Id == id &&
-            (isAdmin || c.ProfessorId == professorId));
+        var c = await db.Classes.FindAsync(id);
         if (c is null) return false;
         db.Classes.Remove(c);
         await db.SaveChangesAsync();
@@ -97,57 +68,39 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
 
     // ── Alumnes ──────────────────────────────────────────────────────────────
 
-    public async Task<List<StudentWithPinDto>> GetStudentsAsync(int classId, int professorId, bool isAdmin)
-    {
-        var classExists = await db.Classes.AnyAsync(c => c.Id == classId &&
-            (isAdmin || c.ProfessorId == professorId));
-        if (!classExists) return [];
-
-        return await db.Students
-            .Where(s => s.ClassId == classId)
+    public async Task<List<StudentDto>> GetStudentsAsync(int classId) =>
+        await db.Students.Where(s => s.ClassId == classId)
             .OrderBy(s => s.NumLlista)
             .Select(s => ToStudentDto(s))
             .ToListAsync();
-    }
 
-    public async Task<StudentWithPinDto> AddStudentAsync(int classId, CreateStudentRequest req)
+    public async Task<StudentDto> AddStudentAsync(int classId, CreateStudentRequest req)
     {
-        var plainPin = string.IsNullOrWhiteSpace(req.Pin) ? PinService.Generate() : req.Pin.Trim();
+        var password = GeneratePassword();
         var student = new Student
         {
-            ClassId          = classId,
-            NumLlista        = req.NumLlista,
-            Nom              = req.Nom.Trim(),
-            Cognoms          = req.Cognoms.Trim(),
-            CorreuElectronic = req.CorreuElectronic?.Trim(),
-            Pin              = PinService.Hash(plainPin)
+            ClassId      = classId,
+            NumLlista    = req.NumLlista,
+            Nom          = req.Nom.Trim(),
+            Cognoms      = req.Cognoms.Trim(),
+            Email        = req.Email.Trim().ToLower(),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
         };
         db.Students.Add(student);
         await db.SaveChangesAsync();
-        // Retornem el PIN en text pla una sola vegada (per mostrar-lo o enviar per email)
-        return ToStudentDto(student) with { Pin = plainPin };
+        return ToStudentDto(student);
     }
 
-    public async Task<StudentWithPinDto?> UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req)
+    public async Task<StudentDto?> UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req)
     {
         var student = await db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
         if (student is null) return null;
-
-        student.NumLlista        = req.NumLlista;
-        student.Nom              = req.Nom.Trim();
-        student.Cognoms          = req.Cognoms.Trim();
-        student.CorreuElectronic = req.CorreuElectronic?.Trim();
-
-        string? plainPinReturned = null;
-        if (!string.IsNullOrWhiteSpace(req.NewPin))
-        {
-            plainPinReturned = req.NewPin.Trim();
-            student.Pin = PinService.Hash(plainPinReturned);
-        }
-
+        student.Nom      = req.Nom.Trim();
+        student.Cognoms  = req.Cognoms.Trim();
+        student.NumLlista = req.NumLlista;
+        student.Email    = req.Email.Trim().ToLower();
         await db.SaveChangesAsync();
-        var dto = ToStudentDto(student);
-        return plainPinReturned is not null ? dto with { Pin = plainPinReturned } : dto;
+        return ToStudentDto(student);
     }
 
     public async Task<bool> DeleteStudentAsync(int classId, int studentId)
@@ -162,175 +115,124 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
     public async Task<BulkCreateResult> BulkAddStudentsAsync(int classId, BulkCreateStudentsRequest req)
     {
         int created = 0, skipped = 0;
-        var errors   = new List<string>();
-        var toEmail  = new List<Student>();
+        var errors  = new List<string>();
+        var classe  = await db.Classes.FindAsync(classId);
 
-        var classe = await db.Classes.FindAsync(classId);
+        // Guardem les parelles (estudiant, contrasenya) per enviar correus DESPRÉS de guardar
+        var toEmail   = new List<(Student Student, string Password)>();
+        var batchEmails = new HashSet<string>(); // detecta duplicats dins del mateix CSV
 
         foreach (var s in req.Students)
         {
-            try
+            if (string.IsNullOrWhiteSpace(s.Nom) || string.IsNullOrWhiteSpace(s.Cognoms) ||
+                string.IsNullOrWhiteSpace(s.Email))
             {
-                var exists = await db.Students.AnyAsync(x => x.ClassId == classId && x.NumLlista == s.NumLlista);
-                if (exists)
-                {
-                    skipped++;
-                    errors.Add($"Núm. {s.NumLlista} ({s.Cognoms}, {s.Nom}): ja existeix, omès.");
-                    continue;
-                }
+                errors.Add($"Alumne #{s.NumLlista}: camps obligatoris buits.");
+                skipped++; continue;
+            }
 
-                var plainPin = string.IsNullOrWhiteSpace(s.Pin) ? PinService.Generate() : s.Pin.Trim();
-                var student = new Student
-                {
-                    ClassId          = classId,
-                    NumLlista        = s.NumLlista,
-                    Nom              = s.Nom.Trim(),
-                    Cognoms          = s.Cognoms.Trim(),
-                    CorreuElectronic = s.CorreuElectronic?.Trim(),
-                    Pin              = PinService.Hash(plainPin)
-                };
-                db.Students.Add(student);
-                created++;
-                if (!string.IsNullOrWhiteSpace(student.CorreuElectronic))
-                    toEmail.Add(student);
-            }
-            catch (Exception ex)
+            var emailNorm = s.Email.Trim().ToLower();
+
+            // Comprova duplicats dins el CSV i a la BD
+            if (batchEmails.Contains(emailNorm) || await db.Students.AnyAsync(x => x.Email == emailNorm))
             {
-                errors.Add($"Núm. {s.NumLlista} ({s.Cognoms}, {s.Nom}): error – {ex.Message}");
+                errors.Add($"Email duplicat omès: {emailNorm}");
+                skipped++; continue;
             }
+            batchEmails.Add(emailNorm);
+
+            var password = GeneratePassword();
+            var student  = new Student
+            {
+                ClassId      = classId,
+                NumLlista    = s.NumLlista,
+                Nom          = s.Nom.Trim(),
+                Cognoms      = s.Cognoms.Trim(),
+                Email        = emailNorm,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
+            };
+            db.Students.Add(student);
+            toEmail.Add((student, password));
+            created++;
         }
 
         if (created > 0)
-            await db.SaveChangesAsync();
+        {
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
+                when (ex.InnerException?.Message.Contains("IX_Students_Email") == true)
+            {
+                errors.Add("Error en guardar: algun correu ja existia a la base de dades.");
+                return new BulkCreateResult(0, skipped + created, errors);
+            }
+
+            // Correus no s'envien automàticament; l'admin pot enviar-los manualment
+        }
 
         return new BulkCreateResult(created, skipped, errors);
     }
 
-    public async Task<ResetPinResult?> ResetPinAsync(int classId, int studentId)
+    public async Task<ResetPasswordResult?> ResetPasswordAsync(int classId, int studentId)
     {
-        var student = await db.Students
-            .FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
+        var student = await db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
         if (student is null) return null;
-
-        var plainPin = PinService.Generate();
-        student.Pin  = PinService.Hash(plainPin);
+        var newPassword = GeneratePassword();
+        student.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         await db.SaveChangesAsync();
-        return new ResetPinResult(plainPin);
+        return new ResetPasswordResult(newPassword);
     }
 
-    public async Task<SendPinResult?> SendPinAsync(int classId, int studentId)
+    public async Task<SendPasswordResult> SendPasswordAsync(int classId, int studentId)
     {
-        var student = await db.Students
-            .Include(s => s.Class)
+        var student = await db.Students.Include(s => s.Class)
             .FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
-        if (student is null) return null;
+        if (student is null) return new SendPasswordResult(false, "Alumne no trobat.");
+        if (!email.IsEnabled) return new SendPasswordResult(false, "Correu no configurat.");
 
-        if (string.IsNullOrWhiteSpace(student.CorreuElectronic))
-            return new SendPinResult(false, "L'alumne no té correu electrònic.");
-
-        if (!email.IsEnabled)
-            return new SendPinResult(false, "El servei de correu no està configurat.");
-
-        // Genera un PIN nou (el PIN actual pot estar hashejat i no és recuperable)
-        var plainPin = PinService.Generate();
-        student.Pin  = PinService.Hash(plainPin);
+        var newPassword = GeneratePassword();
+        student.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
         await db.SaveChangesAsync();
 
-        var sent = await email.SendPinAsync(student.CorreuElectronic, student.NomComplet,
-            student.Class.Name, student.Id, plainPin);
-        return new SendPinResult(sent, sent ? null : "Error en l'enviament.");
+        var sent = await email.SendStudentPasswordAsync(student.Email, student.NomComplet,
+            student.Class.Name, newPassword);
+        return new SendPasswordResult(sent, sent ? null : "Error en l'enviament.");
     }
 
-    public async Task<SendAllResult> SendAllPinsAsync(int classId, int professorId, bool isAdmin)
+    public async Task<SendAllResult> SendAllPasswordsAsync(int classId)
     {
-        var classOk = await db.Classes.AnyAsync(c => c.Id == classId &&
-            (isAdmin || c.ProfessorId == professorId));
-        if (!classOk) return new SendAllResult(0, 0, ["Classe no trobada."]);
-
-        var students = await db.Students
-            .Include(s => s.Class)
-            .Where(s => s.ClassId == classId)
-            .OrderBy(s => s.NumLlista)
-            .ToListAsync();
-
+        var students = await db.Students.Include(s => s.Class)
+            .Where(s => s.ClassId == classId).ToListAsync();
         int sent = 0, skipped = 0;
         var details = new List<string>();
 
         foreach (var s in students)
         {
-            if (string.IsNullOrWhiteSpace(s.CorreuElectronic)) { skipped++; continue; }
+            var newPassword = GeneratePassword();
+            s.PasswordHash = BCrypt.Net.BCrypt.HashPassword(newPassword);
+            await db.SaveChangesAsync();
 
-            // Genera PIN nou per poder enviar-lo en text pla
-            var plainPin = PinService.Generate();
-            s.Pin = PinService.Hash(plainPin);
-
-            var ok = await email.SendPinAsync(s.CorreuElectronic, s.NomComplet,
-                s.Class.Name, s.Id, plainPin);
-            if (ok) sent++;
-            else { skipped++; details.Add($"{s.NomComplet}: error d'enviament."); }
+            if (!email.IsEnabled) { skipped++; continue; }
+            var ok = await email.SendStudentPasswordAsync(s.Email, s.NomComplet, s.Class.Name, newPassword);
+            if (ok) sent++; else { skipped++; details.Add($"{s.NomComplet}: error."); }
         }
-
-        if (sent > 0) await db.SaveChangesAsync();
         return new SendAllResult(sent, skipped, details);
     }
 
-    public async Task<(byte[] Content, string FileName)?> ExportStudentsAsync(
-        int? classId, int professorId, bool isAdmin)
-    {
-        var query = db.Students
-            .Include(s => s.Class)
-            .AsQueryable();
-
-        if (classId.HasValue)
-        {
-            // Verificar accés a la classe
-            var classOk = await db.Classes.AnyAsync(c => c.Id == classId.Value &&
-                (isAdmin || c.ProfessorId == professorId));
-            if (!classOk) return null;
-            query = query.Where(s => s.ClassId == classId.Value);
-        }
-        else if (!isAdmin)
-        {
-            query = query.Where(s => s.Class.ProfessorId == professorId);
-        }
-
-        var students = await query
-            .OrderBy(s => s.Class.Name)
-            .ThenBy(s => s.NumLlista)
-            .ToListAsync();
-
-        var sb = new System.Text.StringBuilder();
-        sb.AppendLine("Classe;CursAcadèmic;NumLlista;Nom;Cognoms;CorreuElectronic;PIN");
-        foreach (var s in students)
-        {
-            sb.AppendLine(string.Join(";",
-                Esc(s.Class.Name),
-                Esc(s.Class.AcademicYear ?? ""),
-                s.NumLlista.ToString(),
-                Esc(s.Nom),
-                Esc(s.Cognoms),
-                Esc(s.CorreuElectronic ?? ""),
-                Esc(s.Pin)));
-        }
-
-        var nom = classId.HasValue
-            ? $"alumnes_{students.FirstOrDefault()?.Class.Name?.Replace(" ", "_") ?? classId.ToString()}_{DateTime.Now:yyyyMMdd}.csv"
-            : $"alumnes_totes_{DateTime.Now:yyyyMMdd}.csv";
-
-        var bytes = System.Text.Encoding.UTF8.GetPreamble()
-            .Concat(System.Text.Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
-        return (bytes, nom);
-    }
-
-    private static string Esc(string v) => $"\"{v.Replace("\"", "\"\"")}\"";
-
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static ClassDto ToDto(Class c) => new(
-        c.Id, c.ProfessorId, c.Professor.NomComplet,
-        c.Name, c.AcademicYear, c.CreatedAt, c.Students.Count);
+    private static ClassDto ToClassDto(Class c) => new(
+        c.Id, c.Name, c.AcademicYear, c.CreatedAt, c.Students.Count);
 
-    private static StudentWithPinDto ToStudentDto(Student s) => new(
-        s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet,
-        s.NumLlista, "••••", s.CorreuElectronic, s.CreatedAt);
+    private static StudentDto ToStudentDto(Student s) => new(
+        s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt);
+
+    private static string GeneratePassword()
+    {
+        const string chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789";
+        return new string(Enumerable.Range(0, 10)
+            .Select(_ => chars[Random.Shared.Next(chars.Length)]).ToArray());
+    }
 }

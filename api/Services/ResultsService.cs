@@ -52,10 +52,11 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
     private async Task<ActivityResultsDto?> ComputeResultsAsync(int activityId, int professorId, bool isAdmin)
     {
         var activity = await db.Activities
-            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.ProfessorId == professorId));
 
         if (activity is null) return null;
 
@@ -88,8 +89,8 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
             var s = member.Student;
 
             var selfEval = selfEvalByStudentId.GetValueOrDefault(s.Id);
-            var selfScores = selfEval?.Scores.ToDictionary(sc => sc.CriteriaKey, sc => (int?)sc.Score)
-                ?? Data.Criteria.Keys.ToDictionary(k => k, _ => (int?)null);
+            var selfScores = selfEval?.Scores.ToDictionary(sc => sc.CriteriaKey, sc => (double?)sc.Score)
+                ?? Data.Criteria.Keys.ToDictionary(k => k, _ => (double?)null);
 
             var peerEvals = peerEvalsByStudentId.GetValueOrDefault(s.Id) ?? [];
 
@@ -104,17 +105,17 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 k => {
                     var vals = peerEvals
                         .Select(e => e.Scores.FirstOrDefault(sc => sc.CriteriaKey == k)?.Score)
-                        .Where(v => v.HasValue).Select(v => (double)v!.Value).ToList();
+                        .Where(v => v.HasValue).Select(v => v!.Value).ToList();
                     return vals.Count > 0 ? (double?)vals.Average() : null;
                 });
 
             var allCoVals    = avgCoScores.Values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
             var avgGlobal    = allCoVals.Count > 0 ? (double?)allCoVals.Average() : null;
-            var allAutVals   = selfScores.Values.Where(v => v.HasValue).Select(v => (double)v!.Value).ToList();
+            var allAutVals   = selfScores.Values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
             var autAvgGlobal = allAutVals.Count > 0 ? (double?)allAutVals.Average() : null;
 
             studentResults.Add(new StudentResultDto(
-                s.Id, s.Nom, s.Cognoms, s.NomComplet, s.CorreuElectronic, s.NumLlista, member.GroupName,
+                s.Id, s.Nom, s.Cognoms, s.NomComplet, s.Email, s.NumLlista, member.GroupName,
                 selfScores, selfEval?.Comment,
                 peerDtos, avgCoScores, avgGlobal, autAvgGlobal, peerEvals.Count));
         }
@@ -123,7 +124,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
             activity.Id,
             activity.ModuleId, activity.Module.Code, activity.Module.Name,
             activity.Module.ClassId, activity.Module.Class.Name, activity.Module.Class.AcademicYear,
-            activity.Module.Class.Professor.NomComplet,
+            activity.Module.Professor.NomComplet,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
             activity.Groups.Count, allMembers.Count);
 
@@ -150,10 +151,11 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
     private async Task<ActivityChartDto?> ComputeChartAsync(int activityId, int professorId, bool isAdmin)
     {
         var activity = await db.Activities
-            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.Class.ProfessorId == professorId));
+                (isAdmin || a.Module.ProfessorId == professorId));
         if (activity is null) return null;
 
         var criteriaAll = Data.Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
@@ -191,11 +193,11 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 .ToList();
 
             double? avgAuto = selfEvals.Count > 0
-                ? selfEvals.SelectMany(e => e.Scores).Select(s => (double)s.Score)
+                ? selfEvals.SelectMany(e => e.Scores).Select(s => s.Score)
                     .DefaultIfEmpty().Average().NullIfZero()
                 : null;
             double? avgCo = peerEvals.Count > 0
-                ? peerEvals.SelectMany(e => e.Scores).Select(s => (double)s.Score)
+                ? peerEvals.SelectMany(e => e.Scores).Select(s => s.Score)
                     .DefaultIfEmpty().Average().NullIfZero()
                 : null;
 
@@ -209,11 +211,11 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
             {
                 double? autoK = selfEvals.Count > 0
                     ? selfEvals.SelectMany(e => e.Scores.Where(s => s.CriteriaKey == cd.CriteriaKey))
-                        .Select(s => (double)s.Score).DefaultIfEmpty(0).Average().NullIfZero()
+                        .Select(s => s.Score).DefaultIfEmpty(0).Average().NullIfZero()
                     : null;
                 double? coK = peerEvals.Count > 0
                     ? peerEvals.SelectMany(e => e.Scores.Where(s => s.CriteriaKey == cd.CriteriaKey))
-                        .Select(s => (double)s.Score).DefaultIfEmpty(0).Average().NullIfZero()
+                        .Select(s => s.Score).DefaultIfEmpty(0).Average().NullIfZero()
                     : null;
                 cd.Groups.Add(new CriteriaGroupValueDto(g.Name, autoK, coK));
             }
@@ -252,7 +254,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 s.NumLlista.ToString(),
                 s.Nom,
                 s.Cognoms,
-                s.CorreuElectronic ?? "",
+                s.Email ?? "",
                 s.GroupName,
                 s.AvgGlobal.HasValue    ? s.AvgGlobal.Value.ToString("F2")    : "",
                 s.AutAvgGlobal.HasValue ? s.AutAvgGlobal.Value.ToString("F2") : ""

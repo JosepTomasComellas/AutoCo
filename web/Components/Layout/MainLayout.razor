@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject ProtectedLocalStorage LocalStorage
 
 <MudThemeProvider Theme="_theme" />
 <MudPopoverProvider />
@@ -71,8 +72,25 @@
         }
     };
 
-    private void Logout()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender || UserState.IsLoggedIn) return;
+        try
+        {
+            var stored = await LocalStorage.GetAsync<LoginResponse>("autoco_session");
+            if (stored.Success && stored.Value is not null)
+            {
+                UserState.SetLogin(stored.Value);
+                // Torna a navegar a la mateixa URL perquè les pàgines recarreguin les dades
+                Nav.NavigateTo(Nav.Uri, forceLoad: false);
+            }
+        }
+        catch { /* clau caducada o dades invàlides → ignora */ }
+    }
+
+    private async Task Logout()
+    {
+        try { await LocalStorage.DeleteAsync("autoco_session"); } catch { }
         UserState.Logout();
         Nav.NavigateTo("/", forceLoad: false);
     }

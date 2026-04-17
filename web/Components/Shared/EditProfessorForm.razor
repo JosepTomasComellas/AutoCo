@@ -2,6 +2,8 @@
 @inject UserStateService UserState
 
 <MudStack Spacing="2" Class="pa-2">
+    <MudTextField @bind-Value="_email" Label="Correu electrònic"
+                  InputType="InputType.Email" Variant="Variant.Outlined" />
     <MudGrid Spacing="2">
         <MudItem xs="12" sm="6">
             <MudTextField @bind-Value="_nom"     Label="Nom"     Variant="Variant.Outlined" />
@@ -10,8 +12,6 @@
             <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" />
         </MudItem>
     </MudGrid>
-    <MudTextField @bind-Value="_correu" Label="Correu electrònic"
-                  InputType="InputType.Email" Variant="Variant.Outlined" />
     <MudTextField @bind-Value="_newPwd"
                   Label="Nova contrasenya (deixa buit per no canviar)"
                   InputType="InputType.Password" Variant="Variant.Outlined"
@@ -27,9 +27,9 @@
     [Parameter, EditorRequired] public ProfessorDto Professor { get; set; } = null!;
     [Parameter] public EventCallback<ProfessorDto> OnSaved { get; set; }
 
+    private string _email   = "";
     private string _nom     = "";
     private string _cognoms = "";
-    private string _correu  = "";
     private string _newPwd  = "";
     private bool   _isAdmin = false;
     private bool   _saving  = false;
@@ -38,21 +38,21 @@
 
     protected override void OnParametersSet()
     {
+        _email   = Professor.Email;
         _nom     = Professor.Nom;
         _cognoms = Professor.Cognoms;
-        _correu  = Professor.CorreuElectronic ?? "";
         _isAdmin = Professor.IsAdmin;
         _newPwd  = "";
     }
 
     private async Task SaveAsync()
     {
-        if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms)) return;
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_nom)
+            || string.IsNullOrWhiteSpace(_cognoms)) return;
         _saving = true;
         Api.SetToken(UserState.Token!);
         var updated = await Api.UpdateProfessorAsync(Professor.Id, new UpdateProfessorRequest(
-            _nom.Trim(), _cognoms.Trim(),
-            string.IsNullOrWhiteSpace(_correu) ? null : _correu.Trim(),
+            _email.Trim(), _nom.Trim(), _cognoms.Trim(),
             _isAdmin,
             string.IsNullOrWhiteSpace(_newPwd) ? null : _newPwd.Trim()));
         _saving = false;

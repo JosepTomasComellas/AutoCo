@@ -84,14 +84,23 @@
                         </MudChip>
                         <MudStack Spacing="0" Style="flex:1;min-width:0">
                             <MudText Typo="Typo.subtitle1" Style="font-weight:600">@m.Name</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @m.ActivityCount activitat@(m.ActivityCount != 1 ? "s" : "")
-                            </MudText>
+                            <MudStack Row="true" Spacing="1">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @m.ActivityCount activitat@(m.ActivityCount != 1 ? "s" : "")
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">·</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@m.ProfessorName</MudText>
+                            </MudStack>
                         </MudStack>
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                                    StartIcon="@Icons.Material.Filled.Add"
                                    Href="@($"/professor/nova-activitat?moduleId={m.Id}")">
                             Nova activitat
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.PersonOff"
+                                   OnClick="() => ToggleExclusionPanel(m.Id, m.ClassId)">
+                            Exclusions
                         </MudButton>
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                        Color="Color.Default" title="Editar"
@@ -100,6 +109,36 @@
                                        Color="Color.Error" title="Eliminar"
                                        OnClick="() => DeleteAsync(m)" />
                     </MudStack>
+                    @if (_showExclusions.Contains(m.Id))
+                    {
+                        <MudDivider Class="my-2" />
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Alumnes exclosos del mòdul</MudText>
+                        @if (!_classeStudents.ContainsKey(m.ClassId))
+                        {
+                            <MudProgressLinear Indeterminate="true" Color="Color.Warning" />
+                        }
+                        else
+                        {
+                            var students = _classeStudents[m.ClassId];
+                            var excluded = _exclusions.GetValueOrDefault(m.Id) ?? [];
+                            <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="1">
+                                @foreach (var s in students)
+                                {
+                                    var isExcluded = excluded.Contains(s.Id);
+                                    <MudChip T="string"
+                                             Color="@(isExcluded ? Color.Error : Color.Default)"
+                                             Variant="@(isExcluded ? Variant.Filled : Variant.Outlined)"
+                                             OnClick="() => ToggleExclusionAsync(m.Id, m.ClassId, s)"
+                                             Style="cursor:pointer">
+                                        @s.NomComplet
+                                    </MudChip>
+                                }
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                Fes clic en un alumne per excloure'l o incloure'l al mòdul.
+                            </MudText>
+                        }
+                    }
                 </MudPaper>
             }
         </MudStack>
@@ -117,6 +156,10 @@
     private string _code   = "";
     private string _name   = "";
     private int    _editId = 0;
+
+    private HashSet<int>                          _showExclusions = [];
+    private Dictionary<int, List<StudentDto>>     _classeStudents = new();
+    private Dictionary<int, HashSet<int>>         _exclusions     = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -172,5 +215,48 @@
         var ok = await Api.DeleteModuleAsync(ClassId, m.Id);
         if (ok) { _moduls.RemoveAll(x => x.Id == m.Id); Snackbar.Add("Mòdul eliminat.", Severity.Info); }
         else Snackbar.Add("Error en eliminar el mòdul.", Severity.Error);
+    }
+
+    private async Task ToggleExclusionPanel(int moduleId, int classId)
+    {
+        if (_showExclusions.Contains(moduleId))
+        {
+            _showExclusions.Remove(moduleId);
+            return;
+        }
+        _showExclusions.Add(moduleId);
+        await LoadModuleDataAsync(moduleId, classId);
+    }
+
+    private async Task LoadModuleDataAsync(int moduleId, int classId)
+    {
+        Api.SetToken(UserState.Token!);
+        if (!_classeStudents.ContainsKey(classId))
+            _classeStudents[classId] = await Api.GetStudentsAsync(classId) ?? [];
+
+        var excl = await Api.GetExclusionsAsync(moduleId) ?? [];
+        _exclusions[moduleId] = excl.Select(e => e.StudentId).ToHashSet();
+    }
+
+    private async Task ToggleExclusionAsync(int moduleId, int classId, StudentDto student)
+    {
+        Api.SetToken(UserState.Token!);
+        if (_exclusions.TryGetValue(moduleId, out var set) && set.Contains(student.Id))
+        {
+            await Api.RemoveExclusionAsync(moduleId, student.Id);
+            set.Remove(student.Id);
+            Snackbar.Add($"{student.NomComplet} inclòs al mòdul.", Severity.Success);
+        }
+        else
+        {
+            await Api.AddExclusionAsync(moduleId, student.Id);
+            if (!_exclusions.TryGetValue(moduleId, out set))
+            {
+                set = [];
+                _exclusions[moduleId] = set;
+            }
+            set.Add(student.Id);
+            Snackbar.Add($"{student.NomComplet} exclòs del mòdul.", Severity.Info);
+        }
     }
 }

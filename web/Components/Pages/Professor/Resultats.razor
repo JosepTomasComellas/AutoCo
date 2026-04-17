@@ -62,7 +62,7 @@ else
                     </HeaderTemplate>
                     <CellTemplate>
                         @{
-                            var autoVal = context.Item.SelfScores.TryGetValue(key, out var av) && av.HasValue ? av.Value.ToString() : "–";
+                            var autoVal = context.Item.SelfScores.TryGetValue(key, out var av) && av.HasValue ? av.Value.ToString("G") : "–";
                             var coVal   = context.Item.AvgCoScores.TryGetValue(key, out var cv) && cv.HasValue ? cv.Value.ToString("F1") : "–";
                         }
                         <MudText Typo="Typo.body2">

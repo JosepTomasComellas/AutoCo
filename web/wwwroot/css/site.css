@@ -28,3 +28,25 @@
 
 /* ── Scroll suau global ──────────────────────────────────────────────────── */
 html { scroll-behavior: smooth; }
+
+/* ── Fons de pantalla ────────────────────────────────────────────────────── */
+html, body {
+    background-image: url('/images/fons-salesians.png');
+    background-size: cover;
+    background-position: center top;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+}
+
+/* Layout transparent; contingut principal blanc i que ompli tota l'alçada disponible */
+.mud-layout {
+    background: transparent !important;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+.mud-main-content {
+    background: #ffffff !important;
+    flex: 1;
+}

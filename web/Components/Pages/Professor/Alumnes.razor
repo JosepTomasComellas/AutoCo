@@ -29,11 +29,14 @@
         }
     </MudStack>
     <MudSpacer />
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-               StartIcon="@Icons.Material.Filled.Email"
-               OnClick="SendAllAsync">
-        Enviar PIN a tots
-    </MudButton>
+    @if (UserState.IsAdmin)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Email"
+                   OnClick="SendAllAsync">
+            Enviar contrasenya a tots
+        </MudButton>
+    }
     <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
                StartIcon="@Icons.Material.Filled.Download"
                OnClick="ExportCsvAsync">
@@ -44,117 +47,121 @@
 @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" /> }
 
 <MudGrid>
-    <!-- Columna esquerra: formularis -->
-    <MudItem xs="12" md="4">
-        <MudCard Elevation="2" Class="mb-4">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
-                        <MudIcon Icon="@Icons.Material.Filled.PersonAdd" />
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Afegir alumne</MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudNumericField T="int" @bind-Value="_numLlista" Label="Núm. de llista"
-                                 Variant="Variant.Outlined" Min="1" Max="99" Class="mb-2" />
-                <MudGrid Spacing="2">
-                    <MudItem xs="6">
-                        <MudTextField @bind-Value="_nom" Label="Nom" Variant="Variant.Outlined" />
-                    </MudItem>
-                    <MudItem xs="6">
-                        <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" />
-                    </MudItem>
-                </MudGrid>
-                <MudTextField @bind-Value="_correu" Label="Correu (opcional)" Class="mt-2"
-                              InputType="InputType.Email" Variant="Variant.Outlined"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
-                <MudTextField @bind-Value="_pin" Label="PIN (opcional – s'auto-genera)"
-                              Variant="Variant.Outlined" Class="mt-2"
-                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Key" />
-            </MudCardContent>
-            <MudCardActions Class="px-4 pb-4">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
-                           OnClick="AddAsync" Disabled="_saving"
-                           StartIcon="@Icons.Material.Filled.PersonAdd">
-                    Afegir alumne
-                </MudButton>
-            </MudCardActions>
-        </MudCard>
-
-        <MudCard Elevation="2">
-            <MudCardHeader>
-                <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Secondary" Variant="Variant.Filled" Size="Size.Small">
-                        <MudIcon Icon="@Icons.Material.Filled.UploadFile" />
-                    </MudAvatar>
-                </CardHeaderAvatar>
-                <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Importar des de CSV</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Format: <code>NumLlista;Nom;Cognoms;Correu;PIN</code>
-                    </MudText>
-                </CardHeaderContent>
-            </MudCardHeader>
-            <MudCardContent>
-                <MudFileUpload T="IBrowserFile" Accept=".csv,.txt" FilesChanged="OnCsvSelected">
-                    <ActivatorContent>
-                        <MudButton Variant="Variant.Outlined" FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.AttachFile">
-                            @(_csvFile is null ? "Seleccionar fitxer CSV" : _csvFile.Name)
+    @if (UserState.IsAdmin)
+    {
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2" Class="mb-4">
+                <MudCardHeader>
+                    <CardHeaderAvatar>
+                        <MudAvatar Color="@(_editStudentId == 0 ? Color.Primary : Color.Warning)"
+                                   Variant="Variant.Filled" Size="Size.Small">
+                            <MudIcon Icon="@(_editStudentId == 0 ? Icons.Material.Filled.PersonAdd : Icons.Material.Filled.Edit)" />
+                        </MudAvatar>
+                    </CardHeaderAvatar>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@(_editStudentId == 0 ? "Nou alumne" : "Editar alumne")</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6">
+                            <MudTextField @bind-Value="_nom" Label="Nom" Variant="Variant.Outlined" Immediate="true" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" Immediate="true" />
+                        </MudItem>
+                    </MudGrid>
+                    <MudNumericField T="int" @bind-Value="_numLlista" Label="Núm. llista"
+                                     Variant="Variant.Outlined" Min="1" Max="99" Class="mt-3" />
+                    <MudTextField @bind-Value="_correu" Label="Correu electrònic"
+                                  Variant="Variant.Outlined" InputType="InputType.Email"
+                                  Class="mt-3" Immediate="true" />
+                </MudCardContent>
+                <MudCardActions Class="px-4 pb-4 gap-2">
+                    @if (_editStudentId == 0)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                                   OnClick="AddAsync" Disabled="_saving"
+                                   StartIcon="@Icons.Material.Filled.PersonAdd">
+                            Afegir alumne
                         </MudButton>
-                    </ActivatorContent>
-                </MudFileUpload>
-            </MudCardContent>
-            <MudCardActions Class="px-4 pb-4 gap-2">
-                <MudButton Variant="Variant.Filled" Color="Color.Secondary"
-                           OnClick="ImportCsvAsync" Disabled="_csvFile is null || _saving"
-                           StartIcon="@Icons.Material.Filled.Upload">
-                    Importar
-                </MudButton>
-                <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
-                           Href="/templates/alumnes-plantilla.csv" download="alumnes-plantilla.csv"
-                           StartIcon="@Icons.Material.Filled.Download">
-                    Plantilla
-                </MudButton>
-            </MudCardActions>
-        </MudCard>
-    </MudItem>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true"
+                                   OnClick="SaveEditAsync" Disabled="_saving"
+                                   StartIcon="@Icons.Material.Filled.Save">
+                            Desar canvis
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" OnClick="CancelEdit">Cancel·lar</MudButton>
+                    }
+                </MudCardActions>
+            </MudCard>
 
-    <!-- Columna dreta: taula d'alumnes -->
-    <MudItem xs="12" md="8">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderContent><MudText Typo="Typo.h6">Importar CSV</MudText></CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                        Format: NumLlista;Nom;Cognoms;Correu
+                    </MudText>
+                    <MudFileUpload T="IBrowserFile" Accept=".csv,.txt" FilesChanged="OnCsvSelected">
+                        <ActivatorContent>
+                            <MudButton Variant="Variant.Outlined" FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.AttachFile">
+                                @(_csvFile is null ? "Seleccionar fitxer CSV" : _csvFile.Name)
+                            </MudButton>
+                        </ActivatorContent>
+                    </MudFileUpload>
+                </MudCardContent>
+                <MudCardActions Class="px-4 pb-4 gap-2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                               OnClick="ImportCsvAsync" Disabled="_csvFile is null || _saving"
+                               StartIcon="@Icons.Material.Filled.Upload">
+                        Importar
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
+                               Href="/templates/alumnes-plantilla.csv" download="alumnes-plantilla.csv"
+                               StartIcon="@Icons.Material.Filled.Download">
+                        Plantilla
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    }
+
+    <MudItem xs="12" md="@(UserState.IsAdmin ? 8 : 12)">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
             <MudText Typo="Typo.h6" Style="font-weight:600">Alumnes (@_students.Count)</MudText>
         </MudStack>
-        <MudDataGrid T="StudentWithPinDto" Items="_students" Dense="true" Hover="true"
+        <MudDataGrid T="StudentDto" Items="_students" Dense="true" Hover="true"
                      SortMode="SortMode.Single">
             <Columns>
                 <PropertyColumn Property="s => s.NumLlista" Title="#" />
                 <TemplateColumn Title="Cognoms, Nom">
                     <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
                 </TemplateColumn>
-                <PropertyColumn Property="s => s.CorreuElectronic" Title="Correu" />
-                <TemplateColumn Title="PIN">
-                    <CellTemplate><code>@context.Item.Pin</code></CellTemplate>
-                </TemplateColumn>
-                <TemplateColumn Title="" CellStyle="white-space:nowrap">
-                    <CellTemplate>
-                        @if (context.Item.CorreuElectronic is not null)
-                        {
+                <PropertyColumn Property="s => s.Email" Title="Correu" />
+                @if (UserState.IsAdmin)
+                {
+                    <TemplateColumn Title="" CellStyle="white-space:nowrap">
+                        <CellTemplate>
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                           Color="Color.Primary" title="Editar"
+                                           OnClick="() => StartEdit(context.Item)" />
                             <MudIconButton Icon="@Icons.Material.Filled.Email" Size="Size.Small"
-                                           Color="Color.Secondary" title="Enviar PIN per correu"
-                                           OnClick="() => SendPinAsync(context.Item)" />
-                        }
-                        <MudIconButton Icon="@Icons.Material.Filled.Key" Size="Size.Small"
-                                       Color="Color.Warning" title="Generar nou PIN"
-                                       OnClick="() => ResetPinAsync(context.Item)" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                       Color="Color.Error" title="Eliminar"
-                                       OnClick="() => DeleteAsync(context.Item)" />
-                    </CellTemplate>
-                </TemplateColumn>
+                                           Color="Color.Secondary" title="Enviar contrasenya"
+                                           OnClick="() => SendPasswordAsync(context.Item)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Key" Size="Size.Small"
+                                           Color="Color.Warning" title="Generar nova contrasenya"
+                                           OnClick="() => ResetPasswordAsync(context.Item)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error" title="Eliminar"
+                                           OnClick="() => DeleteAsync(context.Item)" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                }
             </Columns>
         </MudDataGrid>
     </MudItem>
@@ -163,19 +170,17 @@
 @code {
     [Parameter] public int ClassId { get; set; }
 
-    private ClassDto?               _classe   = null;
-    private List<StudentWithPinDto> _students = [];
+    private ClassDto?         _classe   = null;
+    private List<StudentDto>  _students = [];
     private bool _loading = true;
     private bool _saving  = false;
 
-    // Formulari afegir
-    private int    _numLlista = 1;
-    private string _nom       = "";
-    private string _cognoms   = "";
-    private string _correu    = "";
-    private string _pin       = "";
+    private int    _numLlista    = 1;
+    private string _nom          = "";
+    private string _cognoms      = "";
+    private string _correu       = "";
+    private int    _editStudentId = 0;
 
-    // CSV
     private IBrowserFile? _csvFile;
 
     protected override async Task OnInitializedAsync()
@@ -194,24 +199,61 @@
 
     private async Task AddAsync()
     {
-        if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms))
+        if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms) ||
+            string.IsNullOrWhiteSpace(_correu))
         {
-            Snackbar.Add("Nom i Cognoms són obligatoris.", Severity.Warning); return;
+            Snackbar.Add("Nom, Cognoms i Correu són obligatoris.", Severity.Warning); return;
         }
         _saving = true;
         Api.SetToken(UserState.Token!);
-        var s = await Api.AddStudentAsync(ClassId, new CreateStudentRequest(
-            _nom.Trim(), _cognoms.Trim(), _numLlista,
-            string.IsNullOrWhiteSpace(_pin) ? null : _pin.Trim(),
-            string.IsNullOrWhiteSpace(_correu) ? null : _correu.Trim()));
+        var s = await Api.AddStudentAsync(ClassId,
+            new CreateStudentRequest(_nom.Trim(), _cognoms.Trim(), _numLlista, _correu.Trim()));
         if (s is not null)
         {
             _students.Add(s);
             _students = [.. _students.OrderBy(x => x.NumLlista)];
-            _nom = ""; _cognoms = ""; _correu = ""; _pin = ""; _numLlista++;
-            Snackbar.Add($"Alumne «{s.NomComplet}» afegit. PIN: {s.Pin}", Severity.Success);
+            _nom = ""; _cognoms = ""; _correu = ""; _numLlista++;
+            Snackbar.Add($"Alumne «{s.NomComplet}» afegit.", Severity.Success);
         }
-        else Snackbar.Add("Error en afegir l'alumne.", Severity.Error);
+        else Snackbar.Add("Error en afegir l'alumne. Comprova que el correu no estigui duplicat.", Severity.Error);
+        _saving = false;
+    }
+
+    private void StartEdit(StudentDto s)
+    {
+        _editStudentId = s.Id;
+        _nom           = s.Nom;
+        _cognoms       = s.Cognoms;
+        _numLlista     = s.NumLlista;
+        _correu        = s.Email;
+    }
+
+    private void CancelEdit()
+    {
+        _editStudentId = 0;
+        _nom = ""; _cognoms = ""; _correu = ""; _numLlista = 1;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms) ||
+            string.IsNullOrWhiteSpace(_correu))
+        {
+            Snackbar.Add("Nom, Cognoms i Correu són obligatoris.", Severity.Warning); return;
+        }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var updated = await Api.UpdateStudentAsync(ClassId, _editStudentId,
+            new UpdateStudentRequest(_nom.Trim(), _cognoms.Trim(), _numLlista, _correu.Trim()));
+        if (updated is not null)
+        {
+            var idx = _students.FindIndex(x => x.Id == _editStudentId);
+            if (idx >= 0) _students[idx] = updated;
+            _students = [.. _students.OrderBy(x => x.NumLlista)];
+            CancelEdit();
+            Snackbar.Add($"Alumne «{updated.NomComplet}» actualitzat.", Severity.Success);
+        }
+        else Snackbar.Add("Error en actualitzar. Comprova que el correu no estigui duplicat.", Severity.Error);
         _saving = false;
     }
 
@@ -237,22 +279,20 @@
             var line = rawLine.TrimEnd('\r');
             if (string.IsNullOrWhiteSpace(line)) continue;
             var cols = line.Split(';');
-            if (lineNum == 1 && !int.TryParse(cols[0].Trim(), out _)) continue; // capçalera
-            if (cols.Length < 3) { parseErrors.Add($"Línia {lineNum}: calen almenys 3 columnes."); continue; }
+            if (lineNum == 1 && !int.TryParse(cols[0].Trim(), out _)) continue;
+            if (cols.Length < 4) { parseErrors.Add($"Línia {lineNum}: calen 4 columnes (NumLlista;Nom;Cognoms;Correu)."); continue; }
             if (!int.TryParse(cols[0].Trim(), out var num)) { parseErrors.Add($"Línia {lineNum}: NumLlista invàlid."); continue; }
-            var nom     = cols[1].Trim();
-            var cognoms = cols[2].Trim();
-            var correu  = cols.Length > 3 ? cols[3].Trim() : null;
-            var pinCsv  = cols.Length > 4 ? cols[4].Trim() : null;
-            if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cognoms)) { parseErrors.Add($"Línia {lineNum}: Nom o Cognoms buits."); continue; }
-            students.Add(new CreateStudentRequest(nom, cognoms, num,
-                string.IsNullOrEmpty(pinCsv) ? null : pinCsv,
-                string.IsNullOrEmpty(correu) ? null : correu));
+            var nom    = cols[1].Trim();
+            var cog    = cols[2].Trim();
+            var correu = cols[3].Trim();
+            if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cog) || string.IsNullOrEmpty(correu))
+            { parseErrors.Add($"Línia {lineNum}: camps buits."); continue; }
+            students.Add(new CreateStudentRequest(nom, cog, num, correu));
         }
 
         if (students.Count == 0)
         {
-            Snackbar.Add(parseErrors.Any() ? "Errors al CSV: " + string.Join("; ", parseErrors) : "El fitxer no conté dades.", Severity.Warning);
+            Snackbar.Add(parseErrors.Any() ? "Errors al CSV: " + string.Join("; ", parseErrors.Take(3)) : "Fitxer buit.", Severity.Warning);
             _saving = false; return;
         }
 
@@ -262,49 +302,46 @@
         {
             Snackbar.Add($"Importació: {result.Created} creats, {result.Skipped} omesos.", Severity.Success);
             if (result.Errors.Any())
-                Snackbar.Add(string.Join(" | ", result.Errors), Severity.Warning);
+                Snackbar.Add(string.Join(" | ", result.Errors.Take(3)), Severity.Warning);
         }
         _csvFile = null;
         await LoadAsync();
         _saving = false;
     }
 
-    private async Task SendPinAsync(StudentWithPinDto s)
+    private async Task SendPasswordAsync(StudentDto s)
     {
         Api.SetToken(UserState.Token!);
-        var result = await Api.SendPinAsync(ClassId, s.Id);
-        if (result?.Sent == true) Snackbar.Add("Correu enviat correctament.", Severity.Success);
+        var result = await Api.SendPasswordAsync(ClassId, s.Id);
+        if (result?.Sent == true) Snackbar.Add("Contrasenya enviada.", Severity.Success);
         else Snackbar.Add($"No s'ha pogut enviar: {result?.Reason}", Severity.Error);
     }
 
     private async Task SendAllAsync()
     {
         var confirm = await Dialog.ShowMessageBox("Confirmar",
-            "Enviar el PIN per correu a tots els alumnes amb adreça de correu?",
+            "Enviar nova contrasenya a tots els alumnes?",
             yesText: "Enviar", cancelText: "Cancel·lar");
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);
-        var result = await Api.SendAllPinsAsync(ClassId);
+        var result = await Api.SendAllPasswordsAsync(ClassId);
         if (result is not null)
-            Snackbar.Add($"Enviats: {result.Sent} · Omesos: {result.Skipped}", Severity.Success);
+            Snackbar.Add($"Enviades: {result.Sent} · Omeses: {result.Skipped}", Severity.Success);
     }
 
-    private async Task ResetPinAsync(StudentWithPinDto s)
+    private async Task ResetPasswordAsync(StudentDto s)
     {
         var confirm = await Dialog.ShowMessageBox("Confirmar",
-            $"Generar un nou PIN per a «{s.NomComplet}»?",
+            $"Generar nova contrasenya per a «{s.NomComplet}»?",
             yesText: "Confirmar", cancelText: "Cancel·lar");
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);
-        var result = await Api.ResetPinAsync(ClassId, s.Id);
+        var result = await Api.ResetPasswordAsync(ClassId, s.Id);
         if (result is not null)
-        {
-            Snackbar.Add($"Nou PIN generat: {result.NewPin}", Severity.Success);
-            await LoadAsync();
-        }
+            Snackbar.Add($"Nova contrasenya generada: {result.NewPassword}", Severity.Success);
     }
 
-    private async Task DeleteAsync(StudentWithPinDto s)
+    private async Task DeleteAsync(StudentDto s)
     {
         var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
             $"Eliminar «{s.NomComplet}»?",
@@ -319,11 +356,10 @@
     private async Task ExportCsvAsync()
     {
         var sb = new System.Text.StringBuilder();
-        sb.AppendLine("NumLlista;Nom;Cognoms;Correu;PIN");
+        sb.AppendLine("NumLlista;Nom;Cognoms;Correu");
         foreach (var s in _students.OrderBy(x => x.NumLlista))
-            sb.AppendLine($"{s.NumLlista};{s.Nom};{s.Cognoms};{s.CorreuElectronic};{s.Pin}");
-        var fileName = $"alumnes-{_classe?.Name ?? ClassId.ToString()}.csv"
-            .Replace(" ", "_").Replace("/", "-");
+            sb.AppendLine($"{s.NumLlista};{s.Nom};{s.Cognoms};{s.Email}");
+        var fileName = $"alumnes-{_classe?.Name ?? ClassId.ToString()}.csv".Replace(" ", "_");
         await JS.InvokeVoidAsync("eval", $@"
             (function(){{
                 var blob = new Blob([{System.Text.Json.JsonSerializer.Serialize(sb.ToString())}],

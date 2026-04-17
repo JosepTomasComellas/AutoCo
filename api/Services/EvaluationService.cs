@@ -16,11 +16,16 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
     public async Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId)
     {
         var activity = await db.Activities
-            .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .FirstOrDefaultAsync(a => a.Id == activityId);
 
         if (activity is null || !activity.IsOpen) return null;
+
+        var isExcluded = await db.ModuleExclusions
+            .AnyAsync(e => e.Module.Activities.Any(a => a.Id == activityId) && e.StudentId == studentId);
+        if (isExcluded) return null;
 
         // Trobar el grup de l'alumne
         var group = activity.Groups.FirstOrDefault(g => g.Members.Any(m => m.StudentId == studentId));
@@ -50,13 +55,13 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
             activity.Id,
             activity.ModuleId, activity.Module.Code, activity.Module.Name,
             activity.Module.ClassId, activity.Module.Class.Name, activity.Module.Class.AcademicYear,
-            activity.Module.Class.Professor.NomComplet,
+            activity.Module.Professor.NomComplet,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
             activity.Groups.Count,
             activity.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count());
 
         var groupDto = new GroupDto(group.Id, group.ActivityId, group.Name,
-            students.Select(s => new StudentDto(s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.CreatedAt)).ToList());
+            students.Select(s => new StudentDto(s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt)).ToList());
 
         return new EvaluationFormDto(actDto, groupDto, entries);
     }
@@ -112,7 +117,7 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
             // Actualitzar puntuacions per criteri
             foreach (var (key, score) in entry.Scores)
             {
-                if (score < 1 || score > 10) continue;
+                if (score <= 0 || score > 10) continue;
 
                 var existing = eval.Scores.FirstOrDefault(s => s.CriteriaKey == key);
                 if (existing is not null)

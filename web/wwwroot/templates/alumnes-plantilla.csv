@@ -1,4 +1,4 @@
-NumLlista;Nom;Cognoms;Correu;PIN
-1;Joan;Garcia;joan.garcia@exemple.com;
-2;Maria;Lopez;;1234
-3;Pere;Puig;;
+NumLlista;Nom;Cognoms;Correu
+1;Joan;Garcia;joan.garcia@exemple.com
+2;Maria;Lopez;maria.lopez@exemple.com
+3;Pere;Puig;pere.puig@exemple.com

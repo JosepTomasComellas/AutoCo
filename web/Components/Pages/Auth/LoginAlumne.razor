@@ -2,13 +2,13 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject ProtectedLocalStorage LocalStorage
 
 <PageTitle>Accés Alumne – AutoCo</PageTitle>
 
 <div style="min-height:80vh;display:flex;align-items:center;justify-content:center">
     <MudContainer MaxWidth="MaxWidth.ExtraSmall">
         <MudPaper Elevation="4" Style="overflow:hidden;border-radius:12px">
-
             <div style="background:#1e293b;padding:1.5rem 2rem;display:flex;align-items:center;gap:1rem">
                 <MudIcon Icon="@Icons.Material.Filled.Person"
                          Style="color:rgba(255,255,255,.9);font-size:2rem;flex-shrink:0" />
@@ -21,34 +21,24 @@
                     </MudText>
                 </MudStack>
             </div>
-
             <div style="padding:1.75rem 2rem">
                 @if (_error is not null)
                 {
                     <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
                 }
-
-                <MudSelect T="int" @bind-Value="_classId" Label="Classe" Variant="Variant.Outlined"
-                           Class="mb-3" Disabled="_loading">
-                    <MudSelectItem T="int" Value="0">-- Selecciona la classe --</MudSelectItem>
-                    @foreach (var c in _classes)
-                    {
-                        <MudSelectItem T="int" Value="@c.Id">
-                            @c.Name @(c.AcademicYear is not null ? $"({c.AcademicYear})" : "")
-                        </MudSelectItem>
-                    }
-                </MudSelect>
-
-                <MudNumericField T="int" @bind-Value="_numLlista" Label="Número de llista"
-                                 Variant="Variant.Outlined" Min="1" Max="99" Class="mb-3" />
-
-                <MudTextField @bind-Value="_pin" Label="PIN"
+                <MudTextField @bind-Value="_email" Label="Correu electrònic"
+                              Variant="Variant.Outlined" Class="mb-3"
+                              Immediate="true" InputType="InputType.Email"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Email"
+                              @onkeydown="OnKeyDown" />
+                <MudTextField @bind-Value="_password" Label="Contrasenya"
                               Variant="Variant.Outlined" Class="mb-5"
                               Immediate="true"
-                              InputType="@_pinType"
-                              Adornment="Adornment.End" AdornmentIcon="@_pinIcon"
-                              OnAdornmentClick="TogglePin" />
-
+                              InputType="@_pwdType"
+                              Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
+                              OnAdornmentClick="TogglePassword"
+                              @onkeydown="OnKeyDown" />
                 <MudButton Variant="Variant.Filled" Color="Color.Primary"
                            FullWidth="true" Size="Size.Large"
                            OnClick="Login" Disabled="_loading">
@@ -58,55 +48,47 @@
                     }
                     Entrar
                 </MudButton>
-
                 <MudLink Href="/" Class="d-block text-center mt-4" Color="Color.Secondary">
                     ← Tornar
                 </MudLink>
             </div>
-
         </MudPaper>
     </MudContainer>
 </div>
 
 @code {
-    private List<ClassDto> _classes = [];
-    private int    _classId   = 0;
-    private int    _numLlista = 0;
-    private string _pin       = "";
+    private string _email    = "";
+    private string _password = "";
     private string? _error;
     private bool _loading;
-    private bool _showPin;
-    private InputType _pinType => _showPin ? InputType.Text : InputType.Password;
-    private string   _pinIcon  => _showPin ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+    private bool _showPwd;
+    private InputType _pwdType => _showPwd ? InputType.Text : InputType.Password;
+    private string   _pwdIcon  => _showPwd ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         if (UserState.IsLoggedIn)
-        {
             Nav.NavigateTo(UserState.IsStudent ? "/alumne/dashboard" : "/professor/dashboard");
-            return;
-        }
-        _classes = await Api.GetPublicClassesAsync() ?? [];
     }
 
-    private void TogglePin() => _showPin = !_showPin;
+    private void TogglePassword() => _showPwd = !_showPwd;
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await Login();
+    }
 
     private async Task Login()
     {
-        if (_classId <= 0 || _numLlista <= 0 || string.IsNullOrWhiteSpace(_pin))
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
         {
-            _error = "Omple tots els camps.";
-            return;
+            _error = "Omple tots els camps."; return;
         }
-        _loading = true;
-        _error   = null;
-        var result = await Api.LoginStudentAsync(_classId, _numLlista, _pin.Trim());
+        _loading = true; _error = null;
+        var result = await Api.LoginStudentAsync(_email.Trim(), _password);
         _loading = false;
-        if (result is null)
-        {
-            _error = "Dades incorrectes. Comprova la classe, el número i el PIN.";
-            return;
-        }
+        if (result is null) { _error = "Credencials incorrectes."; return; }
+        await LocalStorage.SetAsync("autoco_session", result);
         UserState.SetLogin(result);
         Nav.NavigateTo("/alumne/dashboard");
     }
