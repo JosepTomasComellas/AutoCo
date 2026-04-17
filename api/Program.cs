@@ -54,6 +54,8 @@ builder.Services.AddScoped<IBackupService,     BackupService>();
 
 // ── Redis (caché de resultats) ─────────────────────────────────────────────────
 var redisConn = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
+builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
+    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConn));
 builder.Services.AddStackExchangeRedisCache(opt =>
 {
     opt.Configuration = redisConn;
