@@ -66,6 +66,9 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
         return new EvaluationFormDto(actDto, groupDto, entries);
     }
 
+    // Valors vàlids de puntuació (1★=E, 2★=D, 3★=C, 4★=B, 5★=A)
+    private static readonly HashSet<double> ValidScores = [1.0, 3.5, 5.0, 7.5, 10.0];
+
     public async Task<bool> SaveAsync(int activityId, int studentId, SaveEvaluationsRequest req)
     {
         var activity = await db.Activities.FindAsync(activityId);
@@ -117,7 +120,7 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
             // Actualitzar puntuacions per criteri
             foreach (var (key, score) in entry.Scores)
             {
-                if (score <= 0 || score > 10) continue;
+                if (!ValidScores.Contains(score)) continue;
 
                 var existing = eval.Scores.FirstOrDefault(s => s.CriteriaKey == key);
                 if (existing is not null)

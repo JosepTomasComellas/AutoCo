@@ -329,7 +329,8 @@ public class ActivityService(AppDbContext db) : IActivityService
         var result = new List<StudentActivityDto>();
         foreach (var act in activities)
         {
-            var myGroup = act.Groups.First(g => g.Members.Any(m => m.StudentId == studentId));
+            var myGroup = act.Groups.FirstOrDefault(g => g.Members.Any(m => m.StudentId == studentId));
+            if (myGroup is null) continue;
             var totalToEval = myGroup.Members.Count;
             var alreadyEval = await db.Evaluations
                 .CountAsync(e => e.ActivityId == act.Id && e.EvaluatorId == studentId);

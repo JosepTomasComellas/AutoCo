@@ -146,13 +146,18 @@
 
     private async Task DeleteAsync()
     {
+        Api.SetToken(UserState.Token!);
+        var evalsCount = await Api.GetEvalsCountAsync(Act.Id);
+
+        var msg = evalsCount > 0
+            ? $"Segur que vols eliminar «{Act.Name}»?\n\n⚠️ Té {Act.NumGroups} grups, {Act.NumStudents} alumnes i {evalsCount} avaluacions guardades que es perdran permanentment."
+            : $"Segur que vols eliminar «{Act.Name}»?\n\nTé {Act.NumGroups} grups i {Act.NumStudents} alumnes assignats.";
+
         var confirm = await Dialog.ShowMessageBox(
-            "Confirmar eliminació",
-            $"Segur que vols eliminar «{Act.Name}»?",
+            "Confirmar eliminació", msg,
             yesText: "Eliminar", cancelText: "Cancel·lar");
         if (confirm != true) return;
 
-        Api.SetToken(UserState.Token!);
         await Api.DeleteActivityAsync(Act.Id);
         Snackbar.Add("Activitat eliminada.", Severity.Info);
         await OnDeleted.InvokeAsync(Act);

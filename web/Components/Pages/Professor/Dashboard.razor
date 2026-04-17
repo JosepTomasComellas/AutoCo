@@ -47,9 +47,37 @@ else if (!_activities.Any())
 }
 else
 {
+    <!-- Estadístiques ràpides -->
+    <MudGrid Class="mb-4" Spacing="2">
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight:700">@_activities.Count</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Activitats totals</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudText Typo="Typo.h5" Color="Color.Success" Style="font-weight:700">@_activities.Count(a => a.IsOpen)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Obertes ara</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_activities.Sum(a => a.NumGroups)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Grups totals</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="3">
+            <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudText Typo="Typo.h5" Color="Color.Info" Style="font-weight:700">@_activities.Sum(a => a.NumStudents)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Alumnes totals</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
     <!-- Filtres -->
     <MudGrid Class="mb-4" Spacing="2">
-        <MudItem xs="12" sm="6" md="5">
+        <MudItem xs="12" sm="6" md="4">
             <MudTextField @bind-Value="_cerca" Label="Cercar activitat" Variant="Variant.Outlined"
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                           Clearable="true" Immediate="true" Margin="Margin.Dense" />
@@ -64,9 +92,10 @@ else
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" md="3" Class="d-flex align-center">
+        <MudItem xs="12" md="4" Class="d-flex align-center gap-3">
+            <MudSwitch @bind-Value="_nomesObertes" Color="Color.Success" Label="Només obertes" Size="Size.Small" />
             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                @_filtrades.Count de @_activities.Count activitats
+                @_filtrades.Count de @_activities.Count
             </MudText>
         </MudItem>
     </MudGrid>
@@ -118,8 +147,9 @@ else
     private List<ActivityDto> _activities = [];
     private bool _loading = true;
 
-    private string _cerca    = "";
-    private int    _classeId = 0;
+    private string _cerca       = "";
+    private int    _classeId    = 0;
+    private bool   _nomesObertes = false;
 
     private Dictionary<int, string> _classes = [];
 
@@ -130,7 +160,8 @@ else
         .Where(a => (string.IsNullOrWhiteSpace(_cerca) ||
                      a.Name.Contains(_cerca, StringComparison.OrdinalIgnoreCase) ||
                      (a.Description?.Contains(_cerca, StringComparison.OrdinalIgnoreCase) ?? false))
-                 && (_classeId == 0 || a.ClassId == _classeId))
+                 && (_classeId == 0 || a.ClassId == _classeId)
+                 && (!_nomesObertes || a.IsOpen))
         .ToList();
 
     protected override async Task OnInitializedAsync()

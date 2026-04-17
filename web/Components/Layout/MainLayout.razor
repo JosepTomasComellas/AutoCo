@@ -3,7 +3,7 @@
 @inject NavigationManager Nav
 @inject ProtectedLocalStorage LocalStorage
 
-<MudThemeProvider Theme="_theme" />
+<MudThemeProvider Theme="_theme" IsDarkMode="_darkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -16,6 +16,11 @@
         </MudStack>
 
         <MudSpacer />
+
+        <!-- Mode fosc -->
+        <MudIconButton Icon="@(_darkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="Color.Inherit" title="@(_darkMode ? "Mode clar" : "Mode fosc")"
+                       OnClick="ToggleDark" />
 
         <!-- Usuari + logout -->
         @if (UserState.IsLoggedIn)
@@ -57,6 +62,10 @@
 </MudLayout>
 
 @code {
+    private bool _darkMode = false;
+
+    private void ToggleDark() => _darkMode = !_darkMode;
+
     private MudTheme _theme = new()
     {
         PaletteLight = new PaletteLight

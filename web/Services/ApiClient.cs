@@ -205,6 +205,12 @@ public class ApiClient
     public Task<List<CriteriaDto>?> GetCriteriaAsync() =>
         GetAsync<List<CriteriaDto>>("/api/criteria");
 
+    public async Task<int> GetEvalsCountAsync(int activityId)
+    {
+        var resp = await GetAsync<System.Text.Json.JsonElement?>($"/api/activities/{activityId}/evals-count");
+        return resp?.TryGetProperty("count", out var c) == true ? c.GetInt32() : 0;
+    }
+
     // ── Backup / Restore (admin) ──────────────────────────────────────────────
 
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()

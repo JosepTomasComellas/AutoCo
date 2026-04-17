@@ -338,7 +338,7 @@
         Api.SetToken(UserState.Token!);
         var result = await Api.ResetPasswordAsync(ClassId, s.Id);
         if (result is not null)
-            Snackbar.Add($"Nova contrasenya generada: {result.NewPassword}", Severity.Success);
+            Snackbar.Add($"Nova contrasenya generada per a {s.NomComplet}. Comunica-la per un canal segur.", Severity.Success);
     }
 
     private async Task DeleteAsync(StudentDto s)

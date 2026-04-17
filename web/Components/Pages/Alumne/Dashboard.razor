@@ -22,8 +22,22 @@ else if (!_activities.Any())
 }
 else
 {
+    <!-- Filtre -->
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="3">
+        <MudSwitch @bind-Value="_nomesPendents" Color="Color.Warning" Label="Només pendents" Size="Size.Small" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            @_filtrades.Count de @_activities.Count activitats
+        </MudText>
+    </MudStack>
+
+    @if (!_filtrades.Any())
+    {
+        <MudAlert Severity="Severity.Success">Has completat totes les avaluacions obertes!</MudAlert>
+    }
+    else
+    {
     <MudGrid>
-        @foreach (var act in _activities)
+        @foreach (var act in _filtrades)
         {
             var pct  = act.TotalToEvaluate > 0 ? (double)act.AlreadyEvaluated / act.TotalToEvaluate * 100 : 0;
             var done = act.AlreadyEvaluated >= act.TotalToEvaluate && act.TotalToEvaluate > 0;
@@ -75,11 +89,17 @@ else
             </MudItem>
         }
     </MudGrid>
+    }
 }
 
 @code {
     private List<StudentActivityDto> _activities = [];
-    private bool _loading = true;
+    private bool _loading       = true;
+    private bool _nomesPendents = false;
+
+    private List<StudentActivityDto> _filtrades => _activities
+        .Where(a => !_nomesPendents || (a.IsOpen && a.AlreadyEvaluated < a.TotalToEvaluate))
+        .ToList();
 
     protected override async Task OnInitializedAsync()
     {

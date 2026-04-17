@@ -20,7 +20,11 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ── JWT ───────────────────────────────────────────────────────────────────────
-var jwtSecret = builder.Configuration["JwtSettings:Secret"]!;
+var jwtSecret = builder.Configuration["JwtSettings:Secret"]
+    ?? throw new InvalidOperationException("JwtSettings:Secret no configurat.");
+if (jwtSecret.Length < 32)
+    throw new InvalidOperationException("JwtSettings:Secret ha de tenir almenys 32 caràcters.");
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opt =>
     {
@@ -28,8 +32,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ValidateIssuer           = false,
-            ValidateAudience         = false
+            ValidateIssuer           = true,
+            ValidIssuer              = "AutoCo",
+            ValidateAudience         = true,
+            ValidAudience            = "AutoCo-Users"
         };
     });
 
@@ -575,6 +581,26 @@ app.MapGet("/api/results/{activityId:int}/csv", async (int activityId,
 // ── Criteri ───────────────────────────────────────────────────────────────────
 app.MapGet("/api/criteria", () =>
     Results.Ok(Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label))));
+
+// ── Compte d'avaluacions (per confirmació d'eliminació) ────────────────────────
+app.MapGet("/api/activities/{id:int}/evals-count", async (
+    int id, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var count = await db.Evaluations.CountAsync(e => e.ActivityId == id);
+    return Results.Ok(new { count });
+}).RequireAuthorization();
+
+// ── Health check ──────────────────────────────────────────────────────────────
+app.MapGet("/api/health", async (AppDbContext db, StackExchange.Redis.IConnectionMultiplexer redis) =>
+{
+    var dbOk    = false;
+    var redisOk = false;
+    try { dbOk    = await db.Database.CanConnectAsync(); }    catch { }
+    try { redisOk = redis.IsConnected; }                      catch { }
+    var status = dbOk && redisOk ? "ok" : "degraded";
+    return Results.Ok(new { status, db = dbOk ? "ok" : "error", redis = redisOk ? "ok" : "error" });
+});
 
 // ════════════════════════════════════════════════════════════════════════════
 // BACKUP / RESTORE (admin only)

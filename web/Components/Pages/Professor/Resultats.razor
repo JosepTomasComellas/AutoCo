@@ -106,7 +106,7 @@ else
                         var label = c.Label;
                         <TemplateColumn Title="@label">
                             <CellTemplate>
-                                @(context.Item.Scores.TryGetValue(key, out var v) ? v.ToString() : "–")
+                                @(context.Item.Scores.TryGetValue(key, out var v) ? v.ToString("G") : "–")
                             </CellTemplate>
                         </TemplateColumn>
                     }
