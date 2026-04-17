@@ -208,7 +208,7 @@
     private async Task DeleteAsync(ModuleDto m)
     {
         var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
-            $"Eliminar el mòdul «{m.Code} – {m.Name}»? S'eliminaran totes les seves activitats.",
+            $"Eliminar el mòdul «{m.Code} – {m.Name}»?\n\nS'eliminaran totes les activitats associades i totes les avaluacions que hi hagi guardades. Aquesta acció no es pot desfer.",
             yesText: "Eliminar", cancelText: "Cancel·lar");
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);

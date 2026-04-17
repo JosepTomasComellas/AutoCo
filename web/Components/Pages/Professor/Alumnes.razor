@@ -138,7 +138,14 @@
         <MudDataGrid T="StudentDto" Items="_students" Dense="true" Hover="true"
                      SortMode="SortMode.Single">
             <Columns>
-                <PropertyColumn Property="s => s.NumLlista" Title="#" />
+                <TemplateColumn Title="#">
+                    <HeaderTemplate>
+                        <MudTooltip Text="Núm. de llista" Placement="Placement.Top">
+                            <span style="cursor:help">#</span>
+                        </MudTooltip>
+                    </HeaderTemplate>
+                    <CellTemplate>@context.Item.NumLlista</CellTemplate>
+                </TemplateColumn>
                 <TemplateColumn Title="Cognoms, Nom">
                     <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
                 </TemplateColumn>

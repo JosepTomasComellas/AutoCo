@@ -31,10 +31,19 @@ else
 
     @if (_form.Activity.Description is not null)
     {
-        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
             @_form.Activity.Description
         </MudText>
     }
+
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
+        <MudProgressLinear Value="_pctProg" Color="@(_totProg ? Color.Success : Color.Primary)"
+                           Rounded="true" Style="flex:1;height:8px" />
+        <MudText Typo="Typo.caption" Color="@(_totProg ? Color.Success : Color.Secondary)"
+                 Style="white-space:nowrap">
+            @_completats / @_totalCriteris criteris puntuats
+        </MudText>
+    </MudStack>
 
     @foreach (var entry in _form.Entries)
     {
@@ -147,6 +156,12 @@ else
 
     // Puntuació per (studentId, criteriaKey): E=1, D=3.5, C=5, B=7.5, A=10
     private Dictionary<(int, string), double> _scores   = new();
+
+    // Progrés del formulari
+    private int    _totalCriteris => _form is null ? 0 : _form.Entries.Count * _criteria.Count;
+    private int    _completats    => _scores.Count(kv => kv.Value > 0);
+    private double _pctProg       => _totalCriteris > 0 ? (double)_completats / _totalCriteris * 100 : 0;
+    private bool   _totProg       => _completats >= _totalCriteris && _totalCriteris > 0;
     private Dictionary<int, string>           _comments = new();
     // Valor hovered per mostrar l'hint en temps real
     private Dictionary<(int, string), int>    _hovered  = new();
@@ -218,12 +233,7 @@ else
         var stars = _hovered.TryGetValue((studentId, key), out var h) ? h : currentStars;
         return stars switch
         {
-            1 => "E – Insuficient (1)",
-            2 => "D – Regular (3.5)",
-            3 => "C – Bé (5)",
-            4 => "B – Notable (7.5)",
-            5 => "A – Excel·lent (10)",
-            _ => "Sense puntuar"
+            1 => "E", 2 => "D", 3 => "C", 4 => "B", 5 => "A", _ => ""
         };
     }
 

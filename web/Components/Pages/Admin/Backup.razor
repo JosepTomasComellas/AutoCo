@@ -56,23 +56,23 @@
 
     <!-- ── Importar ─────────────────────────────────────────────── -->
     <MudItem xs="12" md="6">
-        <MudCard Elevation="2">
-            <MudCardHeader>
+        <MudCard Elevation="2" Style="border:2px solid var(--mud-palette-error)">
+            <MudCardHeader Style="background:rgba(204,0,0,.06)">
                 <CardHeaderAvatar>
-                    <MudAvatar Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small">
-                        <MudIcon Icon="@Icons.Material.Filled.FileUpload" />
+                    <MudAvatar Color="Color.Error" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" />
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Importar configuració</MudText>
+                    <MudText Typo="Typo.h6" Color="Color.Error">Importar configuració</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                         Restaura des d'un fitxer JSON local
                     </MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
-                    Aquesta acció <strong>substitueix totes les dades existents</strong>.
+                <MudAlert Severity="Severity.Error" Class="mb-3">
+                    <strong>Atenció:</strong> Aquesta acció <strong>esborra i substitueix permanentment totes les dades</strong> del sistema (professors, alumnes, activitats i avaluacions).
                 </MudAlert>
                 <InputFile id="importFile" OnChange="OnFileSelected" accept=".json" style="display:none" />
                 <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true"
@@ -82,7 +82,7 @@
                 </MudButton>
             </MudCardContent>
             <MudCardActions Class="px-4 pb-4">
-                <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true"
+                <MudButton Variant="Variant.Filled" Color="Color.Error" FullWidth="true"
                            StartIcon="@Icons.Material.Filled.RestorePage"
                            OnClick="ImportAsync"
                            Disabled="@(_importFile is null || _importing)">

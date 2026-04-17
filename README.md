@@ -8,10 +8,10 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 ### Professor / Administrador
 - Gestió de **classes**, **alumnes** i **mòduls** (UF/MP)
-- Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual
+- Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual des del tauler
 - Configuració de **grups** (manual, per CSV o importació/exportació)
-- **Duplicació d'activitats** reutilitzant la configuració de grups
-- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri, autoavaluació vs. coavaluació, barra de progrés de participació
+- **Duplicació d'activitats** reutilitzant la configuració de grups i membres
+- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri (Auto / Co), nota global d'autoavaluació i coavaluació, barra de progrés de participació
 - **Gràfiques comparatives** per grup (auto vs. co-avaluació, desglossament per criteri)
 - **Exportació CSV** de resultats
 - **Còpies de seguretat** del servidor: exportació/importació JSON de tota la base de dades
@@ -23,7 +23,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - Accés amb correu electrònic i contrasenya
 - Avaluació de tots els membres del grup (inclosa autoavaluació) per 5 criteris
 - Puntuació amb **escala de 5 estrelles** (E / D / C / B / A)
-- Barra de progrés d'avaluació completada
+- **Barra de progrés** d'avaluació completada en temps real
 - Filtre d'activitats pendents al dashboard
 
 ### Criteris d'avaluació (fixes per a totes les activitats)
@@ -101,9 +101,9 @@ Class ────────┘
 
 - **Backend:** C# / ASP.NET Core 9 · Entity Framework Core · SQL Server 2022
 - **Frontend:** Blazor Server · [MudBlazor](https://mudblazor.com/)
-- **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage` per a persistència de sessió
-- **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació automàtica)
-- **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters
+- **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage` per a persistència de sessió (resisteix F5 sense perdre sessió)
+- **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació automàtica en modificar grups)
+- **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters · validació de valors de puntuació al backend
 - **Email:** SMTP configurable (Gmail, etc.) per enviar credencials
 - **Desplegament:** Docker Compose · nginx (SSL/TLS auto-signat o certificat propi)
 
@@ -139,6 +139,10 @@ Accedeix a **https://localhost** (accepta l'avís del certificat auto-signat).
 ```
 
 Genera un directori `autoco-deploy-YYYYMMDD` amb tot el codi i els scripts d'instal·lació.
+
+El script preserva automàticament:
+- El fitxer `.env` si ja existeix al destí o al directori arrel del projecte
+- Els certificats SSL (`nginx/ssl/server.crt` i `server.key`) si ja existeixen al directori de destí
 
 **2. Copiar al servidor:**
 
@@ -226,8 +230,9 @@ GET/POST/PUT/DELETE /api/classes/{id}/students        # Gestió alumnes
 POST /api/classes/{id}/students/bulk                  # Importació massiva CSV
 POST /api/classes/{id}/students/{sid}/reset-password  # Reset contrasenya
 POST /api/classes/{id}/students/{sid}/send-password   # Enviar credencials per correu
+GET/POST/DELETE    /api/classes/{id}/students/send-all # Enviar credencials a tots
 GET/POST/PUT/DELETE /api/classes/{id}/modules         # Gestió mòduls
-GET/POST/PUT/DELETE /api/modules/{id}/exclusions      # Exclusions per mòdul
+GET/POST/DELETE    /api/modules/{id}/exclusions       # Exclusions per mòdul
 
 GET/POST/PUT/DELETE /api/activities                   # Gestió activitats
 POST /api/activities/{id}/toggle                      # Obrir/tancar activitat

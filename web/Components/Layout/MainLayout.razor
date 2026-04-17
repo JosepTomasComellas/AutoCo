@@ -10,9 +10,11 @@
 
 <MudLayout>
     <MudAppBar Elevation="3" Style="background:#1e293b">
-        <!-- Logo -->
+        <!-- Logo clicable → dashboard del rol actiu -->
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0" Style="min-width:0;flex-shrink:0">
-            <MudImage Src="/images/logo2.png" Height="44" Style="display:block" />
+            <a href="@LogoHref" style="display:block;line-height:0">
+                <MudImage Src="/images/logo2.png" Height="44" Style="display:block" />
+            </a>
         </MudStack>
 
         <MudSpacer />
@@ -65,6 +67,10 @@
 
 @code {
     private bool _sessionChecked = false;
+
+    private string LogoHref => UserState.IsStudent   ? "/alumne/dashboard"
+                             : UserState.IsProfessor ? "/professor/dashboard"
+                             : "/";
 
     private MudTheme _theme = new()
     {

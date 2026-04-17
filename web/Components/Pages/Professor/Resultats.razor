@@ -57,7 +57,14 @@ else
     <MudDataGrid T="StudentResultDto" Items="_results.Students" Dense="true" Hover="true"
                  SortMode="SortMode.Single" Class="mb-6">
         <Columns>
-            <PropertyColumn Property="s => s.NumLlista" Title="#" />
+            <TemplateColumn Title="#">
+                <HeaderTemplate>
+                    <MudTooltip Text="Núm. de llista" Placement="Placement.Top">
+                        <span style="cursor:help">#</span>
+                    </MudTooltip>
+                </HeaderTemplate>
+                <CellTemplate>@context.Item.NumLlista</CellTemplate>
+            </TemplateColumn>
             <TemplateColumn Title="Cognoms, Nom">
                 <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
             </TemplateColumn>
@@ -85,21 +92,38 @@ else
                     </CellTemplate>
                 </TemplateColumn>
             }
-            <TemplateColumn Title="AutEval">
+            <TemplateColumn Title="Autoaval.">
+                <HeaderTemplate>
+                    <MudTooltip Text="Nota global d'autoavaluació" Placement="Placement.Top">
+                        <span style="cursor:help">Autoaval.</span>
+                    </MudTooltip>
+                </HeaderTemplate>
                 <CellTemplate>
-                    <MudText Typo="Typo.body2" Style="font-weight:600">
+                    <MudText Typo="Typo.body2" Style="font-weight:600;color:var(--mud-palette-primary)">
                         @(context.Item.AutAvgGlobal.HasValue ? context.Item.AutAvgGlobal.Value.ToString("F1") : "–")
                     </MudText>
                 </CellTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="CoEval">
+            <TemplateColumn Title="Coaval.">
+                <HeaderTemplate>
+                    <MudTooltip Text="Nota global de coavaluació (mitjana de companys)" Placement="Placement.Top">
+                        <span style="cursor:help">Coaval.</span>
+                    </MudTooltip>
+                </HeaderTemplate>
                 <CellTemplate>
-                    <MudText Typo="Typo.body2" Style="font-weight:600">
+                    <MudText Typo="Typo.body2" Style="font-weight:600;color:var(--mud-palette-secondary)">
                         @(context.Item.AvgGlobal.HasValue ? context.Item.AvgGlobal.Value.ToString("F1") : "–")
                     </MudText>
                 </CellTemplate>
             </TemplateColumn>
-            <PropertyColumn Property="s => s.NumPeerEvaluators" Title="Coavs." />
+            <TemplateColumn Title="Coavs.">
+                <HeaderTemplate>
+                    <MudTooltip Text="Nombre de companys que han avaluat aquest alumne" Placement="Placement.Top">
+                        <span style="cursor:help">Coavs.</span>
+                    </MudTooltip>
+                </HeaderTemplate>
+                <CellTemplate>@context.Item.NumPeerEvaluators</CellTemplate>
+            </TemplateColumn>
             <PropertyColumn Property="s => s.SelfComment" Title="Comentari" />
         </Columns>
     </MudDataGrid>

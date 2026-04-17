@@ -217,8 +217,11 @@
 
     private async Task DeleteGroupAsync(GroupDto g)
     {
-        var confirm = await Dialog.ShowMessageBox("Confirmar",
-            $"Eliminar el grup «{g.Name}»?",
+        var membresText = g.Members.Count > 0
+            ? $" Els {g.Members.Count} membres quedaran sense grup assignat."
+            : "";
+        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
+            $"Eliminar el grup «{g.Name}»?{membresText}",
             yesText: "Eliminar", cancelText: "Cancel·lar");
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);

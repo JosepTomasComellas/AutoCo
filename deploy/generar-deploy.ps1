@@ -25,6 +25,17 @@ Write-Host "  Origen : $RepoRoot"
 Write-Host "  Destí  : $Dest"
 Write-Host "========================================================"
 
+# ── Desar certificats SSL existents al destí (si n'hi ha) ────────────────────
+$savedCert = $null
+$savedKey  = $null
+$prevCertPath = Join-Path $Dest "nginx/ssl/server.crt"
+$prevKeyPath  = Join-Path $Dest "nginx/ssl/server.key"
+if ((Test-Path $prevCertPath) -and (Get-Item $prevCertPath).Length -gt 64) {
+    $savedCert = [System.IO.File]::ReadAllBytes($prevCertPath)
+    $savedKey  = [System.IO.File]::ReadAllBytes($prevKeyPath)
+    Write-Host "    -> Certificats SSL del destí desats temporalment."
+}
+
 # ── Netejar / crear directori de destí ────────────────────────────────────────
 if (Test-Path $Dest) {
     Write-Host ""
@@ -116,12 +127,19 @@ $certPath = Join-Path $RepoRoot "nginx/ssl/server.crt"
 $keyPath  = Join-Path $RepoRoot "nginx/ssl/server.key"
 $sslDest  = Join-Path $Dest "nginx/ssl"
 
-if ((Test-Path $certPath) -and (Get-Item $certPath).Length -gt 64) {
-    Write-Host "    -> Copiant certificat SSL existent..."
+if ($savedCert -ne $null) {
+    # Restaurar els certificats que ja existien al destí (prioritat màxima)
+    Write-Host "    -> Restaurant certificats SSL preexistents al destí..."
+    [System.IO.File]::WriteAllBytes((Join-Path $sslDest "server.crt"), $savedCert)
+    [System.IO.File]::WriteAllBytes((Join-Path $sslDest "server.key"), $savedKey)
+} elseif ((Test-Path $certPath) -and (Get-Item $certPath).Length -gt 64) {
+    # Copiar des del repo si existeixen i semblen vàlids
+    Write-Host "    -> Copiant certificat SSL des del repositori..."
     Copy-Item $certPath -Destination $sslDest -Force
     Copy-Item $keyPath  -Destination $sslDest -Force
 } else {
-    Write-Host "    -> Sense certificat SSL valid; nginx generara un d'autosignat."
+    # Cap certificat disponible; nginx en generarà un d'autosignat
+    Write-Host "    -> Sense certificat SSL; nginx generara un d'autosignat."
     New-Item -ItemType File -Path (Join-Path $sslDest ".gitkeep") -Force | Out-Null
 }
 
