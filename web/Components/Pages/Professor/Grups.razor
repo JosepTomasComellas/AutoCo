@@ -290,18 +290,23 @@
     private async Task OnDropToGroup(int groupId)
     {
         if (_draggingStudentId is null || _dragBusy) return;
-        if (_draggingFromGroupId == groupId) { OnDragEnd(); return; }
+
+        // Capturar valors ara, abans de qualsevol await:
+        // events posteriors (ondragend) poden nullificar els camps
+        var studentId   = _draggingStudentId.Value;
+        var fromGroupId = _draggingFromGroupId;
+
+        if (fromGroupId == groupId) { OnDragEnd(); return; }
 
         _dragBusy = true;
+        OnDragEnd();
         Api.SetToken(UserState.Token!);
 
-        // Si venia d'un altre grup, el traiem primer
-        if (_draggingFromGroupId.HasValue)
-            await Api.RemoveMemberAsync(ActivityId, _draggingFromGroupId.Value, _draggingStudentId.Value);
+        if (fromGroupId.HasValue)
+            await Api.RemoveMemberAsync(ActivityId, fromGroupId.Value, studentId);
 
-        await Api.AddMemberAsync(ActivityId, groupId, _draggingStudentId.Value);
+        await Api.AddMemberAsync(ActivityId, groupId, studentId);
 
-        OnDragEnd();
         _dragBusy = false;
         await LoadAsync();
     }
@@ -310,11 +315,14 @@
     {
         if (_draggingStudentId is null || _draggingFromGroupId is null || _dragBusy) return;
 
-        _dragBusy = true;
-        Api.SetToken(UserState.Token!);
-        await Api.RemoveMemberAsync(ActivityId, _draggingFromGroupId.Value, _draggingStudentId.Value);
+        var studentId   = _draggingStudentId.Value;
+        var fromGroupId = _draggingFromGroupId.Value;
 
+        _dragBusy = true;
         OnDragEnd();
+        Api.SetToken(UserState.Token!);
+        await Api.RemoveMemberAsync(ActivityId, fromGroupId, studentId);
+
         _dragBusy = false;
         await LoadAsync();
     }
