@@ -69,7 +69,7 @@ else
         </MudItem>
         <MudItem xs="6" sm="3">
             <MudPaper Elevation="1" Class="pa-3 text-center">
-                <MudText Typo="Typo.h5" Color="Color.Info" Style="font-weight:700">@_activities.Sum(a => a.NumStudents)</MudText>
+                <MudText Typo="Typo.h5" Color="Color.Info" Style="font-weight:700">@_totalAlumnes</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Alumnes totals</MudText>
             </MudPaper>
         </MudItem>
@@ -145,6 +145,7 @@ else
 
 @code {
     private List<ActivityDto> _activities = [];
+    private List<ClassDto>    _classesDtos = [];
     private bool _loading = true;
 
     private string _cerca       = "";
@@ -152,6 +153,7 @@ else
     private bool   _nomesObertes = false;
 
     private Dictionary<int, string> _classes = [];
+    private int _totalAlumnes => _classesDtos.Sum(c => c.NumStudents);
 
     private List<ActivityDto> _obertes  => _filtrades.Where(a =>  a.IsOpen).ToList();
     private List<ActivityDto> _tancades => _filtrades.Where(a => !a.IsOpen).ToList();
@@ -168,7 +170,11 @@ else
     {
         if (!UserState.IsProfessor) return;
         Api.SetToken(UserState.Token!);
-        _activities = await Api.GetActivitiesAsync() ?? [];
+        var activitiesTask = Api.GetActivitiesAsync();
+        var classesTask    = Api.GetClassesAsync();
+        await Task.WhenAll(activitiesTask, classesTask);
+        _activities   = activitiesTask.Result ?? [];
+        _classesDtos  = classesTask.Result    ?? [];
         _classes = _activities
             .GroupBy(a => a.ClassId)
             .ToDictionary(g => g.Key, g => g.First().ClassName +
