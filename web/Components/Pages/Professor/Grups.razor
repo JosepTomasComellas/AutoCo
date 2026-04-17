@@ -84,9 +84,9 @@
     <!-- Zona "Sense grup" (drop zone) -->
     <MudItem xs="12" sm="6" md="4" lg="3">
         <div class="dnd-zone @(_dragOverUnassigned ? "dnd-zone--over" : "") @(_draggingFromGroupId == null && _draggingStudentId != null ? "dnd-zone--source" : "")"
-             @ondragover:preventDefault
              @ondragenter="() => _dragOverUnassigned = true"
              @ondragleave="OnDragLeaveUnassigned"
+             @ondrop:preventDefault
              @ondrop="OnDropToUnassigned">
             <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight:700">
                 <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Small"
@@ -127,9 +127,9 @@
 
         <MudItem xs="12" sm="6" md="4" lg="3">
             <div class="dnd-zone @(isOver ? "dnd-zone--over" : "") @(isSameSource ? "dnd-zone--source" : "")"
-                 @ondragover:preventDefault
                  @ondragenter="() => _dragOverGroupId = gid"
                  @ondragleave="() => { if (_dragOverGroupId == gid) _dragOverGroupId = null; }"
+                 @ondrop:preventDefault
                  @ondrop="() => OnDropToGroup(gid)">
 
                 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
