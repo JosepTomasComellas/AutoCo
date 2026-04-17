@@ -29,6 +29,66 @@
 /* ── Scroll suau global ──────────────────────────────────────────────────── */
 html { scroll-behavior: smooth; }
 
+/* ── Drag & Drop — assignació d'alumnes a grups ─────────────────────────── */
+.dnd-zone {
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 12px;
+    min-height: 120px;
+    background: rgba(255,255,255,.6);
+    transition: border-color .15s, background .15s;
+}
+.dnd-zone--over {
+    border-color: #CC0000;
+    background: rgba(204,0,0,.06);
+}
+.dnd-zone--source {
+    opacity: .7;
+}
+.dnd-members {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 32px;
+}
+.dnd-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px 4px 2px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    cursor: grab;
+    user-select: none;
+    font-size: .82rem;
+    transition: opacity .15s, box-shadow .15s;
+}
+.dnd-chip:hover {
+    background: #e2e8f0;
+    box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+.dnd-chip--unassigned {
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+.dnd-chip--dragging {
+    opacity: .35;
+    cursor: grabbing;
+}
+.dnd-handle {
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+.dnd-empty-hint {
+    color: #94a3b8;
+    font-size: .78rem;
+    text-align: center;
+    padding: 8px 0;
+    border: 1px dashed #cbd5e1;
+    border-radius: 4px;
+}
+
 /* ── Fons de pantalla ────────────────────────────────────────────────────── */
 html, body {
     background-image: url('/images/fons-salesians.png');

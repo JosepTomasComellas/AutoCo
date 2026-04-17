@@ -42,8 +42,7 @@
             Format CSV: capçalera <code>Grup;Correu</code>, una fila per alumne.
             Els alumnes s'identifiquen pel correu electrònic dins la classe d'aquesta activitat.
         </MudText>
-        <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".csv,.txt"
-                       Class="mb-3">
+        <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".csv,.txt" Class="mb-3">
             <ActivatorContent>
                 <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.AttachFile">
                     @(_importFileName ?? "Seleccionar fitxer CSV")
@@ -58,9 +57,7 @@
                     @if (_importing) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                     Importar
                 </MudButton>
-                <MudButton OnClick="() => { _importContent = null; _importFileName = null; }">
-                    Netejar
-                </MudButton>
+                <MudButton OnClick="() => { _importContent = null; _importFileName = null; }">Netejar</MudButton>
             </MudStack>
         }
     </MudPaper>
@@ -68,94 +65,113 @@
 
 @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" /> }
 
-<MudGrid>
-    <!-- Crear grup -->
-    <MudItem xs="12" md="4">
-        <MudPaper Elevation="2" Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" Class="mb-3">Nou grup</MudText>
-            <MudTextField @bind-Value="_nomGrup" Label="Nom del grup" Variant="Variant.Outlined" Class="mb-3" />
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateGroupAsync" Disabled="_saving">
-                Crear grup
-            </MudButton>
-        </MudPaper>
+<!-- Nou grup -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2" Wrap="Wrap.Wrap">
+    <MudTextField @bind-Value="_nomGrup" Label="Nom del nou grup" Variant="Variant.Outlined"
+                  Margin="Margin.Dense" Style="max-width:240px" Immediate="true"
+                  OnKeyDown="OnNomGrupKeyDown" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="CreateGroupAsync" Disabled="_saving || string.IsNullOrWhiteSpace(_nomGrup)">
+        Crear grup
+    </MudButton>
+    <MudText Typo="Typo.caption" Color="Color.Secondary">
+        Arrossega els alumnes per assignar-los a un grup.
+    </MudText>
+</MudStack>
 
-        <!-- Alumnes no assignats -->
-        <MudPaper Elevation="1" Class="pa-4">
-            <MudText Typo="Typo.subtitle1" Class="mb-2">
-                <strong>Sense grup (@_unassigned.Count)</strong>
+<MudGrid Spacing="3">
+    <!-- Zona "Sense grup" (drop zone) -->
+    <MudItem xs="12" sm="6" md="4" lg="3">
+        <div class="dnd-zone @(_dragOverUnassigned ? "dnd-zone--over" : "") @(_draggingFromGroupId == null && _draggingStudentId != null ? "dnd-zone--source" : "")"
+             @ondragover:preventDefault
+             @ondragenter="() => _dragOverUnassigned = true"
+             @ondragleave="OnDragLeaveUnassigned"
+             @ondrop="OnDropToUnassigned">
+            <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight:700">
+                <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Small"
+                         Style="vertical-align:middle;margin-right:4px" />
+                Sense grup (@_unassigned.Count)
             </MudText>
-            @if (!_unassigned.Any())
+
+            @if (!_unassigned.Any() && _draggingStudentId == null)
             {
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Tots els alumnes estan assignats.</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    Tots els alumnes estan assignats.
+                </MudText>
             }
-            else
-            {
-                <MudStack Spacing="1">
-                    @foreach (var s in _unassigned)
-                    {
-                        <MudText Typo="Typo.body2">@s.NumLlista. @s.Cognoms, @s.Nom</MudText>
-                    }
-                </MudStack>
-            }
-        </MudPaper>
+
+            <div class="dnd-members">
+                @foreach (var s in _unassigned)
+                {
+                    var sid = s.Id;
+                    <div class="dnd-chip dnd-chip--unassigned @(_draggingStudentId == sid ? "dnd-chip--dragging" : "")"
+                         draggable="true"
+                         @ondragstart="() => OnDragStart(sid, null)"
+                         @ondragend="OnDragEnd">
+                        <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                                 Size="Size.Small" Class="dnd-handle" />
+                        <span>@s.NumLlista. @s.Cognoms, @s.Nom</span>
+                    </div>
+                }
+            </div>
+        </div>
     </MudItem>
 
-    <!-- Grups existents -->
-    <MudItem xs="12" md="8">
-        <MudText Typo="Typo.h6" Class="mb-3">Grups (@_groups.Count)</MudText>
-        @if (!_groups.Any())
-        {
-            <MudAlert Severity="Severity.Info">No hi ha grups. Crea'n un primer.</MudAlert>
-        }
-        <MudStack Spacing="3">
-            @foreach (var g in _groups)
-            {
-                <MudPaper Elevation="2" Class="pa-3">
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-                        <MudText Typo="Typo.subtitle1"><strong>@g.Name</strong></MudText>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@g.Members.Count membres</MudChip>
-                        <MudSpacer />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                       Color="Color.Error" OnClick="() => DeleteGroupAsync(g)" />
-                    </MudStack>
+    <!-- Grups -->
+    @foreach (var g in _groups)
+    {
+        var gid = g.Id;
+        var isOver = _dragOverGroupId == gid;
+        var isSameSource = _draggingFromGroupId == gid;
 
-                    <!-- Membres actuals -->
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <div class="dnd-zone @(isOver ? "dnd-zone--over" : "") @(isSameSource ? "dnd-zone--source" : "")"
+                 @ondragover:preventDefault
+                 @ondragenter="() => _dragOverGroupId = gid"
+                 @ondragleave="() => { if (_dragOverGroupId == gid) _dragOverGroupId = null; }"
+                 @ondrop="() => OnDropToGroup(gid)">
+
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700;flex:1">@g.Name</MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                             Style="height:20px;font-size:.7rem">
+                        @g.Members.Count
+                    </MudChip>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                   Color="Color.Error" title="Eliminar grup"
+                                   OnClick="() => DeleteGroupAsync(g)" />
+                </MudStack>
+
+                <div class="dnd-members">
                     @foreach (var m in g.Members)
                     {
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-1">
-                            <MudText Typo="Typo.body2">@m.NumLlista. @m.Cognoms, @m.Nom</MudText>
-                            <MudSpacer />
-                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline"
+                        var mid = m.Id;
+                        <div class="dnd-chip @(_draggingStudentId == mid ? "dnd-chip--dragging" : "")"
+                             draggable="true"
+                             @ondragstart="() => OnDragStart(mid, gid)"
+                             @ondragend="OnDragEnd">
+                            <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                                     Size="Size.Small" Class="dnd-handle" />
+                            <span style="flex:1">@m.NumLlista. @m.Cognoms, @m.Nom</span>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close"
                                            Size="Size.Small" Color="Color.Warning"
                                            title="Treure del grup"
-                                           OnClick="() => RemoveMemberAsync(g.Id, m.Id)" />
-                        </MudStack>
+                                           OnClick="() => RemoveMemberAsync(gid, mid)"
+                                           Style="margin:-4px -4px -4px 0;width:24px;height:24px" />
+                        </div>
                     }
 
-                    <!-- Afegir membre -->
-                    @if (_unassigned.Any())
+                    @if (!g.Members.Any())
                     {
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mt-2" Spacing="2">
-                            <MudSelect T="int" @bind-Value="_selectedStudent[g.Id]"
-                                       Label="Afegir alumne" Variant="Variant.Outlined"
-                                       Dense="true" Style="max-width:220px">
-                                <MudSelectItem T="int" Value="0">--</MudSelectItem>
-                                @foreach (var s in _unassigned)
-                                {
-                                    <MudSelectItem T="int" Value="@s.Id">
-                                        @s.NumLlista. @s.Cognoms, @s.Nom
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
-                            <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
-                                           Color="Color.Primary"
-                                           OnClick="() => AddMemberAsync(g.Id)" />
-                        </MudStack>
+                        <div class="dnd-empty-hint">
+                            Arrossega aquí
+                        </div>
                     }
-                </MudPaper>
-            }
-        </MudStack>
-    </MudItem>
+                </div>
+            </div>
+        </MudItem>
+    }
 </MudGrid>
 
 @code {
@@ -164,14 +180,20 @@
     private ActivityDto?      _activity   = null;
     private List<GroupDto>    _groups     = [];
     private List<StudentDto>  _unassigned = [];
-    private bool _loading = true;
-    private bool _saving  = false;
+    private bool _loading  = true;
+    private bool _saving   = false;
     private string _nomGrup = "";
-    private Dictionary<int, int> _selectedStudent = new();
-    private bool    _showImport    = false;
-    private bool    _importing     = false;
-    private string? _importContent = null;
+    private bool _showImport    = false;
+    private bool _importing     = false;
+    private string? _importContent  = null;
     private string? _importFileName = null;
+
+    // ── Estat drag & drop ────────────────────────────────────────────────────
+    private int?  _draggingStudentId  = null;
+    private int?  _draggingFromGroupId = null;  // null = ve de "sense grup"
+    private int?  _dragOverGroupId    = null;
+    private bool  _dragOverUnassigned = false;
+    private bool  _dragBusy           = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,23 +211,21 @@
         _groups = await Api.GetGroupsAsync(ActivityId) ?? [];
         var allStudents = await Api.GetStudentsAsync(_activity.ClassId) ?? [];
 
-        // Exclou els alumnes exclosos del mòdul al qual pertany aquesta activitat
-        var exclusions = await Api.GetExclusionsAsync(_activity.ModuleId) ?? [];
+        var exclusions  = await Api.GetExclusionsAsync(_activity.ModuleId) ?? [];
         var excludedIds = exclusions.Select(e => e.StudentId).ToHashSet();
-
         var assignedIds = _groups.SelectMany(g => g.Members).Select(m => m.Id).ToHashSet();
+
         _unassigned = allStudents
             .Where(s => !assignedIds.Contains(s.Id) && !excludedIds.Contains(s.Id))
             .OrderBy(s => s.NumLlista)
             .ToList();
-
-        foreach (var g in _groups)
-            _selectedStudent.TryAdd(g.Id, 0);
     }
+
+    // ── Crear / esborrar grups ───────────────────────────────────────────────
 
     private async Task CreateGroupAsync()
     {
-        if (string.IsNullOrWhiteSpace(_nomGrup)) { Snackbar.Add("Indica el nom del grup.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_nomGrup)) return;
         _saving = true;
         Api.SetToken(UserState.Token!);
         await Api.CreateGroupAsync(ActivityId, _nomGrup.Trim());
@@ -213,6 +233,11 @@
         await LoadAsync();
         _saving = false;
         Snackbar.Add("Grup creat.", Severity.Success);
+    }
+
+    private async Task OnNomGrupKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await CreateGroupAsync();
     }
 
     private async Task DeleteGroupAsync(GroupDto g)
@@ -230,14 +255,62 @@
         Snackbar.Add("Grup eliminat.", Severity.Info);
     }
 
-    private async Task AddMemberAsync(int groupId)
+    // ── Drag & Drop ──────────────────────────────────────────────────────────
+
+    private void OnDragStart(int studentId, int? fromGroupId)
     {
-        if (!_selectedStudent.TryGetValue(groupId, out var studentId) || studentId <= 0) return;
+        _draggingStudentId   = studentId;
+        _draggingFromGroupId = fromGroupId;
+    }
+
+    private void OnDragEnd()
+    {
+        _draggingStudentId   = null;
+        _draggingFromGroupId = null;
+        _dragOverGroupId     = null;
+        _dragOverUnassigned  = false;
+    }
+
+    private void OnDragLeaveUnassigned()
+    {
+        _dragOverUnassigned = false;
+    }
+
+    private async Task OnDropToGroup(int groupId)
+    {
+        if (_draggingStudentId is null || _dragBusy) return;
+        if (_draggingFromGroupId == groupId) { OnDragEnd(); return; }
+
+        _dragBusy = true;
         Api.SetToken(UserState.Token!);
-        await Api.AddMemberAsync(ActivityId, groupId, studentId);
-        _selectedStudent[groupId] = 0;
+
+        // Si venia d'un altre grup, el traiem primer
+        if (_draggingFromGroupId.HasValue)
+            await Api.RemoveMemberAsync(ActivityId, _draggingFromGroupId.Value, _draggingStudentId.Value);
+
+        var ok = await Api.AddMemberAsync(ActivityId, groupId, _draggingStudentId.Value);
+
+        OnDragEnd();
+        _dragBusy = false;
+
+        if (!ok) Snackbar.Add("No s'ha pogut assignar l'alumne.", Severity.Warning);
         await LoadAsync();
     }
+
+    private async Task OnDropToUnassigned()
+    {
+        if (_draggingStudentId is null || _draggingFromGroupId is null || _dragBusy) return;
+
+        _dragBusy = true;
+        Api.SetToken(UserState.Token!);
+        await Api.RemoveMemberAsync(ActivityId, _draggingFromGroupId.Value, _draggingStudentId.Value);
+
+        OnDragEnd();
+        _dragBusy = false;
+        await LoadAsync();
+    }
+
+    // ── Treure membre (botó X) ───────────────────────────────────────────────
 
     private async Task RemoveMemberAsync(int groupId, int studentId)
     {
@@ -249,6 +322,8 @@
         await Api.RemoveMemberAsync(ActivityId, groupId, studentId);
         await LoadAsync();
     }
+
+    // ── Export / Import ──────────────────────────────────────────────────────
 
     private async Task ExportGroupsAsync()
     {
