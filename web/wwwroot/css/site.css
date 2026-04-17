@@ -51,4 +51,6 @@ html, body {
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     flex: 1;
+    /* Evita que el footer fix solapi el contingut inferior */
+    padding-bottom: 56px !important;
 }
