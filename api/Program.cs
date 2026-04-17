@@ -32,10 +32,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ValidateIssuer           = true,
-            ValidIssuer              = "AutoCo",
-            ValidateAudience         = true,
-            ValidAudience            = "AutoCo-Users"
+            ValidateIssuer           = false,
+            ValidateAudience         = false
         };
     });
 

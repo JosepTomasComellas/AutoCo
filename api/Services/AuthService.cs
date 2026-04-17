@@ -56,7 +56,6 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
         claims.AddRange(extraClaims);
 
         var token = new JwtSecurityToken(
-            issuer: "AutoCo", audience: "AutoCo-Users",
             claims: claims, expires: DateTime.UtcNow.AddHours(hours),
             signingCredentials: creds);
         return new JwtSecurityTokenHandler().WriteToken(token);
