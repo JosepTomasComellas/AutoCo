@@ -9,23 +9,23 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 ## Funcionalitats
 
 ### Professor / Administrador
-- Gestió de **classes**, **alumnes** i **mòduls** (UF/MP)
+- Gestió de **classes**, **alumnes** i **mòduls** (UF/MP), amb edició inline
 - Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual des del tauler
 - Configuració de **grups** per **arrossegar i deixar anar** (drag & drop): alumnes sense grup a l'esquerra, grups en 3 columnes a la dreta
 - Importació/exportació de grups per CSV
 - **Duplicació d'activitats** reutilitzant la configuració de grups i membres
-- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri (Auto / Co), nota global, barra de progrés de participació
+- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri (Autoaval. / Coaval.), nota global i barra de progrés de participació
 - **Gràfiques comparatives** per grup (auto vs. co-avaluació, desglossament per criteri)
 - **Exportació CSV** de resultats
 - **Còpies de seguretat** del servidor: exportació/importació JSON de tota la base de dades
-- Enviament de **credencials per correu** (alumnes i professors)
+- Enviament de **credencials per correu** als alumnes (SMTP configurable)
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
 - **Exclusions per mòdul**: alumnes que no participen en un mòdul concret
 
 ### Alumne
 - Accés amb correu electrònic i contrasenya
 - Avaluació de tots els membres del grup (inclosa autoavaluació) per 5 criteris
-- Puntuació amb **escala de 5 estrelles** (E / D / C / B / A)
+- Puntuació amb **escala de 5 estrelles** mostrada com a lletra (E / D / C / B / A)
 - **Barra de progrés** d'avaluació completada en temps real (X/Y criteris puntuats)
 - Filtre d'activitats pendents al dashboard
 
@@ -115,6 +115,16 @@ Class ────────┘
 
 ---
 
+## Rols
+
+| Rol | Accés |
+|-----|-------|
+| **Admin** | Tot. Gestiona professors, veu totes les classes i activitats, còpies de seguretat |
+| **Professor** | Les seves pròpies classes, mòduls, activitats i resultats |
+| **Alumne** | Les activitats del seu grup. Pot avaluar mentre l'activitat és oberta |
+
+---
+
 ## Desplegament
 
 ### Opció A — Entorn local (desenvolupament)
@@ -132,7 +142,7 @@ Accedeix a **https://localhost** (accepta l'avís del certificat auto-signat).
 
 ### Opció B — Servidor Linux (producció)
 
-**Requisits:** Windows amb PowerShell, accés SSH al servidor Linux amb Docker Engine >= 24.
+**Requisits:** Windows amb PowerShell + accés SSH al servidor Linux amb Docker Engine >= 24.
 
 **1. Generar el paquet de desplegament** (Windows):
 
@@ -153,7 +163,7 @@ El script preserva automàticament:
 **2. Copiar al servidor:**
 
 ```bash
-scp -r autoco-deploy-20260417 usuari@servidor:/opt/autoco
+scp -r autoco-deploy-YYYYMMDD usuari@servidor:/opt/autoco
 ```
 
 **3. Editar les variables d'entorn al servidor:**
@@ -211,16 +221,6 @@ Copia `.env.example` a `.env` i ajusta els valors:
 
 - **Sense certificat:** nginx genera automàticament un certificat auto-signat vàlid 10 anys.
 - **Amb certificat propi:** col·loca `server.crt` i `server.key` al directori `nginx/ssl/` abans d'arrencar.
-
----
-
-## Rols
-
-| Rol | Accés |
-|-----|-------|
-| **Admin** | Tot. Gestiona professors, veu totes les classes i activitats, còpies de seguretat |
-| **Professor** | Les seves pròpies classes, mòduls, activitats i resultats |
-| **Alumne** | Les activitats del seu grup. Pot avaluar mentre l'activitat és oberta |
 
 ---
 
