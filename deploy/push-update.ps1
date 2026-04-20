@@ -59,7 +59,9 @@ if ($ConfigurarClau) {
         $sshDir = $env:USERPROFILE + "\.ssh"
         if (-not (Test-Path $sshDir)) { New-Item -ItemType Directory -Path $sshDir | Out-Null }
         $keyPath = $env:USERPROFILE + "\.ssh\id_ed25519"
-        & ssh-keygen -t ed25519 -f $keyPath -N "" -C "autoco-deploy"
+        # Usem cmd /c perque PowerShell descarta els "" buits i ssh-keygen falla
+        $keygenCmd = 'ssh-keygen -t ed25519 -q -f "' + $keyPath + '" -N "" -C autoco-deploy'
+        & cmd /c $keygenCmd
         if ($LASTEXITCODE -ne 0) { Write-Error "Error generant la clau."; exit 1 }
         $KeyFile   = $keyPath
         $TenimClau = $true
