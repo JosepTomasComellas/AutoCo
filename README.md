@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.4.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.5.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -29,14 +29,19 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Notificació automàtica al professor** quan el 100% de l'activitat s'ha completat
 - **Desfer eliminació** — finestra de 5 s per cancel·lar eliminació d'activitats i alumnes
 - **Registre d'activitat** per cada activitat: qui ha obert, tancat o enviat avaluació i quan
+- **Ordre de grups persistent** (▲▼) i criteris d'avaluació editables inline a la pàgina de grups
 
 **Resultats i informes**
-- Taula de **resultats** amb capçalera fixa, puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell)
+- Taula de **resultats** amb capçalera fixa, paginació (25 files), puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell)
 - **Filtres avançats**: per grup i per rang de nota (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense coavaluació)
 - **Notes del professor** per alumne: camp editable inline a la taula de resultats
 - **Gràfiques comparatives** per grup (Auto vs. Co, desglossament per criteri) amb Chart.js
 - **Informe PDF individual per alumne**: pàgina optimitzada per a impressió/PDF amb dades, notes globals, detall per criteri i comentaris
-- **Exportació CSV** de resultats
+- **Exportació CSV i Excel (.xlsx)** de resultats amb format i color per rang de nota
+
+**Perfil i autenticació**
+- **Pàgina de perfil** del professor: canvi de nom, cognoms i contrasenya des de la barra de navegació
+- **Restabliment de contrasenya per email**: OTP de 6 dígits vàlid 15 minuts (Redis)
 
 **Administració**
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
