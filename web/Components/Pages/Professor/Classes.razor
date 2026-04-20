@@ -85,13 +85,14 @@
                     <MudCard Elevation="1" Style="border-left:3px solid var(--mud-palette-primary)">
                         <MudExpansionPanel>
                             <TitleContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%"
+                                          @onclick="() => EnsureModulesLoaded(c)">
                                     <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Medium" Style="flex-shrink:0">
                                         <MudIcon Icon="@Icons.Material.Filled.Class" />
                                     </MudAvatar>
                                     <MudStack Spacing="0" Style="flex:1;min-width:0">
                                         <MudText Typo="Typo.subtitle1" Style="font-weight:600">@c.Name</MudText>
-                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
                                             @if (c.AcademicYear is not null)
                                             {
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@c.AcademicYear</MudText>
@@ -100,17 +101,6 @@
                                             <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small"
                                                      Style="font-size:14px;color:var(--mud-palette-text-secondary)" />
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@c.NumStudents alumnes</MudText>
-                                            @if (c.NumExclusions > 0)
-                                            {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">·</MudText>
-                                                <MudTooltip Text="Alumnes exclosos d'algun mòdul" Placement="Placement.Top">
-                                                    <MudStack Row="true" Spacing="0" AlignItems="AlignItems.Center" Style="cursor:help">
-                                                        <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Small"
-                                                                 Style="font-size:14px;color:var(--mud-palette-warning)" />
-                                                        <MudText Typo="Typo.caption" Color="Color.Warning" Class="ml-1">@c.NumExclusions exclus.</MudText>
-                                                    </MudStack>
-                                                </MudTooltip>
-                                            }
                                         </MudStack>
                                     </MudStack>
                                     <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
@@ -135,18 +125,79 @@
                             </TitleContent>
                             <ChildContent>
                                 <MudDivider />
-                                <div class="pa-4">
-                                    @if (UserState.IsAdmin)
-                                    {
-                                        <EditClassForm Class="c" OnSaved="OnClassSaved" />
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                            Creada: @c.CreatedAt.ToString("dd/MM/yyyy") · @c.NumStudents alumnes@(c.NumExclusions > 0 ? $" · {c.NumExclusions} exclusions" : "")
+                                <MudGrid Class="pa-4" Spacing="4">
+                                    @* Formulari d'edició (admin) o info bàsica *@
+                                    <MudItem xs="12" md="@(UserState.IsAdmin ? 5 : 12)">
+                                        @if (UserState.IsAdmin)
+                                        {
+                                            <EditClassForm Class="c" OnSaved="OnClassSaved" />
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                Creada: @c.CreatedAt.ToString("dd/MM/yyyy")
+                                            </MudText>
+                                        }
+                                    </MudItem>
+
+                                    @* Llista de mòduls amb alumnes i exclusions *@
+                                    <MudItem xs="12" md="@(UserState.IsAdmin ? 7 : 12)">
+                                        <MudText Typo="Typo.subtitle2" Style="font-weight:600;margin-bottom:8px">
+                                            Mòduls
                                         </MudText>
-                                    }
-                                </div>
+                                        @{
+                                            var mods = _modulesCache.GetValueOrDefault(c.Id);
+                                        }
+                                        @if (mods is null)
+                                        {
+                                            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                                        }
+                                        else if (!mods.Any())
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                Aquesta classe no té mòduls.
+                                            </MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudSimpleTable Dense="true" Hover="true" Style="background:transparent">
+                                                <thead>
+                                                    <tr>
+                                                        <th style="width:56px">Codi</th>
+                                                        <th>Mòdul</th>
+                                                        <th style="width:80px;text-align:right">Alumnes</th>
+                                                        <th style="width:80px;text-align:right">Exclosos</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var m in mods)
+                                                    {
+                                                        <tr>
+                                                            <td><MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">@m.Code</MudChip></td>
+                                                            <td>@m.Name</td>
+                                                            <td style="text-align:right">
+                                                                <MudText Typo="Typo.body2">@(c.NumStudents - m.NumExclusions)</MudText>
+                                                            </td>
+                                                            <td style="text-align:right">
+                                                                @if (m.NumExclusions > 0)
+                                                                {
+                                                                    <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                                                             Variant="Variant.Filled" Style="font-weight:600">
+                                                                        @m.NumExclusions
+                                                                    </MudChip>
+                                                                }
+                                                                else
+                                                                {
+                                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">—</MudText>
+                                                                }
+                                                            </td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </MudSimpleTable>
+                                        }
+                                    </MudItem>
+                                </MudGrid>
                             </ChildContent>
                         </MudExpansionPanel>
                     </MudCard>
@@ -162,6 +213,16 @@
     private string _curs = "";
     private bool _loading = true;
     private bool _saving  = false;
+
+    // Caché de mòduls per classe (càrrega lazy al primer clic)
+    private Dictionary<int, List<ModuleDto>> _modulesCache = new();
+
+    private async Task EnsureModulesLoaded(ClassDto c)
+    {
+        if (_modulesCache.ContainsKey(c.Id)) return;
+        Api.SetToken(UserState.Token!);
+        _modulesCache[c.Id] = await Api.GetModulesAsync(c.Id) ?? [];
+    }
 
     protected override async Task OnInitializedAsync()
     {

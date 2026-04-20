@@ -21,7 +21,7 @@ public record SendAllResult(int Sent, int Skipped, List<string> Details);
 
 // ─── Classes ─────────────────────────────────────────────────────────────────
 public record ClassDto(
-    int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents, int NumExclusions);
+    int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents);
 
 public record CreateClassRequest(string Name, string? AcademicYear);
 public record UpdateClassRequest(string Name, string? AcademicYear);
@@ -46,7 +46,7 @@ public record SendPasswordResult(bool Sent, string? Reason);
 public record ModuleDto(
     int Id, int ClassId, string ClassName, string? ClassAcademicYear,
     int ProfessorId, string ProfessorName,
-    string Code, string Name, int ActivityCount);
+    string Code, string Name, int ActivityCount, int NumExclusions);
 
 public record CreateModuleRequest(string Code, string Name);
 public record UpdateModuleRequest(string Code, string Name);

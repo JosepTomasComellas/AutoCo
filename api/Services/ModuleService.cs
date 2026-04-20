@@ -25,6 +25,7 @@ public class ModuleService(AppDbContext db) : IModuleService
             .Include(m => m.Class)
             .Include(m => m.Professor)
             .Include(m => m.Activities)
+            .Include(m => m.Exclusions)
             .Where(m => m.ClassId == classId)
             .OrderBy(m => m.Code)
             .Select(m => ToDto(m))
@@ -33,7 +34,8 @@ public class ModuleService(AppDbContext db) : IModuleService
     public async Task<ModuleDto?> GetByIdAsync(int id, int professorId, bool isAdmin)
     {
         var m = await db.Modules
-            .Include(m => m.Class).Include(m => m.Professor).Include(m => m.Activities)
+            .Include(m => m.Class).Include(m => m.Professor)
+            .Include(m => m.Activities).Include(m => m.Exclusions)
             .FirstOrDefaultAsync(m => m.Id == id && (isAdmin || m.ProfessorId == professorId));
         return m is null ? null : ToDto(m);
     }
@@ -124,5 +126,5 @@ public class ModuleService(AppDbContext db) : IModuleService
     private static ModuleDto ToDto(Module m) => new(
         m.Id, m.ClassId, m.Class.Name, m.Class.AcademicYear,
         m.ProfessorId, m.Professor.NomComplet,
-        m.Code, m.Name, m.Activities.Count);
+        m.Code, m.Name, m.Activities.Count, m.Exclusions.Count);
 }
