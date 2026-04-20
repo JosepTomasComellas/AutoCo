@@ -95,6 +95,19 @@ html { scroll-behavior: smooth; }
     pointer-events: none !important;
 }
 
+/* ── Barra de progrés enganxada (avaluació alumne) ──────────────────────── */
+.progress-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    padding: 10px 0 8px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 /* ── Fons de pantalla ────────────────────────────────────────────────────── */
 html, body {
     background-image: url('/images/fons-salesians.png');

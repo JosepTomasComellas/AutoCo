@@ -100,31 +100,34 @@
 
             <MudCard Elevation="2">
                 <MudCardHeader>
-                    <CardHeaderContent><MudText Typo="Typo.h6">Importar CSV</MudText></CardHeaderContent>
+                    <CardHeaderContent><MudText Typo="Typo.h6">Importar llista d'alumnes</MudText></CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                        Format: NumLlista;Nom;Cognoms;Correu
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                        <strong>CSV:</strong> <code>NumLlista;Nom;Cognoms;Correu</code>
                     </MudText>
-                    <MudFileUpload T="IBrowserFile" Accept=".csv,.txt" FilesChanged="OnCsvSelected">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                        <strong>XLS/XLSX:</strong> llista directa de la web de l'escola
+                    </MudText>
+                    <MudFileUpload T="IBrowserFile" Accept=".csv,.txt,.xls,.xlsx" FilesChanged="OnImportFileSelected">
                         <ActivatorContent>
                             <MudButton Variant="Variant.Outlined" FullWidth="true"
                                        StartIcon="@Icons.Material.Filled.AttachFile">
-                                @(_csvFile is null ? "Seleccionar fitxer CSV" : _csvFile.Name)
+                                @(_importFile is null ? "Seleccionar fitxer" : _importFile.Name)
                             </MudButton>
                         </ActivatorContent>
                     </MudFileUpload>
                 </MudCardContent>
                 <MudCardActions Class="px-4 pb-4 gap-2">
                     <MudButton Variant="Variant.Filled" Color="Color.Secondary"
-                               OnClick="ImportCsvAsync" Disabled="_csvFile is null || _saving"
+                               OnClick="ImportAsync" Disabled="_importFile is null || _saving"
                                StartIcon="@Icons.Material.Filled.Upload">
                         Importar
                     </MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
                                Href="/templates/alumnes-plantilla.csv" download="alumnes-plantilla.csv"
                                StartIcon="@Icons.Material.Filled.Download">
-                        Plantilla
+                        Plantilla CSV
                     </MudButton>
                 </MudCardActions>
             </MudCard>
@@ -188,7 +191,7 @@
     private string _correu       = "";
     private int    _editStudentId = 0;
 
-    private IBrowserFile? _csvFile;
+    private IBrowserFile? _importFile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -264,17 +267,50 @@
         _saving = false;
     }
 
-    private void OnCsvSelected(IBrowserFile file) => _csvFile = file;
+    private void OnImportFileSelected(IBrowserFile file) => _importFile = file;
 
-    private async Task ImportCsvAsync()
+    private async Task ImportAsync()
     {
-        if (_csvFile is null) return;
+        if (_importFile is null) return;
         _saving = true;
 
-        var students    = new List<CreateStudentRequest>();
-        var parseErrors = new List<string>();
+        var ext = System.IO.Path.GetExtension(_importFile.Name).ToLowerInvariant();
+        List<CreateStudentRequest> students;
+        List<string> errors;
 
-        using var stream = _csvFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        if (ext is ".xls" or ".xlsx")
+            (students, errors) = await ParseXlsAsync();
+        else
+            (students, errors) = await ParseCsvAsync();
+
+        if (students.Count == 0)
+        {
+            Snackbar.Add(errors.Any()
+                ? "Errors al fitxer: " + string.Join("; ", errors.Take(3))
+                : "Fitxer buit o sense dades vàlides.", Severity.Warning);
+            _saving = false;
+            return;
+        }
+
+        Api.SetToken(UserState.Token!);
+        var result = await Api.BulkAddStudentsAsync(ClassId, new BulkCreateStudentsRequest(students));
+        if (result is not null)
+        {
+            Snackbar.Add($"Importació: {result.Created} creats, {result.Skipped} omesos.", Severity.Success);
+            if (result.Errors.Any())
+                Snackbar.Add(string.Join(" | ", result.Errors.Take(3)), Severity.Warning);
+        }
+        _importFile = null;
+        await LoadAsync();
+        _saving = false;
+    }
+
+    private async Task<(List<CreateStudentRequest>, List<string>)> ParseCsvAsync()
+    {
+        var students = new List<CreateStudentRequest>();
+        var errors   = new List<string>();
+
+        using var stream = _importFile!.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
         using var reader = new System.IO.StreamReader(stream);
         var content = await reader.ReadToEndAsync();
         var lines   = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
@@ -286,34 +322,72 @@
             var line = rawLine.TrimEnd('\r');
             if (string.IsNullOrWhiteSpace(line)) continue;
             var cols = line.Split(';');
-            if (lineNum == 1 && !int.TryParse(cols[0].Trim(), out _)) continue;
-            if (cols.Length < 4) { parseErrors.Add($"Línia {lineNum}: calen 4 columnes (NumLlista;Nom;Cognoms;Correu)."); continue; }
-            if (!int.TryParse(cols[0].Trim(), out var num)) { parseErrors.Add($"Línia {lineNum}: NumLlista invàlid."); continue; }
+            if (lineNum == 1 && !int.TryParse(cols[0].Trim(), out _)) continue; // capçalera opcional
+            if (cols.Length < 4) { errors.Add($"Línia {lineNum}: calen 4 columnes (NumLlista;Nom;Cognoms;Correu)."); continue; }
+            if (!int.TryParse(cols[0].Trim(), out var num)) { errors.Add($"Línia {lineNum}: NumLlista invàlid."); continue; }
             var nom    = cols[1].Trim();
             var cog    = cols[2].Trim();
             var correu = cols[3].Trim();
             if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cog) || string.IsNullOrEmpty(correu))
-            { parseErrors.Add($"Línia {lineNum}: camps buits."); continue; }
+            { errors.Add($"Línia {lineNum}: camps buits."); continue; }
             students.Add(new CreateStudentRequest(nom, cog, num, correu));
         }
 
-        if (students.Count == 0)
+        return (students, errors);
+    }
+
+    private async Task<(List<CreateStudentRequest>, List<string>)> ParseXlsAsync()
+    {
+        var students = new List<CreateStudentRequest>();
+        var errors   = new List<string>();
+
+        // Copiem a MemoryStream perquè ExcelDataReader necessita un stream seekable
+        using var inputStream = _importFile!.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+        var ms = new System.IO.MemoryStream();
+        await inputStream.CopyToAsync(ms);
+        ms.Position = 0;
+
+        using var excelReader = ExcelDataReader.ExcelReaderFactory.CreateReader(ms);
+        var ds = excelReader.AsDataSet(new ExcelDataReader.ExcelDataSetConfiguration
         {
-            Snackbar.Add(parseErrors.Any() ? "Errors al CSV: " + string.Join("; ", parseErrors.Take(3)) : "Fitxer buit.", Severity.Warning);
-            _saving = false; return;
+            ConfigureDataTable = _ => new ExcelDataReader.ExcelDataTableConfiguration { UseHeaderRow = false }
+        });
+
+        if (ds.Tables.Count == 0) return (students, errors);
+        var sheet = ds.Tables[0];
+
+        // Estructura del fitxer de l'escola:
+        // Fila 0: nom de la classe  · Fila 1: buida  · Fila 2: capçaleres
+        // Dades des de fila 3:  col 0=Num, col 1=Cognoms, col 2=Nom, col 5=Baixa, col 9=Email
+        for (int r = 3; r < sheet.Rows.Count; r++)
+        {
+            var row     = sheet.Rows[r];
+            var numRaw  = row[0]?.ToString()?.Trim() ?? "";
+            var cognoms = row[1]?.ToString()?.Trim() ?? "";
+            var nom     = row[2]?.ToString()?.Trim() ?? "";
+            var baixa   = row[5]?.ToString()?.Trim() ?? "";
+            var email   = row[9]?.ToString()?.Trim() ?? "";
+
+            if (!string.IsNullOrEmpty(baixa)) continue;              // alumne donat de baixa
+            if (string.IsNullOrEmpty(numRaw) && string.IsNullOrEmpty(nom)) continue; // fila buida
+
+            // Excel emmagatzema números com a double (1.0, 2.0, ...)
+            int numLlista;
+            if (!int.TryParse(numRaw, out numLlista))
+            {
+                if (double.TryParse(numRaw, System.Globalization.NumberStyles.Any,
+                    System.Globalization.CultureInfo.InvariantCulture, out var numD))
+                    numLlista = (int)numD;
+                else { errors.Add($"Fila {r + 1}: número de llista invàlid ('{numRaw}')."); continue; }
+            }
+
+            if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cognoms) || string.IsNullOrEmpty(email))
+            { errors.Add($"Fila {r + 1}: camps obligatoris buits."); continue; }
+
+            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, email));
         }
 
-        Api.SetToken(UserState.Token!);
-        var result = await Api.BulkAddStudentsAsync(ClassId, new BulkCreateStudentsRequest(students));
-        if (result is not null)
-        {
-            Snackbar.Add($"Importació: {result.Created} creats, {result.Skipped} omesos.", Severity.Success);
-            if (result.Errors.Any())
-                Snackbar.Add(string.Join(" | ", result.Errors.Take(3)), Severity.Warning);
-        }
-        _csvFile = null;
-        await LoadAsync();
-        _saving = false;
+        return (students, errors);
     }
 
     private async Task SendPasswordAsync(StudentDto s)

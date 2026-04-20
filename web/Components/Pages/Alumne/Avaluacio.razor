@@ -36,14 +36,16 @@ else
         </MudText>
     }
 
-    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2">
-        <MudProgressLinear Value="_pctProg" Color="@(_totProg ? Color.Success : Color.Primary)"
-                           Rounded="true" Style="flex:1;height:8px" />
-        <MudText Typo="Typo.caption" Color="@(_totProg ? Color.Success : Color.Secondary)"
-                 Style="white-space:nowrap">
-            @_completats / @_totalCriteris criteris puntuats
-        </MudText>
-    </MudStack>
+    <div class="progress-sticky">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudProgressLinear Value="_pctProg" Color="@(_totProg ? Color.Success : Color.Primary)"
+                               Rounded="true" Style="flex:1;height:8px" />
+            <MudText Typo="Typo.caption" Color="@(_totProg ? Color.Success : Color.Secondary)"
+                     Style="white-space:nowrap">
+                @_completats / @_totalCriteris criteris puntuats
+            </MudText>
+        </MudStack>
+    </div>
 
     @foreach (var entry in _form.Entries)
     {

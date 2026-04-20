@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
 using StackExchange.Redis;
 
+// Necessari per a ExcelDataReader: suport d'encodings Windows (cp1252, etc.)
+System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // L'antiforgery registra com a Error quan troba una cookie vella (clau caducada/canviada),
