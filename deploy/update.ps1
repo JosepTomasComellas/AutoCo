@@ -47,29 +47,34 @@ function Copy-File($relSrc, $relDest) {
     Copy-Item $src -Destination $dest -Force
 }
 
-function Copy-Dir($relSrc, $relDest) {
+function Copy-Dir-Clean($relSrc, $relDest) {
+    # Usa robocopy per excloure obj/, bin/ i .vs/ (contenen rutes Windows que trenquen Docker a Linux)
     $src  = Join-Path $RepoRoot $relSrc
     $dest = Join-Path $Dest $relDest
     if (-not (Test-Path $src)) { Write-Warning "  No trobat: $relSrc (saltat)"; return }
-    New-Item -ItemType Directory -Path (Split-Path $dest -Parent) -Force | Out-Null
-    Copy-Item $src -Destination $dest -Recurse -Force
+    New-Item -ItemType Directory -Path $dest -Force | Out-Null
+    # /E = subdirectoris, /XD = exclou directoris, /NFL /NDL /NJH /NJS = sense log verbos
+    robocopy $src $dest /E /XD obj bin .vs .git /NFL /NDL /NJH /NJS | Out-Null
+    # robocopy retorna 0-3 en cas d'exit normal (no es un error)
+    if ($LASTEXITCODE -gt 7) { Write-Warning "  Error copiant ${relSrc} (codi $LASTEXITCODE)" }
 }
 
 # =============================================================================
-# Codi font
+# Codi font (sense obj/ ni bin/ — rutes Windows incompatibles amb Docker Linux)
 # =============================================================================
 Write-Host ""
-Write-Host "  Copiant codi font..."
+Write-Host "  Copiant codi font (sense obj/ i bin/)..."
 
-Copy-Dir  "api"     "api"
-Copy-Dir  "web"     "web"
-Copy-Dir  "shared"  "shared"
+Copy-Dir-Clean "api"     "api"
+Copy-Dir-Clean "web"     "web"
+Copy-Dir-Clean "shared"  "shared"
 
 # =============================================================================
 # Docker i nginx (sense ssl/)
 # =============================================================================
 Write-Host "  Copiant configuracio Docker i nginx..."
 
+Copy-File ".dockerignore"         ".dockerignore"
 Copy-File "docker-compose.yml"    "docker-compose.yml"
 Copy-File "nginx/Dockerfile"      "nginx/Dockerfile"
 Copy-File "nginx/nginx.conf"      "nginx/nginx.conf"
