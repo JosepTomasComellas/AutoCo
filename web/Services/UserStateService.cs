@@ -19,6 +19,8 @@ public class UserStateService
     public bool IsAdmin      => Role == "Admin";
 
     public event Action? OnChange;
+    /// <summary>S'invoca quan l'API retorna 401 (token caducat o invàlid).</summary>
+    public event Action? OnSessionExpired;
 
     public void SetLogin(LoginResponse login)
     {
@@ -36,5 +38,15 @@ public class UserStateService
         Role       = null;
         UserId     = null;
         OnChange?.Invoke();
+    }
+
+    /// <summary>
+    /// Invoca Logout() i notifica l'event OnSessionExpired perquè el
+    /// MainLayout esborri el LocalStorage i redirigeixi al login.
+    /// </summary>
+    public void SessionExpired()
+    {
+        Logout();
+        OnSessionExpired?.Invoke();
     }
 }

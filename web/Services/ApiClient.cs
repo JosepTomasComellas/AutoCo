@@ -8,7 +8,8 @@ namespace AutoCo.Web.Services;
 
 public class ApiClient
 {
-    private readonly HttpClient _http;
+    private readonly HttpClient        _http;
+    private readonly UserStateService  _userState;
 
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -16,7 +17,11 @@ public class ApiClient
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
     };
 
-    public ApiClient(HttpClient http) => _http = http;
+    public ApiClient(HttpClient http, UserStateService userState)
+    {
+        _http      = http;
+        _userState = userState;
+    }
 
     public void SetToken(string token) =>
         _http.DefaultRequestHeaders.Authorization =
@@ -128,7 +133,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> ExportGroupsAsync(int activityId)
     {
         var resp = await _http.GetAsync($"/api/activities/{activityId}/groups/export");
-        if (!resp.IsSuccessStatusCode) return null;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
         var bytes    = await resp.Content.ReadAsByteArrayAsync();
         var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
             ?? resp.Content.Headers.ContentDisposition?.FileName
@@ -180,7 +185,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> ExportCsvAsync(int activityId)
     {
         var resp = await _http.GetAsync($"/api/results/{activityId}/csv");
-        if (!resp.IsSuccessStatusCode) return null;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
         var bytes = await resp.Content.ReadAsByteArrayAsync();
         var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
             ?? resp.Content.Headers.ContentDisposition?.FileName
@@ -216,7 +221,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()
     {
         var resp = await _http.GetAsync("/api/admin/backup/export");
-        if (!resp.IsSuccessStatusCode) return null;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
         var bytes    = await resp.Content.ReadAsByteArrayAsync();
         var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
             ?? resp.Content.Headers.ContentDisposition?.FileName
@@ -236,7 +241,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> DownloadBackupFileAsync(string name)
     {
         var resp = await _http.GetAsync($"/api/admin/backup/files/{Uri.EscapeDataString(name)}");
-        if (!resp.IsSuccessStatusCode) return null;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
         var bytes = await resp.Content.ReadAsByteArrayAsync();
         return (bytes, name);
     }
@@ -249,42 +254,51 @@ public class ApiClient
 
     // ── Privats ───────────────────────────────────────────────────────────────
 
+    private void CheckUnauthorized(HttpResponseMessage resp)
+    {
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            _userState.SessionExpired();
+    }
+
     private async Task<T?> GetAsync<T>(string url)
     {
         var resp = await _http.GetAsync(url);
-        if (!resp.IsSuccessStatusCode) return default;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return default; }
         return await resp.Content.ReadFromJsonAsync<T>(_json);
     }
 
     private async Task<T?> PostAsync<T>(string url, object? body)
     {
         var resp = await _http.PostAsync(url, Json(body));
-        if (!resp.IsSuccessStatusCode) return default;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return default; }
         return await resp.Content.ReadFromJsonAsync<T>(_json);
     }
 
     private async Task PostVoidAsync(string url, object? body)
     {
-        await _http.PostAsync(url, Json(body));
+        var resp = await _http.PostAsync(url, Json(body));
+        CheckUnauthorized(resp);
     }
 
     private async Task<bool> PostNoContentAsync(string url, object? body)
     {
         var resp = await _http.PostAsync(url, Json(body));
-        return resp.IsSuccessStatusCode;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
+        return true;
     }
 
     private async Task<T?> PutAsync<T>(string url, object? body)
     {
         var resp = await _http.PutAsync(url, Json(body));
-        if (!resp.IsSuccessStatusCode) return default;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return default; }
         return await resp.Content.ReadFromJsonAsync<T>(_json);
     }
 
     private async Task<bool> DeleteAsync(string url)
     {
         var resp = await _http.DeleteAsync(url);
-        return resp.IsSuccessStatusCode;
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
+        return true;
     }
 
     private static StringContent Json(object? body) =>
