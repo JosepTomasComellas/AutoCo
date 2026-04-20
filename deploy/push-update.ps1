@@ -21,6 +21,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot  = Split-Path -Parent $ScriptDir
 $sshTarget = "${Usuari}@${Servidor}"
+$r         = $RutaServidor   # alias curt per construir comandes bash
 
 # Clau SSH local a usar
 $KeyFile    = "$env:USERPROFILE\.ssh\id_ed25519"
@@ -31,11 +32,19 @@ if (-not (Test-Path $KeyFile)) {
 }
 $TenimClau = (Test-Path $KeyFile) -and (Test-Path $KeyFilePub)
 
+# Arguments SSH reutilitzables (sense contrassenya, accepta nou host)
+$sshOpts = @("-p", $Port, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new")
+if ($TenimClau) { $sshOpts += @("-i", $KeyFile) }
+
+# Arguments SCP reutilitzables
+$scpOpts = @("-P", $Port, "-o", "StrictHostKeyChecking=accept-new")
+if ($TenimClau) { $scpOpts += @("-i", $KeyFile) }
+
 Write-Host ""
 Write-Host "========================================================"
 Write-Host "  AutoCo - Actualitzacio remota"
 Write-Host "  Servidor : $sshTarget  (port $Port)"
-Write-Host "  Ruta     : $RutaServidor"
+Write-Host "  Ruta     : $r"
 Write-Host "========================================================"
 
 # =============================================================================
@@ -55,6 +64,9 @@ if ($ConfigurarClau) {
         $KeyFile    = "$env:USERPROFILE\.ssh\id_ed25519"
         $KeyFilePub = "$KeyFile.pub"
         $TenimClau  = $true
+        # Recalcular $sshOpts i $scpOpts amb la nova clau
+        $sshOpts = @("-p", $Port, "-i", $KeyFile, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new")
+        $scpOpts = @("-P", $Port, "-i", $KeyFile, "-o", "StrictHostKeyChecking=accept-new")
         Write-Host "    Clau generada: $KeyFile"
     } else {
         Write-Host "    Clau existent: $KeyFile"
@@ -66,8 +78,15 @@ if ($ConfigurarClau) {
     Write-Host "    Instal·lant clau al servidor (demanarà la contrasenya una sola vegada)..."
     Write-Host ""
 
-    # Instal·lar clau (equivalent ssh-copy-id). StrictHostKeyChecking=accept-new per a primera connexió.
-    $remoteCmd = "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '$pubKey' >> ~/.ssh/authorized_keys && sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys && echo 'OK'"
+    # Construïm la comanda bash amb concatenació (evita que PowerShell interpreti && com operador)
+    $remoteCmd = 'mkdir -p ~/.ssh' `
+               + ' && chmod 700 ~/.ssh' `
+               + ' && echo ' + "'" + $pubKey + "'" + ' >> ~/.ssh/authorized_keys' `
+               + ' && sort -u ~/.ssh/authorized_keys -o ~/.ssh/authorized_keys' `
+               + ' && chmod 600 ~/.ssh/authorized_keys' `
+               + ' && echo OK'
+
+    # Sense BatchMode per permetre la contrasenya interactiva
     $out = & ssh -p $Port -o StrictHostKeyChecking=accept-new -o ConnectTimeout=15 $sshTarget $remoteCmd 2>&1
     if ($LASTEXITCODE -ne 0 -or "$out" -notmatch "OK") {
         Write-Host ""
@@ -93,16 +112,14 @@ Write-Host "[1/4] Verificant connexio SSH sense contrasenya..."
 
 if (-not $TenimClau) {
     Write-Host ""
-    Write-Host "  [!] No s'ha trobat cap clau SSH local ($env:USERPROFILE\.ssh\id_ed25519)."
+    Write-Host "  [!] No s'ha trobat cap clau SSH local."
     Write-Host "      Executa primer per instal·lar-la (demana contrasenya 1 sola vegada):"
     Write-Host ""
     Write-Host "      .\deploy\push-update.ps1 -ConfigurarClau"
     exit 1
 }
 
-# Prova connexio sense contrasenya
-$sshBaseArgs = @("-p", $Port, "-i", $KeyFile, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new")
-$out = & ssh @sshBaseArgs $sshTarget "echo OK" 2>&1
+$out = & ssh @sshOpts $sshTarget "echo OK" 2>&1
 if ($LASTEXITCODE -ne 0 -or "$out" -notmatch "OK") {
     Write-Host ""
     Write-Host "  [!] No s'ha pogut connectar sense contrasenya."
@@ -112,7 +129,6 @@ if ($LASTEXITCODE -ne 0 -or "$out" -notmatch "OK") {
     Write-Host "      .\deploy\push-update.ps1 -ConfigurarClau"
     exit 1
 }
-
 Write-Host "    OK — connexio sense contrasenya verificada"
 
 # =============================================================================
@@ -137,23 +153,21 @@ Write-Host ""
 Write-Host "[3/4] Sincronitzant fitxers al servidor..."
 Write-Host "      (.env i certificats SSL existents es preserven)"
 
-$scpBaseArgs = @("-P", $Port, "-i", $KeyFile, "-o", "StrictHostKeyChecking=accept-new")
-
 # Assegurar directori destí
-& ssh @sshBaseArgs $sshTarget "mkdir -p ${RutaServidor}/nginx/ssl" | Out-Null
+& ssh @sshOpts $sshTarget ('mkdir -p ' + $r + '/nginx/ssl') | Out-Null
 
 $itemsToSync = @(
-    @{ Src = "api";                 Dest = "$RutaServidor/api" },
-    @{ Src = "web";                 Dest = "$RutaServidor/web" },
-    @{ Src = "shared";              Dest = "$RutaServidor/shared" },
-    @{ Src = "docker-compose.yml";  Dest = "$RutaServidor/docker-compose.yml" },
-    @{ Src = "nginx/Dockerfile";    Dest = "$RutaServidor/nginx/Dockerfile" },
-    @{ Src = "nginx/nginx.conf";    Dest = "$RutaServidor/nginx/nginx.conf" },
-    @{ Src = "nginx/entrypoint.sh"; Dest = "$RutaServidor/nginx/entrypoint.sh" },
-    @{ Src = "install.sh";          Dest = "$RutaServidor/install.sh" },
-    @{ Src = "update.sh";           Dest = "$RutaServidor/update.sh" },
-    @{ Src = "backup.sh";           Dest = "$RutaServidor/backup.sh" },
-    @{ Src = ".env.example";        Dest = "$RutaServidor/.env.example" }
+    @{ Src = "api";                 Dest = "$r/api" },
+    @{ Src = "web";                 Dest = "$r/web" },
+    @{ Src = "shared";              Dest = "$r/shared" },
+    @{ Src = "docker-compose.yml";  Dest = "$r/docker-compose.yml" },
+    @{ Src = "nginx/Dockerfile";    Dest = "$r/nginx/Dockerfile" },
+    @{ Src = "nginx/nginx.conf";    Dest = "$r/nginx/nginx.conf" },
+    @{ Src = "nginx/entrypoint.sh"; Dest = "$r/nginx/entrypoint.sh" },
+    @{ Src = "install.sh";          Dest = "$r/install.sh" },
+    @{ Src = "update.sh";           Dest = "$r/update.sh" },
+    @{ Src = "backup.sh";           Dest = "$r/backup.sh" },
+    @{ Src = ".env.example";        Dest = "$r/.env.example" }
 )
 
 $errors = 0
@@ -164,21 +178,22 @@ foreach ($item in $itemsToSync) {
         continue
     }
     Write-Host "    -> $($item.Src)"
-    $out = & scp @scpBaseArgs -r $localPath "${sshTarget}:$($item.Dest)" 2>&1
+    $out = & scp @scpOpts -r $localPath "${sshTarget}:$($item.Dest)" 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "    [!] Error copiant $($item.Src): $out"
         $errors++
     }
 }
 
-# Crear .env si no existeix al servidor
-& ssh @sshBaseArgs $sshTarget "[ -f ${RutaServidor}/.env ] || (cp ${RutaServidor}/.env.example ${RutaServidor}/.env && echo '    -> .env creat des de .env.example. Edita-lo!')"
+# Crear .env si no existeix al servidor (construïm la comanda bash per concatenació)
+$cmdEnv = 'if [ ! -f ' + $r + '/.env ]; then cp ' + $r + '/.env.example ' + $r + '/.env; echo "-> .env creat. Edita-lo!"; fi'
+& ssh @sshOpts $sshTarget $cmdEnv
 
 Remove-Item -Recurse -Force $TempDir
 
 if ($errors -gt 0) {
     Write-Host ""
-    Write-Warning "  $errors fitxer(s) no s'han pogut copiar."
+    Write-Warning "  $($errors) fitxer(s) no s'han pogut copiar."
     $resp = Read-Host "  Vols continuar igualment? [s/N]"
     if ($resp -notmatch "^[sS]$") { exit 1 }
 }
@@ -190,17 +205,21 @@ Write-Host ""
 Write-Host "[4/4] Executant update.sh al servidor..."
 Write-Host ""
 
-& ssh -p $Port -i $KeyFile -o StrictHostKeyChecking=accept-new -t $sshTarget "bash ${RutaServidor}/update.sh"
+& ssh -p $Port -i $KeyFile -o StrictHostKeyChecking=accept-new -t $sshTarget ('bash ' + $r + '/update.sh')
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
     Write-Warning "  update.sh ha acabat amb errors."
-    Write-Host "  Logs: ssh -i $KeyFile $sshTarget 'cd ${RutaServidor} && docker compose logs --tail=50'"
+    Write-Host "  Per veure els logs connecta al servidor i executa:"
+    Write-Host "    cd $r"
+    Write-Host "    docker compose logs --tail=50"
 } else {
     Write-Host ""
     Write-Host "========================================================"
     Write-Host "  Actualitzacio completada correctament!"
     Write-Host ""
-    Write-Host "  Logs: ssh -i $KeyFile $sshTarget 'cd ${RutaServidor} && docker compose logs -f'"
+    Write-Host "  Per veure els logs connecta al servidor i executa:"
+    Write-Host "    cd $r"
+    Write-Host "    docker compose logs -f"
     Write-Host "========================================================"
 }
