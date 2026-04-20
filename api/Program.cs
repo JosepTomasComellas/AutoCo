@@ -300,6 +300,14 @@ app.MapPost("/api/classes/{classId:int}/students/send-all-passwords", async (
     return Results.Ok(result);
 }).RequireAuthorization();
 
+app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/move", async (
+    int classId, int studentId, MoveStudentRequest req, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var s = await svc.MoveStudentAsync(classId, studentId, req.TargetClassId);
+    return s is null ? Results.NotFound() : Results.Ok(s);
+}).RequireAuthorization();
+
 // ════════════════════════════════════════════════════════════════════════════
 // MÒDULS
 // ════════════════════════════════════════════════════════════════════════════
@@ -425,6 +433,37 @@ app.MapPost("/api/activities/{id:int}/duplicate", async (int id, DuplicateActivi
     {
         return Results.BadRequest(new { error = ex.Message });
     }
+}).RequireAuthorization();
+
+app.MapPost("/api/activities/{id:int}/duplicate-cross", async (int id, DuplicateCrossRequest req,
+    IActivityService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    try
+    {
+        var a = await svc.DuplicateCrossAsync(id, GetUserId(user), IsAdmin(user), req);
+        return Results.Created($"/api/activities/{a.Id}", a);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
+
+app.MapGet("/api/activities/{id:int}/participation", async (int id, IActivityService svc,
+    ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var p = await svc.GetParticipationAsync(id, GetUserId(user), IsAdmin(user));
+    return Results.Ok(p);
+}).RequireAuthorization();
+
+app.MapPost("/api/activities/{id:int}/remind", async (int id, IActivityService svc,
+    IEmailService email, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var result = await svc.SendRemindersAsync(id, GetUserId(user), IsAdmin(user), email);
+    return Results.Ok(result);
 }).RequireAuthorization();
 
 app.MapGet("/api/activities/{id:int}/groups/export", async (int id, IActivityService svc,

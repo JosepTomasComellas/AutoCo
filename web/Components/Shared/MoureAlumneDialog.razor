@@ -1,0 +1,41 @@
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4" Color="Color.Secondary">
+            L'alumne serà eliminat de tots els grups actuals i mogut a la classe seleccionada.
+        </MudText>
+        <MudSelect T="int" @bind-Value="_targetId" Label="Classe destí"
+                   Variant="Variant.Outlined" AnchorOrigin="Origin.BottomCenter">
+            @foreach (var c in Classes)
+            {
+                <MudSelectItem T="int" Value="@c.Id">
+                    @c.Name@(c.AcademicYear is not null ? $" ({c.AcademicYear})" : "")
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-1">
+                        — @c.NumStudents alumnes
+                    </MudText>
+                </MudSelectItem>
+            }
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => MudDialog.Cancel()">Cancel·lar</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Info" OnClick="Confirm"
+                   Disabled="_targetId == 0" StartIcon="@Icons.Material.Filled.DriveFileMove">
+            Moure
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public List<ClassDto> Classes { get; set; } = [];
+
+    private int _targetId = 0;
+
+    protected override void OnParametersSet()
+    {
+        if (_targetId == 0 && Classes.Any())
+            _targetId = Classes.First().Id;
+    }
+
+    private void Confirm() => MudDialog.Close(DialogResult.Ok(_targetId));
+}

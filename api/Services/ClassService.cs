@@ -17,6 +17,7 @@ public interface IClassService
     Task<StudentDto>        AddStudentAsync(int classId, CreateStudentRequest req);
     Task<StudentDto?>       UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req);
     Task<bool>              DeleteStudentAsync(int classId, int studentId);
+    Task<StudentDto?>       MoveStudentAsync(int classId, int studentId, int targetClassId);
     Task<BulkCreateResult>  BulkAddStudentsAsync(int classId, BulkCreateStudentsRequest req);
     Task<ResetPasswordResult?> ResetPasswordAsync(int classId, int studentId);
     Task<SendPasswordResult>   SendPasswordAsync(int classId, int studentId);
@@ -102,6 +103,26 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         student.Cognoms  = req.Cognoms.Trim();
         student.NumLlista = req.NumLlista;
         student.Email    = req.Email.Trim().ToLower();
+        await db.SaveChangesAsync();
+        return ToStudentDto(student);
+    }
+
+    public async Task<StudentDto?> MoveStudentAsync(int classId, int studentId, int targetClassId)
+    {
+        var student = await db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
+        if (student is null) return null;
+
+        var targetExists = await db.Classes.AnyAsync(c => c.Id == targetClassId);
+        if (!targetExists) return null;
+
+        // Elimina l'alumne de tots els grups (pertanyen a la classe antiga)
+        await db.GroupMembers.Where(gm => gm.StudentId == studentId).ExecuteDeleteAsync();
+        // Elimina avaluacions pendents (FK NoAction)
+        await db.Evaluations
+            .Where(e => e.EvaluatorId == studentId || e.EvaluatedId == studentId)
+            .ExecuteDeleteAsync();
+
+        student.ClassId = targetClassId;
         await db.SaveChangesAsync();
         return ToStudentDto(student);
     }

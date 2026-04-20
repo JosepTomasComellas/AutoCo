@@ -15,6 +15,9 @@ public interface IActivityService
     Task<bool>              DeleteAsync(int id, int professorId, bool isAdmin);
     Task<ActivityDto?>      ToggleOpenAsync(int id, int professorId, bool isAdmin);
     Task<ActivityDto>       DuplicateAsync(int activityId, int professorId, bool isAdmin, DuplicateActivityRequest req);
+    Task<ActivityDto>       DuplicateCrossAsync(int activityId, int professorId, bool isAdmin, DuplicateCrossRequest req);
+    Task<ParticipationDto>  GetParticipationAsync(int activityId, int professorId, bool isAdmin);
+    Task<ReminderResult>    SendRemindersAsync(int activityId, int professorId, bool isAdmin, IEmailService email);
     Task<(byte[] Content, string FileName)?>  ExportGroupsAsync(int activityId, int professorId, bool isAdmin);
     Task<ImportGroupsResult> ImportGroupsAsync(int activityId, int professorId, bool isAdmin, string csvContent);
 
@@ -165,6 +168,100 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
             original.Module.Professor.NomComplet,
             nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
             original.Groups.Count, numStudents);
+    }
+
+    public async Task<ActivityDto> DuplicateCrossAsync(int activityId, int professorId, bool isAdmin, DuplicateCrossRequest req)
+    {
+        var original = await db.Activities
+            .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .FirstOrDefaultAsync(a => a.Id == activityId &&
+                (isAdmin || a.Module.ProfessorId == professorId))
+            ?? throw new UnauthorizedAccessException("Activitat no trobada o sense permisos.");
+
+        var targetModule = await db.Modules
+            .Include(m => m.Professor)
+            .Include(m => m.Class)
+            .FirstOrDefaultAsync(m => m.Id == req.TargetModuleId && (isAdmin || m.ProfessorId == professorId))
+            ?? throw new UnauthorizedAccessException("Mòdul destí no trobat o sense permisos.");
+
+        var nova = new Activity
+        {
+            ModuleId    = req.TargetModuleId,
+            Name        = req.Name.Trim(),
+            Description = req.Description?.Trim(),
+            IsOpen      = true
+        };
+        db.Activities.Add(nova);
+        await db.SaveChangesAsync();
+
+        // Copia l'estructura de grups (noms) però NO els membres (alumnes d'altra classe)
+        foreach (var g in original.Groups)
+        {
+            db.Groups.Add(new Group { ActivityId = nova.Id, Name = g.Name });
+        }
+        await db.SaveChangesAsync();
+
+        return new ActivityDto(nova.Id,
+            targetModule.Id, targetModule.Code, targetModule.Name,
+            targetModule.ClassId, targetModule.Class.Name, targetModule.Class.AcademicYear,
+            targetModule.Professor.NomComplet,
+            nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
+            original.Groups.Count, 0);
+    }
+
+    public async Task<ParticipationDto> GetParticipationAsync(int activityId, int professorId, bool isAdmin)
+    {
+        var hasAccess = await db.Activities.AnyAsync(a => a.Id == activityId &&
+            (isAdmin || a.Module.ProfessorId == professorId));
+        if (!hasAccess) return new(activityId, 0, 0);
+
+        var total = await db.GroupMembers
+            .Where(gm => gm.Group.ActivityId == activityId)
+            .Select(gm => gm.StudentId)
+            .Distinct()
+            .CountAsync();
+
+        var submitted = await db.Evaluations
+            .Where(e => e.ActivityId == activityId)
+            .Select(e => e.EvaluatorId)
+            .Distinct()
+            .CountAsync();
+
+        return new(activityId, submitted, total);
+    }
+
+    public async Task<ReminderResult> SendRemindersAsync(int activityId, int professorId, bool isAdmin, IEmailService email)
+    {
+        if (!email.IsEnabled) return new(0, 0, true);
+
+        var activity = await db.Activities
+            .Include(a => a.Module).ThenInclude(m => m.Class)
+            .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
+            .FirstOrDefaultAsync(a => a.Id == activityId && a.IsOpen &&
+                (isAdmin || a.Module.ProfessorId == professorId));
+        if (activity is null) return new(0, 0, false);
+
+        var submittedIds = await db.Evaluations
+            .Where(e => e.ActivityId == activityId)
+            .Select(e => e.EvaluatorId)
+            .Distinct()
+            .ToHashSetAsync();
+
+        var pending = activity.Groups
+            .SelectMany(g => g.Members)
+            .Select(m => m.Student)
+            .DistinctBy(s => s.Id)
+            .Where(s => !submittedIds.Contains(s.Id))
+            .ToList();
+
+        int sent = 0, skipped = 0;
+        foreach (var s in pending)
+        {
+            var ok = await email.SendReminderAsync(
+                s.Email, s.NomComplet, activity.Name, activity.Module.Class.Name);
+            if (ok) sent++; else skipped++;
+        }
+        return new(sent, skipped, false);
     }
 
     public async Task<(byte[] Content, string FileName)?> ExportGroupsAsync(int activityId, int professorId, bool isAdmin)

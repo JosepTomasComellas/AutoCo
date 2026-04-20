@@ -169,6 +169,12 @@
                     Nova contrasenya
                 </MudButton>
                 <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
+                           Style="background:rgba(255,255,255,.2);color:white"
+                           StartIcon="@Icons.Material.Filled.DriveFileMove"
+                           OnClick="BulkMoveAsync">
+                    Moure a...
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
                            Style="background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.5)"
                            StartIcon="@Icons.Material.Filled.Delete"
                            OnClick="BulkDeleteAsync">
@@ -181,7 +187,13 @@
         }
 
         <MudDataGrid T="StudentDto" Items="_students" Dense="true" Hover="true"
-                     SortMode="SortMode.Single">
+                     SortMode="SortMode.Single" RowsPerPage="25">
+            <PagerContent>
+                @if (_students.Count > 25)
+                {
+                    <MudDataGridPager T="StudentDto" PageSizeOptions="new[]{25,50,100}" />
+                }
+            </PagerContent>
             <Columns>
                 @if (UserState.IsAdmin)
                 {
@@ -227,6 +239,9 @@
                             <MudIconButton Icon="@Icons.Material.Filled.Key" Size="Size.Small"
                                            Color="Color.Warning" title="Generar nova contrasenya"
                                            OnClick="() => ResetPasswordAsync(context.Item)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.DriveFileMove" Size="Size.Small"
+                                           Color="Color.Info" title="Moure a una altra classe"
+                                           OnClick="() => MoveOneAsync(context.Item)" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                            Color="Color.Error" title="Eliminar"
                                            OnClick="() => DeleteAsync(context.Item)" />
@@ -338,6 +353,62 @@
         _selected.Clear();
         await LoadAsync();
         _saving = false;
+    }
+
+    // ── Moure alumnes ────────────────────────────────────────────────────────
+
+    private async Task MoveOneAsync(StudentDto s)
+    {
+        var targetClassId = await PickTargetClassAsync();
+        if (targetClassId is null) return;
+
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var moved = await Api.MoveStudentAsync(ClassId, s.Id, targetClassId.Value);
+        if (moved is not null)
+        {
+            Snackbar.Add($"«{s.NomComplet}» mogut/da correctament.", Severity.Success);
+            await LoadAsync();
+        }
+        else Snackbar.Add("Error en moure l'alumne.", Severity.Error);
+        _saving = false;
+    }
+
+    private async Task BulkMoveAsync()
+    {
+        if (!_selected.Any()) return;
+        var targetClassId = await PickTargetClassAsync();
+        if (targetClassId is null) return;
+
+        var ids = _selected.ToList();
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        int ok = 0, failed = 0;
+        foreach (var id in ids)
+        {
+            var moved = await Api.MoveStudentAsync(ClassId, id, targetClassId.Value);
+            if (moved is not null) ok++; else failed++;
+        }
+        Snackbar.Add($"Moguts: {ok}{(failed > 0 ? $" · Errors: {failed}" : "")}",
+            failed > 0 ? Severity.Warning : Severity.Success);
+        _selected.Clear();
+        await LoadAsync();
+        _saving = false;
+    }
+
+    private async Task<int?> PickTargetClassAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var classes = await Api.GetClassesAsync() ?? [];
+        var others  = classes.Where(c => c.Id != ClassId).ToList();
+        if (!others.Any()) { Snackbar.Add("No hi ha altres classes disponibles.", Severity.Info); return null; }
+
+        var opts   = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+        var param  = new DialogParameters<MoureAlumneDialog> { { d => d.Classes, others } };
+        var dialog = await Dialog.ShowAsync<MoureAlumneDialog>("Moure a classe", param, opts);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return null;
+        return (int)result.Data!;
     }
 
     protected override async Task OnInitializedAsync()

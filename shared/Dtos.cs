@@ -37,6 +37,9 @@ public record CreateStudentRequest(
 public record UpdateStudentRequest(
     string Nom, string Cognoms, int NumLlista, string Email);
 
+public record MoveStudentRequest(int TargetClassId);
+public record BulkMoveStudentsRequest(List<int> StudentIds, int TargetClassId);
+
 public record BulkCreateStudentsRequest(List<CreateStudentRequest> Students);
 public record BulkCreateResult(int Created, int Skipped, List<string> Errors);
 public record ResetPasswordResult(string NewPassword);
@@ -64,8 +67,11 @@ public record ActivityDto(
 public record CreateActivityRequest(int ModuleId, string Name, string? Description);
 public record UpdateActivityRequest(string Name, string? Description);
 public record DuplicateActivityRequest(string Name, string? Description);
+public record DuplicateCrossRequest(int TargetModuleId, string Name, string? Description);
 public record ImportGroupsRequest(string CsvContent);
 public record ImportGroupsResult(int Assigned, int Skipped, List<string> Errors);
+public record ParticipationDto(int ActivityId, int Submitted, int Total);
+public record ReminderResult(int Sent, int Skipped, bool EmailDisabled);
 
 // ─── Grups ───────────────────────────────────────────────────────────────────
 public record GroupDto(int Id, int ActivityId, string Name, List<StudentDto> Members);

@@ -1,3 +1,4 @@
+@implements IDisposable
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
 @inject ApiClient Api
@@ -32,14 +33,35 @@
         </MudCardContent>
     }
     <MudCardContent Class="pt-0 pb-0">
-        <MudStack Row="true" Spacing="1">
+        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
                 @Act.NumGroups grups
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
                 @Act.NumStudents alumnes
             </MudChip>
+            @if (Act.IsOpen && _participation is not null)
+            {
+                <MudTooltip Text="@($"{_participation.Submitted} de {_participation.Total} han avaluat")">
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@(_participation.Submitted == _participation.Total && _participation.Total > 0
+                                       ? Color.Success : Color.Warning)"
+                             Variant="Variant.Filled">
+                        @_participation.Submitted / @_participation.Total avaluat
+                    </MudChip>
+                </MudTooltip>
+            }
+            else if (Act.IsOpen && _loadingParticipation)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+            }
         </MudStack>
+        @if (Act.IsOpen && _participation is not null && _participation.Total > 0)
+        {
+            <MudProgressLinear Value="@(100.0 * _participation.Submitted / _participation.Total)"
+                               Color="@(_participation.Submitted == _participation.Total ? Color.Success : Color.Warning)"
+                               Rounded="true" Size="Size.Small" Class="mt-2" />
+        }
     </MudCardContent>
     <MudCardActions>
         <MudButton Size="Size.Small" Color="Color.Primary"
@@ -57,8 +79,18 @@
                        title="Veure gràfica"
                        OnClick="ShowChartAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Info"
-                       title="Duplicar activitat"
+                       title="Duplicar (mateixa classe)"
                        OnClick="DuplicarAsync" />
+        <MudIconButton Icon="@Icons.Material.Filled.CopyAll" Color="Color.Info"
+                       title="Duplicar a una altra classe"
+                       OnClick="DuplicarCrossAsync" />
+        @if (Act.IsOpen)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.NotificationsActive"
+                           Color="Color.Secondary"
+                           title="Enviar recordatori als pendents"
+                           OnClick="SendRemindersAsync" />
+        }
         <MudIconButton Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
                        Color="@(Act.IsOpen ? Color.Warning : Color.Success)"
                        title="@(Act.IsOpen ? "Tancar" : "Obrir")"
@@ -74,6 +106,40 @@
     [Parameter] public EventCallback<ActivityDto>  OnUpdated { get; set; }
     [Parameter] public EventCallback<ActivityDto>  OnDeleted { get; set; }
 
+    private ParticipationDto? _participation     = null;
+    private bool              _loadingParticipation = false;
+    private System.Threading.Timer? _pollTimer;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Si l'activitat és oberta, càrrega inicial de participació
+        if (Act.IsOpen && _participation is null && !_loadingParticipation)
+            await LoadParticipationAsync();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        if (Act.IsOpen)
+        {
+            _pollTimer = new System.Threading.Timer(async _ =>
+            {
+                await LoadParticipationAsync();
+                await InvokeAsync(StateHasChanged);
+            }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+        }
+    }
+
+    private async Task LoadParticipationAsync()
+    {
+        _loadingParticipation = true;
+        Api.SetToken(UserState.Token!);
+        _participation        = await Api.GetParticipationAsync(Act.Id);
+        _loadingParticipation = false;
+    }
+
+    public void Dispose() => _pollTimer?.Dispose();
+
     private async Task ToggleAsync()
     {
         Api.SetToken(UserState.Token!);
@@ -81,6 +147,7 @@
         if (updated is not null)
         {
             Snackbar.Add(updated.IsOpen ? "Activitat oberta." : "Activitat tancada.", Severity.Success);
+            if (!updated.IsOpen) { _pollTimer?.Dispose(); _pollTimer = null; }
             await OnUpdated.InvokeAsync(updated);
         }
     }
@@ -142,6 +209,51 @@
             Nav.NavigateTo($"/professor/grups/{nova.Id}");
         }
         else Snackbar.Add("Error en duplicar l'activitat.", Severity.Error);
+    }
+
+    private async Task DuplicarCrossAsync()
+    {
+        var parameters = new DialogParameters<DuplicarCrossDialog>
+        {
+            { d => d.NomOriginal,    Act.Name },
+            { d => d.CurrentClassId, Act.ClassId }
+        };
+        var opts   = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await Dialog.ShowAsync<DuplicarCrossDialog>("Duplicar a altra classe", parameters, opts);
+        var result = await dialog.Result;
+        if (result is null || result.Canceled) return;
+
+        var req = (DuplicateCrossRequest)result.Data!;
+        Api.SetToken(UserState.Token!);
+        var nova = await Api.DuplicateActivityCrossAsync(Act.Id, req);
+        if (nova is not null)
+        {
+            Snackbar.Add($"Activitat «{nova.Name}» creada a {nova.ClassName}.", Severity.Success);
+            await OnUpdated.InvokeAsync(nova);
+            Nav.NavigateTo($"/professor/grups/{nova.Id}");
+        }
+        else Snackbar.Add("Error en duplicar l'activitat.", Severity.Error);
+    }
+
+    private async Task SendRemindersAsync()
+    {
+        var confirm = await Dialog.ShowMessageBox("Enviar recordatoris",
+            "S'enviarà un correu a tots els alumnes que encara no han omplert l'avaluació.",
+            yesText: "Enviar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+
+        Api.SetToken(UserState.Token!);
+        var result = await Api.SendRemindersAsync(Act.Id);
+        if (result is null) { Snackbar.Add("Error en enviar recordatoris.", Severity.Error); return; }
+
+        if (result.EmailDisabled)
+            Snackbar.Add("El correu electrònic no està configurat al servidor.", Severity.Warning);
+        else if (result.Sent == 0 && result.Skipped == 0)
+            Snackbar.Add("Tots els alumnes ja han avaluat!", Severity.Success);
+        else
+            Snackbar.Add($"Recordatoris enviats: {result.Sent}" +
+                (result.Skipped > 0 ? $" · Errors: {result.Skipped}" : ""),
+                result.Skipped > 0 ? Severity.Warning : Severity.Success);
     }
 
     private async Task DeleteAsync()

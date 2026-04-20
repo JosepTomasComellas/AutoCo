@@ -69,6 +69,10 @@ public class ApiClient
     public Task<BulkCreateResult?> BulkAddStudentsAsync(int classId, BulkCreateStudentsRequest req) =>
         PostAsync<BulkCreateResult>($"/api/classes/{classId}/students/bulk", req);
 
+    public Task<StudentDto?> MoveStudentAsync(int classId, int studentId, int targetClassId) =>
+        PostAsync<StudentDto>($"/api/classes/{classId}/students/{studentId}/move",
+            new MoveStudentRequest(targetClassId));
+
     public Task<ResetPasswordResult?> ResetPasswordAsync(int classId, int studentId) =>
         PostAsync<ResetPasswordResult>($"/api/classes/{classId}/students/{studentId}/reset-password", null);
 
@@ -129,6 +133,15 @@ public class ApiClient
 
     public Task<ActivityDto?> DuplicateActivityAsync(int id, DuplicateActivityRequest req) =>
         PostAsync<ActivityDto>($"/api/activities/{id}/duplicate", req);
+
+    public Task<ActivityDto?> DuplicateActivityCrossAsync(int id, DuplicateCrossRequest req) =>
+        PostAsync<ActivityDto>($"/api/activities/{id}/duplicate-cross", req);
+
+    public Task<ParticipationDto?> GetParticipationAsync(int activityId) =>
+        GetAsync<ParticipationDto>($"/api/activities/{activityId}/participation");
+
+    public Task<ReminderResult?> SendRemindersAsync(int activityId) =>
+        PostAsync<ReminderResult>($"/api/activities/{activityId}/remind", (object?)null);
 
     public async Task<(byte[] Content, string FileName)?> ExportGroupsAsync(int activityId)
     {
