@@ -2,6 +2,7 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>Resultats – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
@@ -24,6 +25,11 @@
                    StartIcon="@Icons.Material.Filled.Download"
                    Href="@($"/professor/export-csv/{ActivityId}")">
             Exportar CSV
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Print"
+                   OnClick="PrintAsync">
+            Imprimir / PDF
         </MudButton>
     }
 </MudStack>
@@ -169,4 +175,7 @@ else
         _results = await Api.GetResultsAsync(ActivityId);
         _loading = false;
     }
+
+    private async Task PrintAsync() =>
+        await JS.InvokeVoidAsync("window.print");
 }

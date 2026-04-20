@@ -45,6 +45,11 @@ public record BulkCreateResult(int Created, int Skipped, List<string> Errors);
 public record ResetPasswordResult(string NewPassword);
 public record SendPasswordResult(bool Sent, string? Reason);
 
+// ─── Criteris per activitat ──────────────────────────────────────────────────
+public record ActivityCriterionDto(int Id, string Key, string Label, int OrderIndex);
+public record SaveCriteriaRequest(List<CriterionItem> Items);
+public record CriterionItem(string Key, string Label);
+
 // ─── Mòduls ──────────────────────────────────────────────────────────────────
 public record ModuleDto(
     int Id, int ClassId, string ClassName, string? ClassAcademicYear,

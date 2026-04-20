@@ -9,6 +9,7 @@ public class Activity
     public bool   IsOpen       { get; set; } = true;
     public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
 
-    public Module             Module { get; set; } = null!;
-    public ICollection<Group> Groups { get; set; } = [];
+    public Module                         Module   { get; set; } = null!;
+    public ICollection<Group>             Groups   { get; set; } = [];
+    public ICollection<ActivityCriterion> Criteria { get; set; } = [];
 }

@@ -159,6 +159,32 @@ html, body {
     border-color: #92400e;
 }
 
+/* ── Impressió / Exportació PDF ─────────────────────────────────────────── */
+@media print {
+    /* Oculta elements de navegació */
+    .mud-appbar, .mud-main-content > .mud-container > .mud-stack:first-child,
+    .mud-button, .mud-icon-button, .mud-chip, footer, .mud-snackbar-location {
+        display: none !important;
+    }
+    /* Fons blanc, text negre */
+    body, html, .mud-main-content, .mud-layout {
+        background: white !important;
+        background-image: none !important;
+        backdrop-filter: none !important;
+    }
+    .mud-main-content {
+        padding: 0 !important;
+        background: white !important;
+    }
+    /* Evita que les taules es tallin entre pàgines */
+    table, .mud-table, .mud-data-grid {
+        page-break-inside: auto;
+    }
+    tr { page-break-inside: avoid; }
+    /* Expansió de tots els panels */
+    .mud-collapse-container { display: block !important; height: auto !important; }
+}
+
 /* ── Scroll horitzontal en taules (mòbil) ───────────────────────────────── */
 @media (max-width: 599px) {
     .mud-table-container,

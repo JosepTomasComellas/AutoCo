@@ -143,6 +143,12 @@ public class ApiClient
     public Task<ReminderResult?> SendRemindersAsync(int activityId) =>
         PostAsync<ReminderResult>($"/api/activities/{activityId}/remind", (object?)null);
 
+    public Task<List<ActivityCriterionDto>?> GetActivityCriteriaAsync(int activityId) =>
+        GetAsync<List<ActivityCriterionDto>>($"/api/activities/{activityId}/criteria");
+
+    public Task<List<ActivityCriterionDto>?> SaveActivityCriteriaAsync(int activityId, SaveCriteriaRequest req) =>
+        PutAsync<List<ActivityCriterionDto>>($"/api/activities/{activityId}/criteria", req);
+
     public async Task<(byte[] Content, string FileName)?> ExportGroupsAsync(int activityId)
     {
         var resp = await _http.GetAsync($"/api/activities/{activityId}/groups/export");

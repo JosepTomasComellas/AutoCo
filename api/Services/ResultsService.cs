@@ -60,6 +60,8 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
 
         if (activity is null) return null;
 
+        var actCriteria = await CriteriaHelper.GetForActivityAsync(db, activityId);
+
         // Carrega TOTES les avaluacions de l'activitat en una sola consulta (elimina N+1)
         var allEvals = await db.Evaluations
             .Include(e => e.Scores)
@@ -89,8 +91,10 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
             var s = member.Student;
 
             var selfEval = selfEvalByStudentId.GetValueOrDefault(s.Id);
+            var criteriaKeys = actCriteria.Select(c => c.Key).ToList();
+
             var selfScores = selfEval?.Scores.ToDictionary(sc => sc.CriteriaKey, sc => (double?)sc.Score)
-                ?? Data.Criteria.Keys.ToDictionary(k => k, _ => (double?)null);
+                ?? criteriaKeys.ToDictionary(k => k, _ => (double?)null);
 
             var peerEvals = peerEvalsByStudentId.GetValueOrDefault(s.Id) ?? [];
 
@@ -100,7 +104,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 e.Scores.ToDictionary(sc => sc.CriteriaKey, sc => sc.Score),
                 e.Comment)).ToList();
 
-            var avgCoScores = Data.Criteria.Keys.ToDictionary(
+            var avgCoScores = criteriaKeys.ToDictionary(
                 k => k,
                 k => {
                     var vals = peerEvals
@@ -128,7 +132,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
             activity.Groups.Count, allMembers.Count);
 
-        var criteriaDto = Data.Criteria.All
+        var criteriaDto = actCriteria
             .Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
 
         return new ActivityResultsDto(actDto, studentResults, criteriaDto);
@@ -158,7 +162,8 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 (isAdmin || a.Module.ProfessorId == professorId));
         if (activity is null) return null;
 
-        var criteriaAll = Data.Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
+        var actCriteria = await CriteriaHelper.GetForActivityAsync(db, activityId);
+        var criteriaAll = actCriteria.Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
 
         // Carrega TOTES les avaluacions en una sola consulta (elimina N+1)
         var allEvals = await db.Evaluations
@@ -177,7 +182,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
             .ToDictionary(g => g.Key, g => g.ToList());
 
         var groupCharts = new List<GroupChartDto>();
-        var criteriaDetail = Data.Criteria.All
+        var criteriaDetail = actCriteria
             .Select(c => new CriteriaGroupChartDto(c.Key, c.Label, [])).ToList();
 
         foreach (var g in activity.Groups.OrderBy(g => g.Name))

@@ -18,6 +18,8 @@ public interface IActivityService
     Task<ActivityDto>       DuplicateCrossAsync(int activityId, int professorId, bool isAdmin, DuplicateCrossRequest req);
     Task<ParticipationDto>  GetParticipationAsync(int activityId, int professorId, bool isAdmin);
     Task<ReminderResult>    SendRemindersAsync(int activityId, int professorId, bool isAdmin, IEmailService email);
+    Task<List<ActivityCriterionDto>> GetCriteriaAsync(int activityId, int professorId, bool isAdmin);
+    Task<List<ActivityCriterionDto>> SaveCriteriaAsync(int activityId, int professorId, bool isAdmin, SaveCriteriaRequest req);
     Task<(byte[] Content, string FileName)?>  ExportGroupsAsync(int activityId, int professorId, bool isAdmin);
     Task<ImportGroupsResult> ImportGroupsAsync(int activityId, int professorId, bool isAdmin, string csvContent);
 
@@ -79,6 +81,9 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
         };
         db.Activities.Add(activity);
         await db.SaveChangesAsync();
+
+        // Còpia dels criteris globals com a criteris per defecte de l'activitat
+        await SeedDefaultCriteriaAsync(activity.Id);
 
         return new ActivityDto(activity.Id,
             modul.Id, modul.Code, modul.Name,
@@ -151,6 +156,9 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
         db.Activities.Add(nova);
         await db.SaveChangesAsync();
 
+        // Copia criteris de l'original (o globals si l'original no en té)
+        await CopyCriteriaAsync(original.Id, nova.Id);
+
         foreach (var g in original.Groups)
         {
             var nouGrup = new Group { ActivityId = nova.Id, Name = g.Name };
@@ -193,6 +201,9 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
         };
         db.Activities.Add(nova);
         await db.SaveChangesAsync();
+
+        // Copia criteris de l'original
+        await CopyCriteriaAsync(original.Id, nova.Id);
 
         // Copia l'estructura de grups (noms) però NO els membres (alumnes d'altra classe)
         foreach (var g in original.Groups)
@@ -452,6 +463,79 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
                 myGroup.Members.Count, alreadyEval));
         }
         return result;
+    }
+
+    // ── Criteris per activitat ───────────────────────────────────────────────
+
+    public async Task<List<ActivityCriterionDto>> GetCriteriaAsync(int activityId, int professorId, bool isAdmin)
+    {
+        var hasAccess = await db.Activities.AnyAsync(a => a.Id == activityId &&
+            (isAdmin || a.Module.ProfessorId == professorId));
+        if (!hasAccess) return [];
+        return await CriteriaHelper.GetDtosAsync(db, activityId);
+    }
+
+    public async Task<List<ActivityCriterionDto>> SaveCriteriaAsync(int activityId, int professorId, bool isAdmin, SaveCriteriaRequest req)
+    {
+        var hasAccess = await db.Activities.AnyAsync(a => a.Id == activityId &&
+            (isAdmin || a.Module.ProfessorId == professorId));
+        if (!hasAccess) return [];
+
+        // Substitueix tots els criteris existents
+        await db.ActivityCriteria.Where(ac => ac.ActivityId == activityId).ExecuteDeleteAsync();
+        for (int i = 0; i < req.Items.Count; i++)
+        {
+            db.ActivityCriteria.Add(new ActivityCriterion
+            {
+                ActivityId = activityId,
+                Key        = req.Items[i].Key.Trim().ToLowerInvariant(),
+                Label      = req.Items[i].Label.Trim(),
+                OrderIndex = i
+            });
+        }
+        await db.SaveChangesAsync();
+
+        // Invalida la caché de resultats per si n'hi havia
+        await InvalidateResultsCacheAsync(activityId);
+
+        return await CriteriaHelper.GetDtosAsync(db, activityId);
+    }
+
+    private async Task SeedDefaultCriteriaAsync(int activityId)
+    {
+        for (int i = 0; i < Criteria.All.Count; i++)
+        {
+            db.ActivityCriteria.Add(new ActivityCriterion
+            {
+                ActivityId = activityId,
+                Key        = Criteria.All[i].Key,
+                Label      = Criteria.All[i].Label,
+                OrderIndex = i
+            });
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private async Task CopyCriteriaAsync(int sourceActivityId, int targetActivityId)
+    {
+        var source = await db.ActivityCriteria
+            .Where(ac => ac.ActivityId == sourceActivityId)
+            .OrderBy(ac => ac.OrderIndex)
+            .ToListAsync();
+
+        if (!source.Any()) { await SeedDefaultCriteriaAsync(targetActivityId); return; }
+
+        foreach (var c in source)
+        {
+            db.ActivityCriteria.Add(new ActivityCriterion
+            {
+                ActivityId = targetActivityId,
+                Key        = c.Key,
+                Label      = c.Label,
+                OrderIndex = c.OrderIndex
+            });
+        }
+        await db.SaveChangesAsync();
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

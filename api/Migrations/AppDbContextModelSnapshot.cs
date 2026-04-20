@@ -54,6 +54,39 @@ namespace AutoCo.Api.Migrations
                     b.ToTable("Activities");
                 });
 
+            modelBuilder.Entity("AutoCo.Api.Data.Models.ActivityCriterion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ActivityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityId", "Key")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ActivityCriteria_ActivityId_Key");
+
+                    b.ToTable("ActivityCriteria");
+                });
+
             modelBuilder.Entity("AutoCo.Api.Data.Models.Class", b =>
                 {
                     b.Property<int>("Id")
@@ -348,6 +381,17 @@ namespace AutoCo.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Module");
+                });
+
+            modelBuilder.Entity("AutoCo.Api.Data.Models.ActivityCriterion", b =>
+                {
+                    b.HasOne("AutoCo.Api.Data.Models.Activity", "Activity")
+                        .WithMany("Criteria")
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
                 });
 
             modelBuilder.Entity("AutoCo.Api.Data.Models.Evaluation", b =>

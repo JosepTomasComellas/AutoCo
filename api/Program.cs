@@ -466,6 +466,23 @@ app.MapPost("/api/activities/{id:int}/remind", async (int id, IActivityService s
     return Results.Ok(result);
 }).RequireAuthorization();
 
+app.MapGet("/api/activities/{id:int}/criteria", async (int id, IActivityService svc,
+    ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var list = await svc.GetCriteriaAsync(id, GetUserId(user), IsAdmin(user));
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapPut("/api/activities/{id:int}/criteria", async (int id, SaveCriteriaRequest req,
+    IActivityService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    if (!req.Items.Any()) return Results.BadRequest(new { error = "Cal almenys un criteri." });
+    var list = await svc.SaveCriteriaAsync(id, GetUserId(user), IsAdmin(user), req);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
 app.MapGet("/api/activities/{id:int}/groups/export", async (int id, IActivityService svc,
     ClaimsPrincipal user) =>
 {

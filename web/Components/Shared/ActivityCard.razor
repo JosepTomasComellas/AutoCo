@@ -84,6 +84,9 @@
         <MudIconButton Icon="@Icons.Material.Filled.CopyAll" Color="Color.Info"
                        title="Duplicar a una altra classe"
                        OnClick="DuplicarCrossAsync" />
+        <MudIconButton Icon="@Icons.Material.Filled.Tune" Color="Color.Default"
+                       title="Gestionar criteris d'avaluació"
+                       OnClick="ManageCriteriaAsync" />
         @if (Act.IsOpen)
         {
             <MudIconButton Icon="@Icons.Material.Filled.NotificationsActive"
@@ -235,6 +238,16 @@
         else Snackbar.Add("Error en duplicar l'activitat.", Severity.Error);
     }
 
+    private async Task ManageCriteriaAsync()
+    {
+        var parameters = new DialogParameters<CriteriaDialog>
+        {
+            { d => d.ActivityId, Act.Id }
+        };
+        var opts = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        await Dialog.ShowAsync<CriteriaDialog>("Criteris d'avaluació", parameters, opts);
+    }
+
     private async Task SendRemindersAsync()
     {
         var confirm = await Dialog.ShowMessageBox("Enviar recordatoris",
@@ -258,20 +271,27 @@
 
     private async Task DeleteAsync()
     {
+        if (!await DeleteWithUndoAsync($"Eliminant «{Act.Name}»...")) return;
         Api.SetToken(UserState.Token!);
-        var evalsCount = await Api.GetEvalsCountAsync(Act.Id);
-
-        var msg = evalsCount > 0
-            ? $"Segur que vols eliminar «{Act.Name}»?\n\n⚠️ Té {Act.NumGroups} grups, {Act.NumStudents} alumnes i {evalsCount} avaluacions guardades que es perdran permanentment."
-            : $"Segur que vols eliminar «{Act.Name}»?\n\nTé {Act.NumGroups} grups i {Act.NumStudents} alumnes assignats.";
-
-        var confirm = await Dialog.ShowMessageBox(
-            "Confirmar eliminació", msg,
-            yesText: "Eliminar", cancelText: "Cancel·lar");
-        if (confirm != true) return;
-
         await Api.DeleteActivityAsync(Act.Id);
-        Snackbar.Add("Activitat eliminada.", Severity.Info);
+        Snackbar.Add("Activitat eliminada.", Severity.Success);
         await OnDeleted.InvokeAsync(Act);
+    }
+
+    private async Task<bool> DeleteWithUndoAsync(string msg)
+    {
+        var cancelled = false;
+        var cts = new CancellationTokenSource();
+        Snackbar.Add(msg, Severity.Warning, cfg =>
+        {
+            cfg.Action               = "Desfer";
+            cfg.ActionColor          = Color.Warning;
+            cfg.ActionVariant        = Variant.Text;
+            cfg.OnClick              = _ => { cancelled = true; cts.Cancel(); return Task.CompletedTask; };
+            cfg.VisibleStateDuration = 5000;
+        });
+        try { await Task.Delay(5500, cts.Token); } catch (OperationCanceledException) { }
+        if (cancelled) Snackbar.Add("Eliminació cancel·lada.", Severity.Info);
+        return !cancelled;
     }
 }

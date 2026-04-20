@@ -13,8 +13,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Activity>         Activities        => Set<Activity>();
     public DbSet<Group>            Groups            => Set<Group>();
     public DbSet<GroupMember>      GroupMembers      => Set<GroupMember>();
-    public DbSet<Evaluation>       Evaluations       => Set<Evaluation>();
-    public DbSet<EvaluationScore>  EvaluationScores  => Set<EvaluationScore>();
+    public DbSet<Evaluation>          Evaluations          => Set<Evaluation>();
+    public DbSet<EvaluationScore>     EvaluationScores     => Set<EvaluationScore>();
+    public DbSet<ActivityCriterion>   ActivityCriteria     => Set<ActivityCriterion>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -114,6 +115,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(es => new { es.EvaluationId, es.CriteriaKey }).IsUnique();
             e.Property(es => es.CriteriaKey).HasMaxLength(50);
+        });
+
+        b.Entity<ActivityCriterion>(e => {
+            e.HasOne(ac => ac.Activity)
+             .WithMany(a => a.Criteria)
+             .HasForeignKey(ac => ac.ActivityId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(ac => new { ac.ActivityId, ac.Key }).IsUnique();
+            e.Property(ac => ac.Key).HasMaxLength(50);
+            e.Property(ac => ac.Label).HasMaxLength(200);
         });
     }
 }

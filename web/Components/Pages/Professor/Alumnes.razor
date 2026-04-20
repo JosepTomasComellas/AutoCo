@@ -741,14 +741,29 @@
 
     private async Task DeleteAsync(StudentDto s)
     {
-        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
-            $"Eliminar «{s.NomComplet}»?",
-            yesText: "Eliminar", cancelText: "Cancel·lar");
-        if (confirm != true) return;
+        if (!await DeleteWithUndoAsync($"Eliminant «{s.NomComplet}»...")) return;
         Api.SetToken(UserState.Token!);
         await Api.DeleteStudentAsync(ClassId, s.Id);
         _students.RemoveAll(x => x.Id == s.Id);
-        Snackbar.Add("Alumne eliminat.", Severity.Info);
+        _selected.Remove(s.Id);
+        Snackbar.Add($"Alumne «{s.NomComplet}» eliminat.", Severity.Success);
+    }
+
+    private async Task<bool> DeleteWithUndoAsync(string msg)
+    {
+        var cancelled = false;
+        var cts = new CancellationTokenSource();
+        Snackbar.Add(msg, Severity.Warning, cfg =>
+        {
+            cfg.Action               = "Desfer";
+            cfg.ActionColor          = Color.Warning;
+            cfg.ActionVariant        = Variant.Text;
+            cfg.OnClick              = _ => { cancelled = true; cts.Cancel(); return Task.CompletedTask; };
+            cfg.VisibleStateDuration = 5000;
+        });
+        try { await Task.Delay(5500, cts.Token); } catch (OperationCanceledException) { }
+        if (cancelled) Snackbar.Add("Eliminació cancel·lada.", Severity.Info);
+        return !cancelled;
     }
 
     private async Task ExportCsvAsync()
