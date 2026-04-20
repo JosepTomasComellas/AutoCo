@@ -107,6 +107,21 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
     {
         var student = await db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
         if (student is null) return false;
+
+        // Les FK d'Evaluation cap a Student tenen OnDelete.NoAction → cal eliminar manualment.
+        // EvaluationScores en cascade (OnDelete.Cascade) quan s'elimina Evaluation.
+        await db.Evaluations
+            .Where(e => e.EvaluatorId == studentId || e.EvaluatedId == studentId)
+            .ExecuteDeleteAsync();
+
+        await db.GroupMembers
+            .Where(gm => gm.StudentId == studentId)
+            .ExecuteDeleteAsync();
+
+        await db.ModuleExclusions
+            .Where(me => me.StudentId == studentId)
+            .ExecuteDeleteAsync();
+
         db.Students.Remove(student);
         await db.SaveChangesAsync();
         return true;
