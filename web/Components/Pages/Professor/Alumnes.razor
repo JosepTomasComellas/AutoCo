@@ -135,12 +135,66 @@
     }
 
     <MudItem xs="12" md="@(UserState.IsAdmin ? 8 : 12)">
-        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
             <MudText Typo="Typo.h6" Style="font-weight:600">Alumnes (@_students.Count)</MudText>
+            <MudSpacer />
+            @if (UserState.IsAdmin && _students.Any())
+            {
+                <MudCheckBox T="bool" Value="_allSelected" ValueChanged="ToggleSelectAll"
+                             Color="Color.Primary" Size="Size.Small"
+                             Label="@(_selected.Count == 0 ? "Seleccionar tots" : $"{_selected.Count} seleccionats")"
+                             Style="margin:0" />
+            }
         </MudStack>
+
+        @* Barra d'accions massives *@
+        @if (UserState.IsAdmin && _selected.Any())
+        {
+            <MudPaper Elevation="2" Class="pa-2 mb-2 d-flex align-center flex-wrap gap-2"
+                      Style="background:var(--mud-palette-primary);border-radius:8px">
+                <MudText Typo="Typo.body2" Style="color:white;font-weight:600;flex-shrink:0">
+                    @_selected.Count alumne@(_selected.Count != 1 ? "s" : "") seleccionat@(_selected.Count != 1 ? "s" : "")
+                </MudText>
+                <MudSpacer />
+                <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
+                           Style="background:rgba(255,255,255,.2);color:white"
+                           StartIcon="@Icons.Material.Filled.Email"
+                           OnClick="BulkSendPasswordsAsync">
+                    Enviar contrasenya
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
+                           Style="background:rgba(255,255,255,.2);color:white"
+                           StartIcon="@Icons.Material.Filled.Key"
+                           OnClick="BulkResetPasswordsAsync">
+                    Nova contrasenya
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
+                           Style="background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.5)"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           OnClick="BulkDeleteAsync">
+                    Eliminar
+                </MudButton>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                               Style="color:white" title="Desseleccionar tots"
+                               OnClick="() => _selected.Clear()" />
+            </MudPaper>
+        }
+
         <MudDataGrid T="StudentDto" Items="_students" Dense="true" Hover="true"
                      SortMode="SortMode.Single">
             <Columns>
+                @if (UserState.IsAdmin)
+                {
+                    <TemplateColumn T="StudentDto" CellStyle="width:32px;padding:0 4px">
+                        <HeaderTemplate><span /></HeaderTemplate>
+                        <CellTemplate>
+                            <MudCheckBox T="bool"
+                                         Value="_selected.Contains(context.Item.Id)"
+                                         ValueChanged="v => ToggleSelect(context.Item.Id, v)"
+                                         Color="Color.Primary" Size="Size.Small" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                }
                 <TemplateColumn Title="#">
                     <HeaderTemplate>
                         <MudTooltip Text="Núm. de llista" Placement="Placement.Top">
@@ -192,6 +246,92 @@
     private int    _editStudentId = 0;
 
     private IBrowserFile? _importFile;
+
+    // ── Selecció massiva ──────────────────────────────────────────────────────
+    private HashSet<int> _selected = [];
+    private bool _allSelected => _students.Count > 0 && _selected.Count == _students.Count;
+
+    private void ToggleSelect(int id, bool add)
+    {
+        if (add) _selected.Add(id);
+        else     _selected.Remove(id);
+    }
+
+    private void ToggleSelectAll(bool selectAll)
+    {
+        if (selectAll) _selected = [.. _students.Select(s => s.Id)];
+        else           _selected.Clear();
+    }
+
+    private async Task BulkSendPasswordsAsync()
+    {
+        if (!_selected.Any()) return;
+        var ids = _selected.ToList();
+        var confirm = await Dialog.ShowMessageBox("Enviar contrasenyes",
+            $"S'enviarà la contrasenya per correu a {ids.Count} alumne{(ids.Count != 1 ? "s" : "")}.",
+            yesText: "Enviar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        int sent = 0, failed = 0;
+        foreach (var id in ids)
+        {
+            var r = await Api.SendPasswordAsync(ClassId, id);
+            if (r?.Sent == true) sent++; else failed++;
+        }
+        Snackbar.Add($"Enviades: {sent}{(failed > 0 ? $" · Fallades: {failed}" : "")}",
+            failed > 0 ? Severity.Warning : Severity.Success);
+        _selected.Clear();
+        _saving = false;
+    }
+
+    private async Task BulkResetPasswordsAsync()
+    {
+        if (!_selected.Any()) return;
+        var ids = _selected.ToList();
+        var confirm = await Dialog.ShowMessageBox("Generar noves contrasenyes",
+            $"Es generarà una nova contrasenya per a {ids.Count} alumne{(ids.Count != 1 ? "s" : "")}. Les contrasenyes anteriors quedaran invàlides.",
+            yesText: "Confirmar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        int ok = 0, failed = 0;
+        foreach (var id in ids)
+        {
+            var r = await Api.ResetPasswordAsync(ClassId, id);
+            if (r is not null) ok++; else failed++;
+        }
+        Snackbar.Add($"Contrasenyes generades: {ok}{(failed > 0 ? $" · Errors: {failed}" : "")}",
+            failed > 0 ? Severity.Warning : Severity.Success);
+        _selected.Clear();
+        _saving = false;
+    }
+
+    private async Task BulkDeleteAsync()
+    {
+        if (!_selected.Any()) return;
+        var ids = _selected.ToList();
+        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
+            $"S'eliminaran {ids.Count} alumne{(ids.Count != 1 ? "s" : "")} i totes les seves avaluacions. Aquesta acció no es pot desfer.",
+            yesText: "Eliminar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        int ok = 0, failed = 0;
+        foreach (var id in ids)
+        {
+            var success = await Api.DeleteStudentAsync(ClassId, id);
+            if (success) ok++; else failed++;
+        }
+        Snackbar.Add($"Eliminats: {ok}{(failed > 0 ? $" · Errors: {failed}" : "")}",
+            failed > 0 ? Severity.Warning : Severity.Success);
+        _selected.Clear();
+        await LoadAsync();
+        _saving = false;
+    }
 
     protected override async Task OnInitializedAsync()
     {
