@@ -10,7 +10,7 @@ RUN dotnet restore "api/AutoCo.Api.csproj"
 COPY shared/ shared/
 COPY api/ api/
 WORKDIR /src/api
-RUN dotnet publish -c Release -o /app/publish --no-restore
+RUN dotnet publish -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app

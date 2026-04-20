@@ -10,7 +10,7 @@ RUN dotnet restore "web/AutoCo.Web.csproj"
 COPY shared/ shared/
 COPY web/ web/
 WORKDIR /src/web
-RUN dotnet publish -c Release -o /app/publish --no-restore
+RUN dotnet publish -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
