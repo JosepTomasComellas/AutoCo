@@ -10,6 +10,7 @@ public interface IEmailService
     Task<bool> SendStudentPasswordAsync(string toEmail, string toName, string className, string password);
     Task<bool> SendProfessorCredentialsAsync(string toEmail, string toName, string password);
     Task<bool> SendReminderAsync(string toEmail, string toName, string activityName, string className);
+    Task<bool> SendActivityCompletedAsync(string toEmail, string toName, string activityName, string className, int total);
 }
 
 public class EmailService(IConfiguration config, ILogger<EmailService> logger) : IEmailService
@@ -91,6 +92,23 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
             Departament d'Informàtica · Salesians de Sarrià
             """;
         return await SendAsync(toEmail, toName, $"Recordatori: avaluació pendent – {activityName}", body);
+    }
+
+    public async Task<bool> SendActivityCompletedAsync(string toEmail, string toName,
+        string activityName, string className, int total)
+    {
+        if (!IsEnabled) return false;
+        var url = string.IsNullOrWhiteSpace(_webUrl) ? "(URL no configurada)" : $"{_webUrl}/professor/resultats";
+        var body = $"""
+            Hola, {toName}!
+
+            Tots els {total} alumnes de l'activitat «{activityName}» ({className}) han completat la seva avaluació.
+
+            Podeu consultar els resultats aquí: {url}
+
+            Departament d'Informàtica · Salesians de Sarrià
+            """;
+        return await SendAsync(toEmail, toName, $"Avaluació completada – {activityName}", body);
     }
 
     private async Task<bool> SendAsync(string toEmail, string toName, string subject, string body)

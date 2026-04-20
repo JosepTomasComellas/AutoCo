@@ -525,10 +525,27 @@ app.MapDelete("/api/activities/{id:int}", async (int id, IActivityService svc,
 }).RequireAuthorization();
 
 app.MapPost("/api/activities/{id:int}/toggle", async (int id, IActivityService svc,
-    ClaimsPrincipal user) =>
+    AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var a = await svc.ToggleOpenAsync(id, GetUserId(user), IsAdmin(user));
+    if (a is not null)
+    {
+        try
+        {
+            var prof = await db.Professors.FindAsync(GetUserId(user));
+            db.ActivityLogs.Add(new ActivityLog
+            {
+                ActivityId   = id,
+                ActivityName = a.Name,
+                ActorName    = prof?.NomComplet,
+                Action       = a.IsOpen ? "opened" : "closed",
+                CreatedAt    = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
+        catch { }
+    }
     return a is null ? Results.NotFound() : Results.Ok(a);
 }).RequireAuthorization();
 
@@ -596,10 +613,10 @@ app.MapGet("/api/evaluations/{activityId:int}", async (int activityId,
 
 app.MapPost("/api/evaluations/{activityId:int}", async (int activityId,
     SaveEvaluationsRequest req, IEvaluationService svc, IResultsService results,
-    ClaimsPrincipal user) =>
+    IEmailService email, ClaimsPrincipal user) =>
 {
     if (!user.IsInRole("Student")) return Results.Forbid();
-    var ok = await svc.SaveAsync(activityId, GetUserId(user), req);
+    var ok = await svc.SaveAsync(activityId, GetUserId(user), req, email);
     if (ok) await results.InvalidateCacheAsync(activityId);
     return ok ? Results.NoContent() : Results.BadRequest();
 }).RequireAuthorization();
@@ -716,6 +733,126 @@ app.MapPost("/api/admin/backup/files/{name}/restore", async (
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.RestoreFileAsync(name);
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}).RequireAuthorization();
+
+// ════════════════════════════════════════════════════════════════════════════
+// NOTES DEL PROFESSOR PER ALUMNE
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/notes/{activityId:int}/{studentId:int}", async (
+    int activityId, int studentId, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var note = await db.ProfessorNotes
+        .FirstOrDefaultAsync(n => n.ActivityId == activityId && n.StudentId == studentId);
+    if (note is null) return Results.Ok(new ProfessorNoteDto(studentId, "", DateTime.UtcNow));
+    return Results.Ok(new ProfessorNoteDto(note.StudentId, note.Note, note.UpdatedAt));
+}).RequireAuthorization();
+
+app.MapGet("/api/notes/{activityId:int}", async (
+    int activityId, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var notes = await db.ProfessorNotes
+        .Where(n => n.ActivityId == activityId)
+        .Select(n => new ProfessorNoteDto(n.StudentId, n.Note, n.UpdatedAt))
+        .ToListAsync();
+    return Results.Ok(notes);
+}).RequireAuthorization();
+
+app.MapPut("/api/notes/{activityId:int}/{studentId:int}", async (
+    int activityId, int studentId, SaveNoteRequest req,
+    AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var note = await db.ProfessorNotes
+        .FirstOrDefaultAsync(n => n.ActivityId == activityId && n.StudentId == studentId);
+    if (note is null)
+    {
+        note = new ProfessorNote
+        {
+            ActivityId = activityId, StudentId = studentId,
+            Note = req.Note.Trim(), UpdatedAt = DateTime.UtcNow
+        };
+        db.ProfessorNotes.Add(note);
+    }
+    else
+    {
+        note.Note = req.Note.Trim();
+        note.UpdatedAt = DateTime.UtcNow;
+    }
+    await db.SaveChangesAsync();
+    return Results.Ok(new ProfessorNoteDto(note.StudentId, note.Note, note.UpdatedAt));
+}).RequireAuthorization();
+
+// ════════════════════════════════════════════════════════════════════════════
+// PLANTILLES D'ACTIVITAT
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/templates", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var professorId = GetUserId(user);
+    var isAdm = IsAdmin(user);
+    var list = await db.ActivityTemplates
+        .Where(t => t.ProfessorId == professorId || isAdm)
+        .OrderByDescending(t => t.CreatedAt)
+        .ToListAsync();
+    var dtos = list.Select(t =>
+    {
+        var criteria = System.Text.Json.JsonSerializer.Deserialize<List<CriterionItem>>(t.CriteriaJson)
+            ?? new List<CriterionItem>();
+        return new ActivityTemplateDto(t.Id, t.Name, t.Description, criteria, t.CreatedAt);
+    }).ToList();
+    return Results.Ok(dtos);
+}).RequireAuthorization();
+
+app.MapPost("/api/templates", async (CreateTemplateRequest req, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var criteriaJson = System.Text.Json.JsonSerializer.Serialize(req.Criteria ?? new List<CriterionItem>());
+    var t = new ActivityTemplate
+    {
+        ProfessorId  = GetUserId(user),
+        Name         = req.Name.Trim(),
+        Description  = req.Description?.Trim(),
+        CriteriaJson = criteriaJson,
+        CreatedAt    = DateTime.UtcNow
+    };
+    db.ActivityTemplates.Add(t);
+    await db.SaveChangesAsync();
+    var criteria = System.Text.Json.JsonSerializer.Deserialize<List<CriterionItem>>(t.CriteriaJson)
+        ?? new List<CriterionItem>();
+    return Results.Created($"/api/templates/{t.Id}",
+        new ActivityTemplateDto(t.Id, t.Name, t.Description, criteria, t.CreatedAt));
+}).RequireAuthorization();
+
+app.MapDelete("/api/templates/{id:int}", async (int id, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var t = await db.ActivityTemplates.FindAsync(id);
+    if (t is null) return Results.NotFound();
+    if (t.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+    db.ActivityTemplates.Remove(t);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+}).RequireAuthorization();
+
+// ════════════════════════════════════════════════════════════════════════════
+// REGISTRE D'ACTIVITAT (LOG)
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/activities/{id:int}/log", async (
+    int id, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var logs = await db.ActivityLogs
+        .Where(l => l.ActivityId == id)
+        .OrderByDescending(l => l.CreatedAt)
+        .Take(100)
+        .Select(l => new ActivityLogDto(l.Id, l.Action, l.ActorName, l.Details, l.CreatedAt))
+        .ToListAsync();
+    return Results.Ok(logs);
 }).RequireAuthorization();
 
 app.Run();

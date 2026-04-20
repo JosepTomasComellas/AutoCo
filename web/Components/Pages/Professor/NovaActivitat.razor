@@ -25,6 +25,21 @@
             </CardHeaderContent>
         </MudCardHeader>
         <MudCardContent>
+            <!-- Selector de plantilla (opcional) -->
+            @if (_templates.Any())
+            {
+                <MudSelect T="int" Value="_templateId" Label="Des d'una plantilla (opcional)"
+                           Variant="Variant.Outlined" Class="mb-4"
+                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.ContentCopy"
+                           ValueChanged="OnTemplateChanged">
+                    <MudSelectItem T="int" Value="0">— Sense plantilla —</MudSelectItem>
+                    @foreach (var t in _templates)
+                    {
+                        <MudSelectItem T="int" Value="@t.Id">@t.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
             <MudSelect T="int" Value="_classId" Label="Classe" Variant="Variant.Outlined"
                        Class="mb-4" Adornment="Adornment.Start"
                        AdornmentIcon="@Icons.Material.Filled.Class"
@@ -78,20 +93,26 @@
 @code {
     [SupplyParameterFromQuery] public int ModuleId { get; set; }
 
-    private List<ClassDto>  _classes        = [];
-    private List<ModuleDto> _modules        = [];
-    private int    _classId       = 0;
-    private int    _moduleId      = 0;
-    private string _nom           = "";
-    private string _desc          = "";
-    private bool   _saving        = false;
+    private List<ClassDto>            _classes   = [];
+    private List<ModuleDto>           _modules   = [];
+    private List<ActivityTemplateDto> _templates = [];
+    private int    _classId        = 0;
+    private int    _moduleId       = 0;
+    private int    _templateId     = 0;
+    private string _nom            = "";
+    private string _desc           = "";
+    private bool   _saving         = false;
     private bool   _loadingModules = false;
 
     protected override async Task OnInitializedAsync()
     {
         if (!UserState.IsProfessor) return;
         Api.SetToken(UserState.Token!);
-        _classes = await Api.GetClassesAsync() ?? [];
+        var classTask    = Api.GetClassesAsync();
+        var templateTask = Api.GetTemplatesAsync();
+        await Task.WhenAll(classTask, templateTask);
+        _classes   = classTask.Result    ?? [];
+        _templates = templateTask.Result ?? [];
 
         if (ModuleId > 0)
         {
@@ -119,6 +140,16 @@
         Api.SetToken(UserState.Token!);
         _modules = await Api.GetModulesAsync(classId) ?? [];
         _loadingModules = false;
+    }
+
+    private void OnTemplateChanged(int templateId)
+    {
+        _templateId = templateId;
+        if (templateId <= 0) return;
+        var t = _templates.FirstOrDefault(x => x.Id == templateId);
+        if (t is null) return;
+        _nom  = t.Name;
+        _desc = t.Description ?? "";
     }
 
     private async Task CreateAsync()

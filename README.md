@@ -1,46 +1,58 @@
-# AutoCo — Sistema d'Avaluació entre Iguals
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.4.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
-
-![AutoCo — Visió general](Imatges/autoco-overview.svg)
 
 ---
 
 ## Funcionalitats
 
 ### Professor / Administrador
+
+**Gestió de l'estructura docent**
 - Gestió de **classes**, **alumnes** i **mòduls** (UF/MP), amb edició inline
 - **Avatars** d'alumne amb inicials i color per número de llista
 - **Mou alumnes** entre classes (elimina participació anterior i reassigna)
-- Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual des del tauler
-- **Criteris personalitzats** per activitat: cada activitat pot tenir la seva pròpia llista de criteris d'avaluació (afegir, reordenar, eliminar) o usar els globals
-- Configuració de **grups** per **arrossegar i deixar anar** (drag & drop): alumnes sense grup a l'esquerra, grups en 3 columnes a la dreta
-- Importació/exportació de grups per CSV
-- **Duplicació d'activitats** reutilitzant la configuració de grups i membres
-- **Duplicació creuada** d'activitats a una altra classe i mòdul
-- **Indicador de participació** en temps real a cada targeta d'activitat (polling cada 30 s)
-- **Recordatoris per correu** als alumnes que no han omplert l'avaluació (botó per activitat oberta)
-- **Desfer eliminació** — finestra de 5 s per cancel·lar l'eliminació d'activitats i alumnes
-- Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri (Autoaval. / Coaval.), nota global i barra de progrés de participació
-- **Gràfiques comparatives** per grup (auto vs. co-avaluació, desglossament per criteri)
-- **Exportació CSV** de resultats
-- **Exportació PDF / impressió** de la pàgina de resultats directament des del navegador
-- **Còpies de seguretat** del servidor: exportació/importació JSON de tota la base de dades
-- Enviament de **credencials per correu** als alumnes (SMTP configurable)
-- Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
 - **Exclusions per mòdul**: alumnes que no participen en un mòdul concret
-- **Filtre per mòdul** al tauler d'activitats
+- Enviament de **credencials per correu** als alumnes (SMTP configurable)
+- **Codis QR** per a cada classe: genera un QR que porta directament a la pàgina de login de l'alumne
+
+**Gestió d'activitats**
+- Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual des del tauler
+- **Criteris personalitzats** per activitat (afegir, reordenar, eliminar) o usar els globals
+- **Plantilles d'activitat**: desa configuració (nom, descripció, criteris) i reutilitza-la en noves activitats
+- Configuració de **grups** per **arrossegar i deixar anar** (drag & drop)
+- Importació/exportació de grups per CSV
+- **Duplicació d'activitats** reutilitzant la configuració de grups
+- **Duplicació creuada** d'activitats a una altra classe i mòdul
+- **Indicador de participació** en temps real a cada targeta (polling 30 s)
+- **Recordatoris per correu** als alumnes que no han omplert l'avaluació
+- **Notificació automàtica al professor** quan el 100% de l'activitat s'ha completat
+- **Desfer eliminació** — finestra de 5 s per cancel·lar eliminació d'activitats i alumnes
+- **Registre d'activitat** per cada activitat: qui ha obert, tancat o enviat avaluació i quan
+
+**Resultats i informes**
+- Taula de **resultats** amb capçalera fixa, puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell)
+- **Filtres avançats**: per grup i per rang de nota (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense coavaluació)
+- **Notes del professor** per alumne: camp editable inline a la taula de resultats
+- **Gràfiques comparatives** per grup (Auto vs. Co, desglossament per criteri) amb Chart.js
+- **Informe PDF individual per alumne**: pàgina optimitzada per a impressió/PDF amb dades, notes globals, detall per criteri i comentaris
+- **Exportació CSV** de resultats
+
+**Administració**
+- Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
+- **Còpies de seguretat**: exportació/importació JSON de tota la base de dades
 - **KPIs al tauler**: classes, mòduls, alumnes, activitats, obertes i grups
-- **Mode fosc** amb preferència desada al navegador
+- **Mode fosc** i **selector de tema de color** (6 opcions) amb preferències desades al navegador
 
 ### Alumne
-- Accés amb correu electrònic i contrasenya
+- Accés amb correu electrònic i contrasenya (o via codi QR de la classe)
 - Avaluació de tots els membres del grup (inclosa autoavaluació) per criteri
 - Puntuació amb **escala de 5 estrelles** mostrada com a lletra (E / D / C / B / A)
 - **Barra de progrés** d'avaluació completada en temps real (X/Y criteris puntuats)
-- Filtre d'activitats pendents al dashboard
 
-### Criteris d'avaluació globals (per defecte)
+---
+
+## Criteris d'avaluació globals (per defecte)
 
 | Clau | Descripció |
 |------|------------|
@@ -54,8 +66,8 @@ Cada activitat pot sobreescriure aquests criteris amb la seva pròpia llista per
 
 ### Escala de puntuació
 
-| Estrelles | Lletra | Valor numèric |
-|:---------:|:------:|:-------------:|
+| Estrelles | Lletra | Valor |
+|:---------:|:------:|:-----:|
 | ★☆☆☆☆ | E | 1 |
 | ★★☆☆☆ | D | 3.5 |
 | ★★★☆☆ | C | 5 |
@@ -70,22 +82,26 @@ Cada activitat pot sobreescriure aquests criteris amb la seva pròpia llista per
 AutoCo/
 ├── api/          # API REST — ASP.NET Core 9 Minimal API
 │   ├── Data/     # EF Core DbContext, models i seed
-│   ├── Services/ # Lògica de negoci
+│   │   └── Models/   # Professor, Class, Student, Module, Activity,
+│   │                 # Group, Evaluation, ProfessorNote,
+│   │                 # ActivityTemplate, ActivityLog...
+│   ├── Services/ # Auth, Class, Activity, Evaluation, Results, Email, Backup
 │   ├── Migrations/
 │   └── Dockerfile
 ├── web/          # Frontend — Blazor Server + MudBlazor
 │   ├── Components/
-│   │   ├── Pages/   # Alumne/, Professor/, Admin/, Auth/
-│   │   ├── Shared/  # Diàlegs i components reutilitzables
-│   │   └── Layout/
+│   │   ├── Pages/   # Alumne/, Professor/ (Dashboard, Resultats,
+│   │   │            #   Grafic, QrCodes, InformeAlumne...), Admin/, Auth/
+│   │   ├── Shared/  # ActivityCard, diàlegs reutilitzables
+│   │   └── Layout/  # MainLayout (tema de color, mode fosc)
 │   ├── Services/    # ApiClient, UserStateService
 │   ├── wwwroot/
-│   │   ├── css/site.css   # Estils globals + DnD + dark mode + print
-│   │   └── js/app.js      # Utilitats JS (download, dragover síncron)
+│   │   ├── css/site.css   # Estils globals, DnD, dark mode, print, informe PDF
+│   │   └── js/            # app.js (utilitats), charts.js (Chart.js interop)
 │   └── Dockerfile
-├── shared/       # DTOs compartits entre api i web
+├── shared/       # DTOs + AppVersion compartits entre api i web
 ├── nginx/        # Proxy invers amb SSL automàtic
-├── deploy/       # Script de generació del paquet de desplegament
+├── deploy/       # Scripts de desplegament (update.ps1, push-update.ps1)
 └── docker-compose.yml
 ```
 
@@ -103,29 +119,27 @@ AutoCo/
 
 ```
 Professor ──< Module ──< Activity ──< Group ──< GroupMember (Student)
-              │               └──< ActivityCriteria
-              │                            └──< Evaluation (Evaluator→Evaluated)
-              │                                        └──< EvaluationScore (per criteri)
+              │               ├──< ActivityCriteria
+              │               ├──< Evaluation ──< EvaluationScore
+              │               ├──< ProfessorNote (per alumne)
+              │               └──< ActivityLog (registre d'accions)
 Class ────────┘
-  └──< Student
-  └──< ModuleExclusion (alumnes exclosos d'un mòdul)
+  ├──< Student
+  └──< ModuleExclusion
+ActivityTemplate (per professor, criteris JSON)
 ```
-
-- Un `Module` pertany a una `Class` i a un `Professor`
-- Una `Activity` pertany a un `Module`
-- `ActivityCriteria` conté els criteris personalitzats; si no n'hi ha, s'usen els globals
-- Un alumne avalua tots els membres del seu grup (inclòs ell mateix — `IsSelf = true`)
 
 ---
 
 ## Tecnologies
 
-- **Backend:** C# / ASP.NET Core 9 · Entity Framework Core · SQL Server 2022
-- **Frontend:** Blazor Server · [MudBlazor](https://mudblazor.com/)
-- **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage` per a persistència de sessió (resisteix F5 sense perdre sessió)
-- **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació automàtica en modificar grups)
-- **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters · validació de valors de puntuació al backend
-- **Email:** SMTP configurable (Gmail, etc.) per enviar credencials i recordatoris
+- **Backend:** C# / ASP.NET Core 9 · Entity Framework Core 9 · SQL Server 2022
+- **Frontend:** Blazor Server · [MudBlazor 8.6](https://mudblazor.com/) · Chart.js 4
+- **QR:** [Net.Codecrete.QrCodeGenerator](https://github.com/manuelbl/QrCodeGenerator) (SVG pur, sense deps)
+- **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage`
+- **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació automàtica)
+- **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters
+- **Email:** MailKit + SMTP configurable (credencials, recordatoris, notificació de compleció)
 - **Desplegament:** Docker Compose · nginx (SSL/TLS auto-signat o certificat propi)
 
 ---
@@ -155,56 +169,27 @@ docker compose up --build
 
 Accedeix a **https://localhost** (accepta l'avís del certificat auto-signat).
 
-### Opció B — Servidor Linux (producció)
-
-**Requisits:** Windows amb PowerShell + accés SSH al servidor Linux amb Docker Engine >= 24.
-
-**1. Generar el paquet de desplegament** (Windows):
+### Opció B — Actualització del servidor (des de Windows)
 
 ```powershell
-# Des del directori arrel del projecte
-.\deploy\generar-deploy.ps1
+# Genera el paquet de fitxers a copiar
+.\deploy\update.ps1
 
-# O amb ruta personalitzada
-.\deploy\generar-deploy.ps1 -Dest "C:\Users\usuari\Desktop\autoco-deploy"
+# O envía directament al servidor via SSH (una sola comanda)
+.\deploy\push-update.ps1                  # requereix clau SSH configurada
+.\deploy\push-update.ps1 -ConfigurarClau  # primera vegada: instal·la la clau SSH
 ```
 
-Genera un directori `autoco-deploy-YYYYMMDD` amb tot el codi i els scripts d'instal·lació.
+El paquet preserva automàticament el `.env` i els certificats SSL del servidor.
 
-El script preserva automàticament:
-- El fitxer `.env` si ja existeix al destí o al directori arrel del projecte
-- Els certificats SSL (`nginx/ssl/server.crt` i `server.key`) si ja existeixen al directori de destí
-
-**2. Copiar al servidor:**
+### Comandes útils al servidor
 
 ```bash
-scp -r autoco-deploy-YYYYMMDD usuari@servidor:/opt/autoco
-```
-
-**3. Editar les variables d'entorn al servidor:**
-
-```bash
-nano /opt/autoco/.env
-```
-
-**4. Instal·lar:**
-
-```bash
-sudo bash /opt/autoco/install.sh
-```
-
-`install.sh` valida les variables crítiques, construeix les imatges i arrenca tots els contenidors.
-
-### Comandes útils
-
-```bash
-docker compose up           # Aixecar sense reconstruir
-docker compose up --build   # Reconstruir i aixecar
+docker compose up --build   # Reconstruir i aixecar (aplicar canvis)
 docker compose down         # Aturar (dades preservades)
 docker compose down -v      # Aturar i esborrar totes les dades
 docker compose logs -f      # Logs en temps real
-bash /opt/autoco/update.sh  # Actualitzar (reconstrueix imatges)
-bash /opt/autoco/backup.sh  # Backup manual de la BD
+bash /docker/AutoCo/backup.sh  # Backup manual de la BD
 ```
 
 ---
@@ -221,21 +206,21 @@ Copia `.env.example` a `.env` i ajusta els valors:
 | `ADMIN_EMAIL` | Correu de l'administrador inicial | ✓ |
 | `ADMIN_PASSWORD` | Contrasenya de l'administrador inicial | ✓ |
 | `ADMIN_NOM` | Nom de l'administrador | ✓ |
-| `ADMIN_COGNOMS` | Cognoms de l'administrador | ✓ |
+| `ADMIN_COGNOMS` | Cognoms de l'administrador | |
 | `SMTP_HOST` | Servidor SMTP (p.ex. `smtp.gmail.com`) | |
 | `SMTP_PORT` | Port SMTP (p.ex. `587`) | |
 | `SMTP_USERNAME` | Usuari SMTP | |
 | `SMTP_PASSWORD` | Contrasenya SMTP (o app password) | |
 | `SMTP_FROM_ADDRESS` | Adreça remitent dels correus | |
 | `SMTP_FROM_NAME` | Nom remitent dels correus | |
-| `APP_WEB_URL` | URL pública de l'aplicació (p.ex. `https://autoco.centre.cat`) | |
+| `APP_WEB_URL` | URL pública (p.ex. `https://autoco.centre.cat`) — per als QR i links dels correus | |
 
-> El SMTP és opcional. Si no es configura, les funcions d'enviament de credencials i recordatoris per correu quedaran desactivades però la resta de l'aplicació funciona amb normalitat.
+> SMTP és opcional. Si no es configura, les funcions d'email queden desactivades però l'aplicació funciona amb normalitat.
 
 ### SSL
 
 - **Sense certificat:** nginx genera automàticament un certificat auto-signat vàlid 10 anys.
-- **Amb certificat propi:** col·loca `server.crt` i `server.key` al directori `nginx/ssl/` abans d'arrencar.
+- **Amb certificat propi:** col·loca `server.crt` i `server.key` a `nginx/ssl/` abans d'arrencar.
 
 ---
 
@@ -258,16 +243,25 @@ GET/POST/DELETE    /api/modules/{id}/exclusions       # Exclusions per mòdul
 
 GET/POST/PUT/DELETE /api/activities                   # Gestió activitats
 POST /api/activities/{id}/toggle                      # Obrir/tancar activitat
-POST /api/activities/{id}/duplicate                   # Duplicar activitat (mateixa classe)
+POST /api/activities/{id}/duplicate                   # Duplicar (mateixa classe)
 POST /api/activities/{id}/duplicate-cross             # Duplicar a una altra classe
-GET  /api/activities/{id}/participation               # Estat de participació (submitted/total)
-POST /api/activities/{id}/remind                      # Enviar recordatoris als pendents
-GET  /api/activities/{id}/criteria                    # Obtenir criteris de l'activitat
+GET  /api/activities/{id}/participation               # Estat de participació
+POST /api/activities/{id}/remind                      # Enviar recordatoris
+GET  /api/activities/{id}/criteria                    # Obtenir criteris
 PUT  /api/activities/{id}/criteria                    # Desar criteris personalitzats
 GET  /api/activities/{id}/groups/export               # Exportar grups (CSV)
 POST /api/activities/{id}/groups/import               # Importar grups (CSV)
 GET/POST/DELETE /api/activities/{id}/groups           # Gestió grups
 POST/DELETE /api/activities/{id}/groups/{gid}/members # Membres de grup
+GET  /api/activities/{id}/log                         # Registre d'activitat
+
+GET  /api/notes/{activityId}                          # Notes del professor per activitat
+GET  /api/notes/{activityId}/{studentId}              # Nota d'un alumne concret
+PUT  /api/notes/{activityId}/{studentId}              # Desar nota
+
+GET  /api/templates                                   # Llistar plantilles del professor
+POST /api/templates                                   # Crear plantilla
+DELETE /api/templates/{id}                            # Eliminar plantilla
 
 GET  /api/evaluations/{activityId}                    # Formulari d'avaluació (alumne)
 POST /api/evaluations/{activityId}                    # Guardar avaluació
@@ -277,11 +271,11 @@ GET  /api/results/{activityId}                        # Resultats (professor)
 GET  /api/results/{activityId}/chart                  # Dades gràfica
 GET  /api/results/{activityId}/csv                    # Exportar CSV
 
-GET  /api/admin/backup/export                         # Exportar backup JSON
-POST /api/admin/backup/import                         # Importar backup JSON
 GET/POST /api/admin/backup/files                      # Backups al servidor
 GET/DELETE /api/admin/backup/files/{name}             # Descarregar/eliminar backup
-POST /api/admin/backup/files/{name}/restore           # Restaurar backup del servidor
+POST /api/admin/backup/files/{name}/restore           # Restaurar backup
+GET  /api/admin/backup/export                         # Exportar backup JSON complet
+POST /api/admin/backup/import                         # Importar backup JSON
 
 GET  /api/health                                      # Estat DB + Redis
 GET  /api/criteria                                    # Llista de criteris globals

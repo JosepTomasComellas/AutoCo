@@ -1,0 +1,103 @@
+@page "/professor/qr"
+@using Net.Codecrete.QrCodeGenerator
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+
+<PageTitle>Codis QR – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/classes"
+               Variant="Variant.Text">Classes</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.QrCode" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">Codis QR d'accés per a alumnes</MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Print"
+               OnClick='() => Nav.NavigateTo("javascript:window.print()")'>
+        Imprimir tots
+    </MudButton>
+</MudStack>
+
+<MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
+    Cada codi QR redirigeix l'alumne directament a la pàgina d'inici de sessió de la seva classe.
+    Imprimiu i enganxeu-los a la classe o compartiu-los digitalment.
+</MudAlert>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (!_classes.Any())
+{
+    <MudAlert Severity="Severity.Info">No hi ha classes disponibles.</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3">
+        @foreach (var c in _classes)
+        {
+            var qrSvg = GenerateQr(c.Id);
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Elevation="3" Class="pa-4 text-center" Style="border-radius:12px">
+                    <!-- SVG del QR -->
+                    <div style="display:inline-block;border:4px solid white;border-radius:8px;
+                                box-shadow:0 2px 8px rgba(0,0,0,.15);background:white;padding:4px">
+                        @((MarkupString)qrSvg)
+                    </div>
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:700">@c.Name</MudText>
+                    @if (c.AcademicYear is not null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@c.AcademicYear</MudText>
+                    }
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        @c.NumStudents alumnes
+                    </MudText>
+                    <MudDivider Class="my-2" />
+                    <MudText Typo="Typo.caption" Style="word-break:break-all;color:var(--mud-palette-text-disabled);font-size:.65rem">
+                        @GetLoginUrl(c.Id)
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        }
+    </MudGrid>
+}
+
+@code {
+    private List<ClassDto> _classes = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+        _classes = await Api.GetClassesAsync() ?? [];
+        _loading = false;
+    }
+
+    private string GetLoginUrl(int classId)
+    {
+        var baseUri = Nav.BaseUri.TrimEnd('/');
+        return $"{baseUri}/auth/login-alumne?classId={classId}";
+    }
+
+    private string GenerateQr(int classId)
+    {
+        try
+        {
+            var url = GetLoginUrl(classId);
+            var qr  = QrCode.EncodeText(url, QrCode.Ecc.Medium);
+            // border=3, returns full SVG document; adjust size with width/height attrs
+            var svg = qr.ToSvgString(3);
+            // Injectar width/height fixos per a la targeta (el SVG ja té viewBox)
+            svg = svg.Replace("<svg ", "<svg width=\"180\" height=\"180\" ");
+            return svg;
+        }
+        catch
+        {
+            return "<p>Error generant QR</p>";
+        }
+    }
+}

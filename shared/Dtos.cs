@@ -172,6 +172,18 @@ public record ImportResult(
     int Professors, int Classes, int Students,
     int Modules, int Activities, int Evaluations);
 
+// ─── Notes del professor per alumne ──────────────────────────────────────────
+public record ProfessorNoteDto(int StudentId, string Note, DateTime UpdatedAt);
+public record SaveNoteRequest(string Note);
+
+// ─── Plantilles d'activitat ───────────────────────────────────────────────────
+public record ActivityTemplateDto(int Id, string Name, string? Description,
+    List<CriterionItem> Criteria, DateTime CreatedAt);
+public record CreateTemplateRequest(string Name, string? Description, List<CriterionItem> Criteria);
+
+// ─── Registre d'activitat ─────────────────────────────────────────────────────
+public record ActivityLogDto(int Id, string Action, string? ActorName, string? Details, DateTime CreatedAt);
+
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 public record StudentDashboardDto(List<StudentActivityDto> Activities);
 

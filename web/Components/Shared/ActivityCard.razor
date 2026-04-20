@@ -6,6 +6,7 @@
 @inject NavigationManager Nav
 
 <MudCard Elevation="@(Act.IsOpen ? 2 : 1)"
+         Class="activity-card"
          Style="@(Act.IsOpen ? "" : "background:#fff5f5;border:1px solid #f5c6c6")">
     <MudCardHeader>
         <CardHeaderContent>
@@ -87,6 +88,9 @@
         <MudIconButton Icon="@Icons.Material.Filled.Tune" Color="Color.Default"
                        title="Gestionar criteris d'avaluació"
                        OnClick="ManageCriteriaAsync" />
+        <MudIconButton Icon="@Icons.Material.Filled.BookmarkAdd" Color="Color.Default"
+                       title="Desar com a plantilla"
+                       OnClick="SaveAsTemplateAsync" />
         @if (Act.IsOpen)
         {
             <MudIconButton Icon="@Icons.Material.Filled.NotificationsActive"
@@ -246,6 +250,20 @@
         };
         var opts = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
         await Dialog.ShowAsync<CriteriaDialog>("Criteris d'avaluació", parameters, opts);
+    }
+
+    private async Task SaveAsTemplateAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        // Llegir els criteris actuals de l'activitat
+        var criteria = await Api.GetActivityCriteriaAsync(Act.Id) ?? [];
+        var items    = criteria.Select(c => new CriterionItem(c.Key, c.Label)).ToList();
+        var req      = new CreateTemplateRequest(Act.Name, Act.Description, items);
+        var saved    = await Api.CreateTemplateAsync(req);
+        if (saved is not null)
+            Snackbar.Add($"Plantilla «{saved.Name}» desada.", Severity.Success);
+        else
+            Snackbar.Add("Error en desar la plantilla.", Severity.Error);
     }
 
     private async Task SendRemindersAsync()

@@ -1,0 +1,228 @@
+@page "/professor/informe/{ActivityId:int}/{StudentId:int}"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Informe alumne – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<!-- Barra d'acció (s'oculta en imprimir) -->
+<div class="no-print">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+        <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text"
+                   OnClick='() => Nav.NavigateTo($"/professor/resultats/{ActivityId}")'>
+            Resultats
+        </MudButton>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Print"
+                   OnClick='async () => await JS.InvokeVoidAsync("window.print")'>
+            Imprimir / Desar PDF
+        </MudButton>
+    </MudStack>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_student is null || _results is null)
+{
+    <MudAlert Severity="Severity.Error">Alumne o activitat no trobats.</MudAlert>
+}
+else
+{
+    <!-- ═══ INFORME IMPRIMIBLE ═══ -->
+    <div class="informe-alumne">
+
+        <!-- Capçalera -->
+        <div class="informe-header">
+            <div class="informe-logo-area">
+                <img src="/images/logo2.png" height="40" alt="AutoCo" />
+            </div>
+            <div class="informe-titol-area">
+                <div class="informe-titol">Informe d'Avaluació entre Iguals</div>
+                <div class="informe-subtitol">@_results.Activity.ClassName · @_results.Activity.ModuleName</div>
+            </div>
+            <div class="informe-data-area">
+                <div>@DateTime.Now.ToString("dd/MM/yyyy")</div>
+                <div style="font-size:.75rem;opacity:.6">AutoCo v@(AppVersion.Current)</div>
+            </div>
+        </div>
+
+        <!-- Dades de l'alumne -->
+        <div class="informe-section">
+            <table class="informe-dades">
+                <tr>
+                    <td class="label">Alumne/a</td>
+                    <td class="valor"><strong>@_student.Cognoms, @_student.Nom</strong></td>
+                    <td class="label">Activitat</td>
+                    <td class="valor"><strong>@_results.Activity.Name</strong></td>
+                </tr>
+                <tr>
+                    <td class="label">Grup</td>
+                    <td class="valor">@_student.GroupName</td>
+                    <td class="label">Núm. llista</td>
+                    <td class="valor">@_student.NumLlista</td>
+                </tr>
+                <tr>
+                    <td class="label">Professor/a</td>
+                    <td class="valor">@_results.Activity.ProfessorName</td>
+                    <td class="label">Avaluadors</td>
+                    <td class="valor">@_student.NumPeerEvaluators companys</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Resum de notes globals -->
+        <div class="informe-section">
+            <div class="informe-section-title">Resum global</div>
+            <div class="informe-globals">
+                <div class="informe-global-box @(GlobalCss(_student.AutAvgGlobal))">
+                    <div class="global-label">Autoavaluació</div>
+                    <div class="global-nota">@(_student.AutAvgGlobal.HasValue ? _student.AutAvgGlobal.Value.ToString("F1") : "—")</div>
+                    <div class="global-max">/ 10</div>
+                </div>
+                <div class="informe-global-box @(GlobalCss(_student.AvgGlobal))">
+                    <div class="global-label">Coavaluació (mitjana)</div>
+                    <div class="global-nota">@(_student.AvgGlobal.HasValue ? _student.AvgGlobal.Value.ToString("F1") : "—")</div>
+                    <div class="global-max">/ 10</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detall per criteri -->
+        <div class="informe-section">
+            <div class="informe-section-title">Puntuació per criteri</div>
+            <table class="informe-taula">
+                <thead>
+                    <tr>
+                        <th class="col-criteri">Criteri</th>
+                        <th class="col-nota">Autoaval.</th>
+                        <th class="col-nota">Coaval. (mitj.)</th>
+                        <th class="col-barra">Visió gràfica</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in _results.Criteria)
+                    {
+                        var auto = _student.SelfScores.TryGetValue(c.Key, out var av) && av.HasValue ? av : null;
+                        var co   = _student.AvgCoScores.TryGetValue(c.Key, out var cv) && cv.HasValue ? cv : null;
+                        <tr>
+                            <td class="col-criteri">@c.Label</td>
+                            <td class="col-nota @(auto.HasValue ? GradeClass(auto.Value) : "grade-none")">
+                                @(auto.HasValue ? auto.Value.ToString("G") : "—")
+                            </td>
+                            <td class="col-nota @(co.HasValue ? GradeClass(co.Value) : "grade-none")">
+                                @(co.HasValue ? co.Value.ToString("F1") : "—")
+                            </td>
+                            <td class="col-barra">
+                                @if (auto.HasValue)
+                                {
+                                    <div class="barra-wrap">
+                                        <div class="barra auto" style="width:@(auto.Value * 10)%"></div>
+                                        @if (co.HasValue)
+                                        {
+                                            <div class="barra co" style="width:@(co.Value * 10)%;opacity:.5"></div>
+                                        }
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Comentari de l'alumne -->
+        @if (!string.IsNullOrWhiteSpace(_student.SelfComment))
+        {
+            <div class="informe-section">
+                <div class="informe-section-title">Comentari de l'alumne/a</div>
+                <div class="informe-comentari">@_student.SelfComment</div>
+            </div>
+        }
+
+        <!-- Nota del professor -->
+        @if (!string.IsNullOrWhiteSpace(_professorNote))
+        {
+            <div class="informe-section">
+                <div class="informe-section-title">Nota del professor/a</div>
+                <div class="informe-comentari informe-nota-prof">@_professorNote</div>
+            </div>
+        }
+
+        <!-- Detall de coavaluadors -->
+        @if (_student.PeerEvaluations.Any())
+        {
+            <div class="informe-section">
+                <div class="informe-section-title">Detall per avaluador</div>
+                <table class="informe-taula">
+                    <thead>
+                        <tr>
+                            <th>Avaluador/a</th>
+                            @foreach (var c in _results.Criteria)
+                            {
+                                <th class="col-nota">@c.Label</th>
+                            }
+                            <th>Comentari</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var peer in _student.PeerEvaluations)
+                        {
+                            <tr>
+                                <td>@peer.EvaluatorName</td>
+                                @foreach (var c in _results.Criteria)
+                                {
+                                    var v = peer.Scores.TryGetValue(c.Key, out var sv) ? (double?)sv : null;
+                                    <td class="col-nota @(v.HasValue ? GradeClass(v.Value) : "grade-none")">
+                                        @(v.HasValue ? v.Value.ToString("G") : "—")
+                                    </td>
+                                }
+                                <td>@peer.Comment</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <!-- Peu de pàgina -->
+        <div class="informe-peu">
+            Salesians de Sarrià · Departament d'Informàtica · AutoCo Avaluació v@(AppVersion.Current)
+        </div>
+
+    </div>
+}
+
+@code {
+    [Parameter] public int ActivityId { get; set; }
+    [Parameter] public int StudentId  { get; set; }
+
+    private ActivityResultsDto? _results       = null;
+    private StudentResultDto?   _student       = null;
+    private string              _professorNote = "";
+    private bool                _loading       = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+        var resultsTask = Api.GetResultsAsync(ActivityId);
+        var noteTask    = Api.GetNotesForActivityAsync(ActivityId);
+        await Task.WhenAll(resultsTask, noteTask);
+        _results = resultsTask.Result;
+        _student = _results?.Students.FirstOrDefault(s => s.StudentId == StudentId);
+        var note = (noteTask.Result ?? []).FirstOrDefault(n => n.StudentId == StudentId);
+        _professorNote = note?.Note ?? "";
+        _loading = false;
+    }
+
+    private static string GradeClass(double v) =>
+        v >= 8 ? "grade-high" : v >= 5 ? "grade-mid" : "grade-low";
+
+    private static string GlobalCss(double? v) =>
+        v is null ? "grade-none" : v >= 8 ? "global-high" : v >= 5 ? "global-mid" : "global-low";
+}

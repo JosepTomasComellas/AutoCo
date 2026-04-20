@@ -8,7 +8,8 @@ namespace AutoCo.Api.Services;
 public interface IEvaluationService
 {
     Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId);
-    Task<bool>               SaveAsync(int activityId, int studentId, SaveEvaluationsRequest req);
+    Task<bool>               SaveAsync(int activityId, int studentId, SaveEvaluationsRequest req,
+                                       IEmailService? email = null);
 }
 
 public class EvaluationService(AppDbContext db) : IEvaluationService
@@ -69,7 +70,8 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
     // Valors vàlids de puntuació (1★=E, 2★=D, 3★=C, 4★=B, 5★=A)
     private static readonly HashSet<double> ValidScores = [1.0, 3.5, 5.0, 7.5, 10.0];
 
-    public async Task<bool> SaveAsync(int activityId, int studentId, SaveEvaluationsRequest req)
+    public async Task<bool> SaveAsync(int activityId, int studentId, SaveEvaluationsRequest req,
+                                       IEmailService? email = null)
     {
         var activity = await db.Activities.FindAsync(activityId);
         if (activity is null || !activity.IsOpen) return false;
@@ -134,6 +136,60 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
 
             await db.SaveChangesAsync();
             await tx.CommitAsync();
+
+            // ── Log de l'avaluació enviada ─────────────────────────────────
+            try
+            {
+                var student = await db.Students.FindAsync(studentId);
+                db.ActivityLogs.Add(new ActivityLog
+                {
+                    ActivityId   = activityId,
+                    ActivityName = activity.Name,
+                    ActorName    = student?.NomComplet,
+                    Action       = "evaluated",
+                    Details      = $"Alumne del grup {group.Name}",
+                    CreatedAt    = DateTime.UtcNow
+                });
+                await db.SaveChangesAsync();
+            }
+            catch { /* el log és no-crític */ }
+
+            // ── Notificació si l'activitat és 100% completa ───────────────
+            if (email?.IsEnabled == true)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Comptar quants membres de grups han enviat totes les avaluacions
+                        var allGroupMembers = await db.GroupMembers
+                            .Where(gm => gm.Group.ActivityId == activityId)
+                            .Select(gm => gm.StudentId)
+                            .Distinct()
+                            .ToListAsync();
+
+                        var submitted = await db.Evaluations
+                            .Where(e => e.ActivityId == activityId && e.IsSelf)
+                            .Select(e => e.EvaluatorId)
+                            .Distinct()
+                            .CountAsync();
+
+                        if (submitted >= allGroupMembers.Count && allGroupMembers.Count > 0)
+                        {
+                            var mod = await db.Modules
+                                .Include(m => m.Professor)
+                                .Include(m => m.Class)
+                                .FirstOrDefaultAsync(m => m.Activities.Any(a => a.Id == activityId));
+                            if (mod?.Professor is not null)
+                                await email.SendActivityCompletedAsync(
+                                    mod.Professor.Email, mod.Professor.NomComplet,
+                                    activity.Name, mod.Class.Name, allGroupMembers.Count);
+                        }
+                    }
+                    catch { /* notificació no-crítica */ }
+                });
+            }
+
             return true;
         }
         catch

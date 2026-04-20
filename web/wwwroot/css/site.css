@@ -159,6 +159,24 @@ html, body {
     border-color: #92400e;
 }
 
+/* ── Targetes d'activitat: efecte hover ──────────────────────────────────── */
+.activity-card {
+    transition: transform .15s ease, box-shadow .15s ease;
+}
+.activity-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0,0,0,.14) !important;
+}
+.app-dark .activity-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,.45) !important;
+}
+
+/* ── Taula resultats: color per rang de nota ─────────────────────────────── */
+.grade-high { color: #16a34a; font-weight: 700 }   /* ≥ 8   verd    */
+.grade-mid  { color: #ca8a04; font-weight: 600 }   /* 5–7.9 taronja */
+.grade-low  { color: #dc2626; font-weight: 700 }   /* < 5   vermell */
+.grade-none { color: #94a3b8 }                     /* sense dades   */
+
 /* ── Impressió / Exportació PDF ─────────────────────────────────────────── */
 @media print {
     /* Oculta elements de navegació */
@@ -183,6 +201,110 @@ html, body {
     tr { page-break-inside: avoid; }
     /* Expansió de tots els panels */
     .mud-collapse-container { display: block !important; height: auto !important; }
+}
+
+/* ── Informe PDF per alumne ──────────────────────────────────────────────── */
+.informe-alumne {
+    max-width: 860px;
+    margin: 0 auto;
+    font-family: 'Roboto', sans-serif;
+    font-size: .88rem;
+    color: #1e293b;
+}
+.informe-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: #1e293b;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 10px 10px 0 0;
+    margin-bottom: 0;
+}
+.informe-logo-area  { flex-shrink: 0; }
+.informe-titol-area { flex: 1 }
+.informe-titol      { font-size: 1.1rem; font-weight: 700 }
+.informe-subtitol   { font-size: .8rem; opacity: .65; margin-top: 2px }
+.informe-data-area  { text-align: right; font-size: .8rem; opacity: .7 }
+
+.informe-section {
+    border: 1px solid #e2e8f0;
+    border-top: none;
+    padding: 1rem 1.5rem;
+    background: white;
+}
+.informe-section:last-of-type { border-radius: 0 0 10px 10px }
+.informe-section-title {
+    font-weight: 700;
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #64748b;
+    margin-bottom: .6rem;
+}
+
+.informe-dades { width: 100%; border-collapse: collapse }
+.informe-dades td { padding: .2rem .5rem .2rem 0; vertical-align: top }
+.informe-dades td.label { color: #64748b; font-size: .8rem; width: 90px }
+.informe-dades td.valor { width: 30% }
+
+.informe-globals { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: .25rem }
+.informe-global-box {
+    flex: 1; min-width: 160px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: .75rem 1rem;
+    text-align: center;
+}
+.informe-global-box .global-label { font-size: .75rem; color: #64748b; margin-bottom: .25rem }
+.informe-global-box .global-nota  { font-size: 2rem; font-weight: 800; line-height: 1 }
+.informe-global-box .global-max   { font-size: .75rem; color: #94a3b8 }
+.informe-global-box.global-high { border-color: #16a34a }
+.informe-global-box.global-high .global-nota { color: #16a34a }
+.informe-global-box.global-mid  { border-color: #ca8a04 }
+.informe-global-box.global-mid  .global-nota { color: #ca8a04 }
+.informe-global-box.global-low  { border-color: #dc2626 }
+.informe-global-box.global-low  .global-nota { color: #dc2626 }
+
+.informe-taula { width: 100%; border-collapse: collapse; font-size: .83rem }
+.informe-taula th { background: #f1f5f9; font-weight: 600; padding: .4rem .5rem; text-align: left; border-bottom: 2px solid #e2e8f0 }
+.informe-taula td { padding: .35rem .5rem; border-bottom: 1px solid #f1f5f9 }
+.informe-taula tr:last-child td { border-bottom: none }
+.col-criteri { min-width: 160px }
+.col-nota    { text-align: center; width: 80px; font-weight: 600 }
+.col-barra   { width: 200px; padding-left: 1rem }
+
+.barra-wrap { position: relative; height: 14px; background: #f1f5f9; border-radius: 7px; overflow: hidden }
+.barra { position: absolute; top: 0; left: 0; height: 100%; border-radius: 7px }
+.barra.auto { background: #CC0000; z-index: 2 }
+.barra.co   { background: #1e293b; z-index: 1 }
+
+.informe-comentari {
+    background: #f8fafc;
+    border-left: 3px solid #cbd5e1;
+    padding: .5rem .75rem;
+    border-radius: 0 6px 6px 0;
+    font-style: italic;
+    color: #475569;
+}
+.informe-nota-prof { border-left-color: #CC0000 }
+
+.informe-peu {
+    text-align: center;
+    font-size: .72rem;
+    color: #94a3b8;
+    margin-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+@media print {
+    .no-print { display: none !important }
+    .mud-appbar, .mud-main-content > .mud-container > *:first-child { display: none !important }
+    .mud-main-content { padding: 0 !important; background: white !important }
+    .informe-alumne { max-width: 100% }
+    .informe-header { border-radius: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+    .informe-global-box { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+    .barra { -webkit-print-color-adjust: exact; print-color-adjust: exact }
 }
 
 /* ── Scroll horitzontal en taules (mòbil) ───────────────────────────────── */

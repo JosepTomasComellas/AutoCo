@@ -235,6 +235,30 @@ public class ApiClient
         return resp?.TryGetProperty("count", out var c) == true ? c.GetInt32() : 0;
     }
 
+    // ── Notes professor ───────────────────────────────────────────────────────
+
+    public Task<List<ProfessorNoteDto>?> GetNotesForActivityAsync(int activityId) =>
+        GetAsync<List<ProfessorNoteDto>>($"/api/notes/{activityId}");
+
+    public Task<ProfessorNoteDto?> SaveNoteAsync(int activityId, int studentId, string note) =>
+        PutAsync<ProfessorNoteDto>($"/api/notes/{activityId}/{studentId}", new SaveNoteRequest(note));
+
+    // ── Plantilles ────────────────────────────────────────────────────────────
+
+    public Task<List<ActivityTemplateDto>?> GetTemplatesAsync() =>
+        GetAsync<List<ActivityTemplateDto>>("/api/templates");
+
+    public Task<ActivityTemplateDto?> CreateTemplateAsync(CreateTemplateRequest req) =>
+        PostAsync<ActivityTemplateDto>("/api/templates", req);
+
+    public Task<bool> DeleteTemplateAsync(int id) =>
+        DeleteAsync($"/api/templates/{id}");
+
+    // ── Registre d'activitat ──────────────────────────────────────────────────
+
+    public Task<List<ActivityLogDto>?> GetActivityLogAsync(int activityId) =>
+        GetAsync<List<ActivityLogDto>>($"/api/activities/{activityId}/log");
+
     // ── Backup / Restore (admin) ──────────────────────────────────────────────
 
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()

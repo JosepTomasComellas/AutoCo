@@ -16,6 +16,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Evaluation>          Evaluations          => Set<Evaluation>();
     public DbSet<EvaluationScore>     EvaluationScores     => Set<EvaluationScore>();
     public DbSet<ActivityCriterion>   ActivityCriteria     => Set<ActivityCriterion>();
+    public DbSet<ProfessorNote>       ProfessorNotes       => Set<ProfessorNote>();
+    public DbSet<ActivityTemplate>    ActivityTemplates    => Set<ActivityTemplate>();
+    public DbSet<ActivityLog>         ActivityLogs         => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -125,6 +128,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(ac => new { ac.ActivityId, ac.Key }).IsUnique();
             e.Property(ac => ac.Key).HasMaxLength(50);
             e.Property(ac => ac.Label).HasMaxLength(200);
+        });
+
+        b.Entity<ProfessorNote>(e => {
+            e.HasOne(n => n.Activity)
+             .WithMany()
+             .HasForeignKey(n => n.ActivityId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(n => n.Student)
+             .WithMany()
+             .HasForeignKey(n => n.StudentId)
+             .OnDelete(DeleteBehavior.NoAction);
+            e.HasIndex(n => new { n.ActivityId, n.StudentId }).IsUnique();
+        });
+
+        b.Entity<ActivityTemplate>(e => {
+            e.Property(t => t.Name).HasMaxLength(300);
+            e.HasIndex(t => t.ProfessorId);
+        });
+
+        b.Entity<ActivityLog>(e => {
+            // Sense FK — el log es preserva si l'activitat s'esborra
+            e.HasIndex(l => l.ActivityId);
+            e.Property(l => l.Action).HasMaxLength(50);
+            e.Property(l => l.ActivityName).HasMaxLength(300);
+            e.Property(l => l.ActorName).HasMaxLength(300);
         });
     }
 }
