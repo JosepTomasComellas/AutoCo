@@ -80,9 +80,20 @@ else
                         }
                         else
                         {
-                            <MudButton Variant="Variant.Filled" Disabled="true">
-                                Activitat tancada
-                            </MudButton>
+                            @if (done)
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle"
+                                         Color="Color.Success" Size="Size.Small">
+                                    Completada
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.Cancel"
+                                         Color="Color.Default" Size="Size.Small">
+                                    No completada
+                                </MudChip>
+                            }
                         }
                     </MudCardActions>
                 </MudCard>

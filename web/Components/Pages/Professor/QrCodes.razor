@@ -3,6 +3,7 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>Codis QR – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
@@ -15,7 +16,7 @@
     <MudText Typo="Typo.h5" Style="font-weight:700">Codis QR d'accés per a alumnes</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Print"
-               OnClick='() => Nav.NavigateTo("javascript:window.print()")'>
+               OnClick='async () => await JS.InvokeVoidAsync("window.print")'>
         Imprimir tots
     </MudButton>
 </MudStack>

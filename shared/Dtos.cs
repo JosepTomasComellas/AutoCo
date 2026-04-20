@@ -79,7 +79,8 @@ public record ParticipationDto(int ActivityId, int Submitted, int Total);
 public record ReminderResult(int Sent, int Skipped, bool EmailDisabled);
 
 // ─── Grups ───────────────────────────────────────────────────────────────────
-public record GroupDto(int Id, int ActivityId, string Name, List<StudentDto> Members);
+public record GroupDto(int Id, int ActivityId, string Name, List<StudentDto> Members, int OrderIndex = 0);
+public record ReorderGroupsRequest(List<int> OrderedGroupIds);
 public record CreateGroupRequest(string Name);
 public record AddMemberRequest(int StudentId);
 
@@ -176,9 +177,16 @@ public record ImportResult(
 public record ProfessorNoteDto(int StudentId, string Note, DateTime UpdatedAt);
 public record SaveNoteRequest(string Note);
 
+// ─── Perfil professor (canvi propi) ──────────────────────────────────────────
+public record UpdateOwnProfileRequest(string Nom, string Cognoms, string? CurrentPassword, string? NewPassword);
+
+// ─── Reset de contrasenya (OTP per email) ────────────────────────────────────
+public record PasswordResetRequestDto(string Email);
+public record PasswordResetConfirmDto(string Email, string Code, string NewPassword);
+
 // ─── Plantilles d'activitat ───────────────────────────────────────────────────
 public record ActivityTemplateDto(int Id, string Name, string? Description,
-    List<CriterionItem> Criteria, DateTime CreatedAt);
+    List<CriterionItem> Criteria, DateTime CreatedAt, string? ProfessorName = null);
 public record CreateTemplateRequest(string Name, string? Description, List<CriterionItem> Criteria);
 
 // ─── Registre d'activitat ─────────────────────────────────────────────────────

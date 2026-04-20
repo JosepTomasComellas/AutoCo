@@ -21,6 +21,11 @@
     <MudSpacer />
     @if (_activity is not null)
     {
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Tune"
+                   OnClick="() => _showCriteria = !_showCriteria">
+            Criteris
+        </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Download"
                    OnClick="ExportGroupsAsync">
@@ -33,6 +38,54 @@
         </MudButton>
     }
 </MudStack>
+
+@if (_showCriteria)
+{
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>Criteris d'avaluació</strong></MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
+            Personalitza els criteris d'aquesta activitat. Si no n'hi ha, s'usen els globals per defecte.
+        </MudText>
+        @foreach (var (item, idx) in _criteriaItems.Select((x, i) => (x, i)))
+        {
+            var capturedIdx = idx;
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                <MudTextField Value="item.Label"
+                              ValueChanged='(string v) => _criteriaItems[capturedIdx] = new CriterionItem(_criteriaItems[capturedIdx].Key, v)'
+                              Label="@($"Criteri {capturedIdx + 1}")"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="flex:1" Immediate="true" />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                               Disabled="idx == 0"
+                               OnClick="() => MoveCriterion(idx, -1)" />
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                               Disabled="idx == _criteriaItems.Count - 1"
+                               OnClick="() => MoveCriterion(idx, 1)" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                               Color="Color.Error"
+                               Disabled="_criteriaItems.Count <= 1"
+                               OnClick="() => _criteriaItems.RemoveAt(idx)" />
+            </MudStack>
+        }
+        <MudStack Row="true" Spacing="2" Class="mt-3">
+            <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick='() => _criteriaItems.Add(new CriterionItem("criteri" + (_criteriaItems.Count+1), "Nou criteri"))'>
+                Afegir criteri
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Save"
+                       OnClick="SaveCriteriaAsync" Disabled="_savingCriteria">
+                @if (_savingCriteria) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                Desar criteris
+            </MudButton>
+            <MudButton Variant="Variant.Text" Size="Size.Small"
+                       OnClick="ResetCriteriaToDefaultAsync">
+                Restablir globals
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+}
 
 @if (_showImport)
 {
@@ -146,6 +199,13 @@
                                  Style="height:20px;font-size:.7rem">
                             @g.Members.Count
                         </MudChip>
+                        @{ var gidx = _groups.IndexOf(g); }
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                                       Disabled="gidx <= 0" title="Pujar grup"
+                                       OnClick="() => MoveGroupAsync(gidx, -1)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                                       Disabled="gidx >= _groups.Count - 1" title="Baixar grup"
+                                       OnClick="() => MoveGroupAsync(gidx, 1)" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
                                        Color="Color.Error" title="Eliminar grup"
                                        OnClick="() => DeleteGroupAsync(g)" />
@@ -199,6 +259,13 @@
     private string? _importContent  = null;
     private string? _importFileName = null;
 
+    // ── Criteris inline ──────────────────────────────────────────────────────
+    private bool _showCriteria  = false;
+    private bool _savingCriteria = false;
+    private List<CriterionItem> _criteriaItems = [];
+
+    // ── Reordenació de grups ─────────────────────────────────────────────────
+
     // ── Estat drag & drop ────────────────────────────────────────────────────
     private int?  _draggingStudentId  = null;
     private int?  _draggingFromGroupId = null;  // null = ve de "sense grup"
@@ -230,6 +297,74 @@
             .Where(s => !assignedIds.Contains(s.Id) && !excludedIds.Contains(s.Id))
             .OrderBy(s => s.NumLlista)
             .ToList();
+
+        await LoadCriteriaAsync();
+    }
+
+    private async Task LoadCriteriaAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var criteria = await Api.GetActivityCriteriaAsync(ActivityId) ?? [];
+        _criteriaItems = criteria.Select(c => new CriterionItem(c.Key, c.Label)).ToList();
+        if (!_criteriaItems.Any())
+            _criteriaItems = (await Api.GetCriteriaAsync() ?? [])
+                .Select(c => new CriterionItem(c.Key, c.Label)).ToList();
+    }
+
+    private void MoveCriterion(int idx, int delta)
+    {
+        var newIdx = idx + delta;
+        if (newIdx < 0 || newIdx >= _criteriaItems.Count) return;
+        (_criteriaItems[idx], _criteriaItems[newIdx]) = (_criteriaItems[newIdx], _criteriaItems[idx]);
+    }
+
+    private async Task SaveCriteriaAsync()
+    {
+        var valid = _criteriaItems.Where(c => !string.IsNullOrWhiteSpace(c.Label)).ToList();
+        if (!valid.Any()) { Snackbar.Add("Cal almenys un criteri.", Severity.Warning); return; }
+
+        _savingCriteria = true;
+        Api.SetToken(UserState.Token!);
+        // Genera claus úniques a partir del label
+        var items = valid.Select((c, i) =>
+        {
+            var key = string.IsNullOrWhiteSpace(c.Key) || c.Key.StartsWith("criteri")
+                ? "c" + (i + 1)
+                : c.Key;
+            return new CriterionItem(key, c.Label.Trim());
+        }).ToList();
+        var saved = await Api.SaveActivityCriteriaAsync(ActivityId, new SaveCriteriaRequest(items));
+        _savingCriteria = false;
+        if (saved is not null)
+        {
+            _criteriaItems = saved.Select(c => new CriterionItem(c.Key, c.Label)).ToList();
+            Snackbar.Add("Criteris desats.", Severity.Success);
+        }
+        else Snackbar.Add("Error en desar criteris.", Severity.Error);
+    }
+
+    private async Task ResetCriteriaToDefaultAsync()
+    {
+        // Esborra criteris personalitzats → s'usaran els globals
+        Api.SetToken(UserState.Token!);
+        // Enviar llista buida no és vàlid (mínim 1), usem els globals com a llista
+        var globals = await Api.GetCriteriaAsync() ?? [];
+        var items   = globals.Select(c => new CriterionItem(c.Key, c.Label)).ToList();
+        var saved   = await Api.SaveActivityCriteriaAsync(ActivityId, new SaveCriteriaRequest(items));
+        if (saved is not null)
+        {
+            _criteriaItems = saved.Select(c => new CriterionItem(c.Key, c.Label)).ToList();
+            Snackbar.Add("Criteris globals restaurats.", Severity.Success);
+        }
+    }
+
+    private async Task MoveGroupAsync(int idx, int delta)
+    {
+        var newIdx = idx + delta;
+        if (newIdx < 0 || newIdx >= _groups.Count) return;
+        (_groups[idx], _groups[newIdx]) = (_groups[newIdx], _groups[idx]);
+        Api.SetToken(UserState.Token!);
+        await Api.ReorderGroupsAsync(ActivityId, _groups.Select(g => g.Id).ToList());
     }
 
     // ── Crear / esborrar grups ───────────────────────────────────────────────

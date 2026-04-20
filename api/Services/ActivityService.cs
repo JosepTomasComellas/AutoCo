@@ -28,6 +28,7 @@ public interface IActivityService
     Task<bool>            DeleteGroupAsync(int activityId, int groupId);
     Task<bool>            AddMemberAsync(int activityId, int groupId, int studentId);
     Task<bool>            RemoveMemberAsync(int activityId, int groupId, int studentId);
+    Task<bool>            ReorderGroupsAsync(int activityId, List<int> orderedGroupIds);
 
     // Per al dashboard de l'alumne
     Task<List<StudentActivityDto>> GetStudentActivitiesAsync(int studentId, int classId);
@@ -364,20 +365,40 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
         var groups = await db.Groups
             .Include(g => g.Members).ThenInclude(m => m.Student)
             .Where(g => g.ActivityId == activityId)
-            .OrderBy(g => g.Name)
+            .OrderBy(g => g.OrderIndex).ThenBy(g => g.Id)
             .ToListAsync();
 
         return groups.Select(g => new GroupDto(g.Id, g.ActivityId, g.Name,
             g.Members.OrderBy(m => m.Student.NumLlista)
-                     .Select(m => ToStudentDto(m.Student)).ToList())).ToList();
+                     .Select(m => ToStudentDto(m.Student)).ToList(),
+            g.OrderIndex)).ToList();
     }
 
     public async Task<GroupDto> CreateGroupAsync(int activityId, CreateGroupRequest req)
     {
-        var group = new Group { ActivityId = activityId, Name = req.Name.Trim() };
+        // OrderIndex = màxim actual + 1 per afegir al final
+        var maxOrder = await db.Groups
+            .Where(g => g.ActivityId == activityId)
+            .Select(g => (int?)g.OrderIndex)
+            .MaxAsync() ?? -1;
+        var group = new Group { ActivityId = activityId, Name = req.Name.Trim(), OrderIndex = maxOrder + 1 };
         db.Groups.Add(group);
         await db.SaveChangesAsync();
-        return new GroupDto(group.Id, group.ActivityId, group.Name, []);
+        return new GroupDto(group.Id, group.ActivityId, group.Name, [], group.OrderIndex);
+    }
+
+    public async Task<bool> ReorderGroupsAsync(int activityId, List<int> orderedGroupIds)
+    {
+        var groups = await db.Groups
+            .Where(g => g.ActivityId == activityId)
+            .ToListAsync();
+        for (int i = 0; i < orderedGroupIds.Count; i++)
+        {
+            var g = groups.FirstOrDefault(x => x.Id == orderedGroupIds[i]);
+            if (g is not null) g.OrderIndex = i;
+        }
+        await db.SaveChangesAsync();
+        return true;
     }
 
     public async Task<bool> DeleteGroupAsync(int activityId, int groupId)

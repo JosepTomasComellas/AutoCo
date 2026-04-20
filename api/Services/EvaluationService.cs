@@ -2,6 +2,7 @@ using AutoCo.Api.Data;
 using AutoCo.Api.Data.Models;
 using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AutoCo.Api.Services;
 
@@ -12,7 +13,7 @@ public interface IEvaluationService
                                        IEmailService? email = null);
 }
 
-public class EvaluationService(AppDbContext db) : IEvaluationService
+public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactory) : IEvaluationService
 {
     public async Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId)
     {
@@ -155,35 +156,43 @@ public class EvaluationService(AppDbContext db) : IEvaluationService
             catch { /* el log és no-crític */ }
 
             // ── Notificació si l'activitat és 100% completa ───────────────
+            // IMPORTANT: usa un scope propi per evitar que el DbContext
+            // scoped de la petició HTTP quedi disposat dins del Task.Run
             if (email?.IsEnabled == true)
             {
+                var capturedActivityId   = activityId;
+                var capturedActivityName = activity.Name;
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        // Comptar quants membres de grups han enviat totes les avaluacions
-                        var allGroupMembers = await db.GroupMembers
-                            .Where(gm => gm.Group.ActivityId == activityId)
+                        using var scope     = scopeFactory.CreateScope();
+                        var scopedDb        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                        var scopedEmail     = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                        if (!scopedEmail.IsEnabled) return;
+
+                        var allGroupMembers = await scopedDb.GroupMembers
+                            .Where(gm => gm.Group.ActivityId == capturedActivityId)
                             .Select(gm => gm.StudentId)
                             .Distinct()
                             .ToListAsync();
 
-                        var submitted = await db.Evaluations
-                            .Where(e => e.ActivityId == activityId && e.IsSelf)
+                        var submitted = await scopedDb.Evaluations
+                            .Where(e => e.ActivityId == capturedActivityId && e.IsSelf)
                             .Select(e => e.EvaluatorId)
                             .Distinct()
                             .CountAsync();
 
                         if (submitted >= allGroupMembers.Count && allGroupMembers.Count > 0)
                         {
-                            var mod = await db.Modules
+                            var mod = await scopedDb.Modules
                                 .Include(m => m.Professor)
                                 .Include(m => m.Class)
-                                .FirstOrDefaultAsync(m => m.Activities.Any(a => a.Id == activityId));
+                                .FirstOrDefaultAsync(m => m.Activities.Any(a => a.Id == capturedActivityId));
                             if (mod?.Professor is not null)
-                                await email.SendActivityCompletedAsync(
+                                await scopedEmail.SendActivityCompletedAsync(
                                     mod.Professor.Email, mod.Professor.NomComplet,
-                                    activity.Name, mod.Class.Name, allGroupMembers.Count);
+                                    capturedActivityName, mod.Class.Name, allGroupMembers.Count);
                         }
                     }
                     catch { /* notificació no-crítica */ }

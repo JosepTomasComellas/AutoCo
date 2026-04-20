@@ -1,0 +1,142 @@
+@page "/auth/reset-contrasenya"
+@inject ApiClient Api
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Restablir contrasenya – AutoCo</PageTitle>
+
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center">
+    <MudContainer MaxWidth="MaxWidth.ExtraSmall">
+        <MudPaper Elevation="4" Style="overflow:hidden;border-radius:12px">
+
+            <div style="background:#1e293b;padding:1.5rem 2rem;display:flex;align-items:center;gap:1rem">
+                <MudIcon Icon="@Icons.Material.Filled.LockReset"
+                         Style="color:rgba(255,255,255,.9);font-size:2rem;flex-shrink:0" />
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h6" Style="color:white;font-weight:700;line-height:1.2">
+                        Restablir contrasenya
+                    </MudText>
+                    <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.55)">
+                        AutoCo · Avaluació entre iguals
+                    </MudText>
+                </MudStack>
+            </div>
+
+            <div style="padding:1.75rem 2rem">
+                @if (_step == 1)
+                {
+                    <!-- Pas 1: introduir correu -->
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                        Introdueix el teu correu electrònic. Rebràs un codi de 6 dígits vàlid 15 minuts.
+                    </MudText>
+
+                    @if (_error is not null)
+                    {
+                        <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+                    }
+
+                    <MudTextField @bind-Value="_email" Label="Correu electrònic"
+                                  Variant="Variant.Outlined" Class="mb-4"
+                                  InputType="InputType.Email" Immediate="true"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               FullWidth="true" Size="Size.Large"
+                               OnClick="RequestResetAsync" Disabled="_loading">
+                        @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        Enviar codi
+                    </MudButton>
+                }
+                else
+                {
+                    <!-- Pas 2: codi + nova contrasenya -->
+                    <MudAlert Severity="Severity.Success" Class="mb-4">
+                        Si el correu existeix al sistema, rebràs el codi en breu.
+                    </MudAlert>
+
+                    @if (_error is not null)
+                    {
+                        <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
+                    }
+
+                    <MudTextField @bind-Value="_code" Label="Codi de verificació (6 dígits)"
+                                  Variant="Variant.Outlined" Class="mb-3"
+                                  Immediate="true" MaxLength="6"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Pin" />
+                    <MudTextField @bind-Value="_newPassword" Label="Nova contrasenya"
+                                  Variant="Variant.Outlined" Class="mb-3"
+                                  InputType="InputType.Password" Immediate="true"
+                                  HelperText="Mínim 8 caràcters."
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
+                    <MudTextField @bind-Value="_confirmPassword" Label="Confirmar nova contrasenya"
+                                  Variant="Variant.Outlined" Class="mb-4"
+                                  InputType="InputType.Password" Immediate="true" />
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               FullWidth="true" Size="Size.Large"
+                               OnClick="ConfirmResetAsync" Disabled="_loading">
+                        @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                        Canviar contrasenya
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Text" FullWidth="true" Class="mt-2"
+                               OnClick="() => { _step = 1; _error = null; }">
+                        ← Tornar a introduir el correu
+                    </MudButton>
+                }
+
+                <MudLink Href="/auth/login-professor" Class="d-block text-center mt-4" Color="Color.Secondary">
+                    ← Tornar al login
+                </MudLink>
+            </div>
+
+        </MudPaper>
+    </MudContainer>
+</div>
+
+@code {
+    private int    _step            = 1;
+    private string _email           = "";
+    private string _code            = "";
+    private string _newPassword     = "";
+    private string _confirmPassword = "";
+    private bool   _loading         = false;
+    private string? _error;
+
+    private async Task RequestResetAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_email))
+        { _error = "Introdueix el correu electrònic."; return; }
+
+        _loading = true;
+        await Api.RequestPasswordResetAsync(_email.Trim());
+        _loading = false;
+        _step = 2;
+    }
+
+    private async Task ConfirmResetAsync()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_code) || _code.Length != 6)
+        { _error = "El codi ha de tenir 6 dígits."; return; }
+        if (string.IsNullOrWhiteSpace(_newPassword) || _newPassword.Length < 8)
+        { _error = "La contrasenya ha de tenir almenys 8 caràcters."; return; }
+        if (_newPassword != _confirmPassword)
+        { _error = "Les contrasenyes no coincideixen."; return; }
+
+        _loading = true;
+        var (ok, err) = await Api.ConfirmPasswordResetAsync(_email.Trim(), _code.Trim(), _newPassword);
+        _loading = false;
+
+        if (ok)
+        {
+            Snackbar.Add("Contrasenya canviada correctament. Ja pots iniciar sessió.", Severity.Success);
+            Nav.NavigateTo("/auth/login-professor");
+        }
+        else
+        {
+            _error = err ?? "Error desconegut.";
+        }
+    }
+}

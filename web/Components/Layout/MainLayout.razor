@@ -33,6 +33,12 @@
                          Class="d-none d-sm-block">
                     @UserState.NomComplet
                 </MudText>
+                @if (UserState.IsProfessor)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
+                                   Color="Color.Inherit" title="El meu perfil"
+                                   Href="/professor/perfil" />
+                }
                 <!-- Selector de color primari -->
                 <MudMenu Icon="@Icons.Material.Filled.Palette" Color="Color.Inherit"
                          title="Tema de color" Dense="true" AnchorOrigin="Origin.BottomRight">

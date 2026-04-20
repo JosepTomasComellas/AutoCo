@@ -11,6 +11,7 @@ public interface IEmailService
     Task<bool> SendProfessorCredentialsAsync(string toEmail, string toName, string password);
     Task<bool> SendReminderAsync(string toEmail, string toName, string activityName, string className);
     Task<bool> SendActivityCompletedAsync(string toEmail, string toName, string activityName, string className, int total);
+    Task<bool> SendPasswordResetAsync(string toEmail, string toName, string code);
 }
 
 public class EmailService(IConfiguration config, ILogger<EmailService> logger) : IEmailService
@@ -109,6 +110,28 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
             Departament d'Informàtica · Salesians de Sarrià
             """;
         return await SendAsync(toEmail, toName, $"Avaluació completada – {activityName}", body);
+    }
+
+    public async Task<bool> SendPasswordResetAsync(string toEmail, string toName, string code)
+    {
+        if (!IsEnabled) return false;
+        var body = $"""
+            Hola, {toName}!
+
+            Has sol·licitat restablir la teva contrasenya d'AutoCo.
+
+            ─────────────────────────────────────
+             CODI DE VERIFICACIÓ
+            ─────────────────────────────────────
+             {code}
+            ─────────────────────────────────────
+
+            Aquest codi és vàlid durant 15 minuts.
+            Si no has sol·licitat aquest canvi, ignora aquest missatge.
+
+            Departament d'Informàtica · Salesians de Sarrià
+            """;
+        return await SendAsync(toEmail, toName, "Restabliment de contrasenya – AutoCo", body);
     }
 
     private async Task<bool> SendAsync(string toEmail, string toName, string subject, string body)

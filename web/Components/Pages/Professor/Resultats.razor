@@ -29,8 +29,13 @@
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Download"
-                   Href="@($"/professor/export-csv/{ActivityId}")">
+                   OnClick="ExportCsvAsync">
             CSV
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Success" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.TableChart"
+                   OnClick="ExportExcelAsync">
+            Excel
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Print"
@@ -107,7 +112,8 @@ else
 
     <!-- Taula principal -->
     <MudDataGrid T="StudentResultDto" Items="_filteredStudents" Dense="true" Hover="true"
-                 SortMode="SortMode.Single" FixedHeader="true" Height="520px" Class="mb-6">
+                 SortMode="SortMode.Single" FixedHeader="true" Height="520px" Class="mb-6"
+                 RowsPerPage="25">
         <Columns>
             <TemplateColumn Title="#">
                 <HeaderTemplate>
@@ -226,6 +232,9 @@ else
                 </TemplateColumn>
             }
         </Columns>
+        <PagerContent>
+            <MudDataGridPager T="StudentResultDto" />
+        </PagerContent>
     </MudDataGrid>
 
     <!-- Detall coavaluacions -->
@@ -398,6 +407,27 @@ else
         "deleted"   => "Esborrada",
         _           => action
     };
+
+    private async Task ExportCsvAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var result = await Api.ExportCsvAsync(ActivityId);
+        if (result is null) { Snackbar.Add("Error en exportar CSV.", Severity.Error); return; }
+        var (bytes, fileName) = result.Value;
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("downloadBase64File", base64, fileName, "text/csv");
+    }
+
+    private async Task ExportExcelAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var result = await Api.ExportExcelAsync(ActivityId);
+        if (result is null) { Snackbar.Add("Error en exportar Excel.", Severity.Error); return; }
+        var (bytes, fileName) = result.Value;
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("downloadBase64File", base64, fileName,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    }
 
     private async Task PrintAsync() =>
         await JS.InvokeVoidAsync("window.print");

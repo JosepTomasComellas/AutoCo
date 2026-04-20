@@ -6,6 +6,7 @@ using AutoCo.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using AutoCo.Api.Data.Models;
@@ -131,6 +132,44 @@ app.MapPost("/api/auth/student", async (StudentLoginRequest req, IAuthService sv
     return result is null ? Results.Unauthorized() : Results.Ok(result);
 }).RequireRateLimiting("auth");
 
+app.MapPost("/api/auth/request-reset", async (
+    PasswordResetRequestDto req, AppDbContext db, IEmailService email,
+    Microsoft.Extensions.Caching.Distributed.IDistributedCache cache) =>
+{
+    // Sempre retorna Ok per no revelar si el correu existeix
+    var prof = await db.Professors.FirstOrDefaultAsync(
+        p => p.Email == req.Email.Trim().ToLower());
+    if (prof is not null && email.IsEnabled)
+    {
+        var code = new Random().Next(100000, 999999).ToString();
+        await cache.SetStringAsync($"autoco:reset:{req.Email.Trim().ToLower()}", code,
+            new Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions
+            { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15) });
+        await email.SendPasswordResetAsync(prof.Email, prof.NomComplet, code);
+    }
+    return Results.Ok(new { message = "Si el correu existeix, rebràs el codi en breu." });
+}).RequireRateLimiting("auth");
+
+app.MapPost("/api/auth/confirm-reset", async (
+    PasswordResetConfirmDto req, AppDbContext db,
+    Microsoft.Extensions.Caching.Distributed.IDistributedCache cache) =>
+{
+    var email = req.Email.Trim().ToLower();
+    var stored = await cache.GetStringAsync($"autoco:reset:{email}");
+    if (stored is null || stored != req.Code.Trim())
+        return Results.BadRequest(new { error = "Codi incorrecte o expirat." });
+    if (req.NewPassword.Length < 8)
+        return Results.BadRequest(new { error = "La contrasenya ha de tenir almenys 8 caràcters." });
+
+    var prof = await db.Professors.FirstOrDefaultAsync(p => p.Email == email);
+    if (prof is null) return Results.NotFound();
+
+    prof.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+    await db.SaveChangesAsync();
+    await cache.RemoveAsync($"autoco:reset:{email}");
+    return Results.Ok(new { message = "Contrasenya actualitzada correctament." });
+}).RequireRateLimiting("auth");
+
 // ════════════════════════════════════════════════════════════════════════════
 // PROFESSORS  (Admin only per a escriptura)
 // ════════════════════════════════════════════════════════════════════════════
@@ -174,6 +213,39 @@ app.MapDelete("/api/professors/{id:int}", async (int id, IProfessorService svc,
     {
         return Results.BadRequest(new { error = ex.Message });
     }
+}).RequireAuthorization();
+
+app.MapGet("/api/professors/me", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var prof = await db.Professors.FindAsync(GetUserId(user));
+    if (prof is null) return Results.NotFound();
+    return Results.Ok(new ProfessorDto(prof.Id, prof.Email, prof.Nom, prof.Cognoms,
+        prof.NomComplet, prof.IsAdmin, prof.CreatedAt));
+}).RequireAuthorization();
+
+app.MapPut("/api/professors/me", async (UpdateOwnProfileRequest req, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var prof = await db.Professors.FindAsync(GetUserId(user));
+    if (prof is null) return Results.NotFound();
+
+    // Verifica contrasenya actual si es vol canviar la contrasenya
+    if (!string.IsNullOrWhiteSpace(req.NewPassword))
+    {
+        if (string.IsNullOrWhiteSpace(req.CurrentPassword) ||
+            !BCrypt.Net.BCrypt.Verify(req.CurrentPassword, prof.PasswordHash))
+            return Results.BadRequest(new { error = "La contrasenya actual és incorrecta." });
+        if (req.NewPassword.Length < 8)
+            return Results.BadRequest(new { error = "La nova contrasenya ha de tenir almenys 8 caràcters." });
+        prof.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+    }
+
+    prof.Nom     = req.Nom.Trim();
+    prof.Cognoms = req.Cognoms.Trim();
+    await db.SaveChangesAsync();
+    return Results.Ok(new ProfessorDto(prof.Id, prof.Email, prof.Nom, prof.Cognoms,
+        prof.NomComplet, prof.IsAdmin, prof.CreatedAt));
 }).RequireAuthorization();
 
 app.MapPost("/api/professors/{professorId:int}/send-credentials", async (
@@ -580,6 +652,14 @@ app.MapPost("/api/activities/{actId:int}/groups/{groupId:int}/members", async (
     return ok ? Results.NoContent() : Results.BadRequest();
 }).RequireAuthorization();
 
+app.MapPut("/api/activities/{actId:int}/groups/reorder", async (
+    int actId, ReorderGroupsRequest req, IActivityService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    await svc.ReorderGroupsAsync(actId, req.OrderedGroupIds);
+    return Results.NoContent();
+}).RequireAuthorization();
+
 app.MapDelete("/api/activities/{actId:int}/groups/{groupId:int}/members/{studentId:int}",
     async (int actId, int groupId, int studentId, IActivityService svc,
     ClaimsPrincipal user) =>
@@ -649,6 +729,17 @@ app.MapGet("/api/results/{activityId:int}/csv", async (int activityId,
     if (result is null) return Results.NotFound();
     var (content, fileName) = result.Value;
     return Results.File(content, "text/csv; charset=utf-8", fileName);
+}).RequireAuthorization();
+
+app.MapGet("/api/results/{activityId:int}/excel", async (int activityId,
+    IResultsService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var result = await svc.ExportExcelAsync(activityId, GetUserId(user), IsAdmin(user));
+    if (result is null) return Results.NotFound();
+    var (content, fileName) = result.Value;
+    return Results.File(content,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
 }).RequireAuthorization();
 
 // ── Criteri ───────────────────────────────────────────────────────────────────
@@ -743,6 +834,11 @@ app.MapGet("/api/notes/{activityId:int}/{studentId:int}", async (
     int activityId, int studentId, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    var activity = await db.Activities.Include(a => a.Module)
+        .FirstOrDefaultAsync(a => a.Id == activityId);
+    if (activity is null) return Results.NotFound();
+    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+
     var note = await db.ProfessorNotes
         .FirstOrDefaultAsync(n => n.ActivityId == activityId && n.StudentId == studentId);
     if (note is null) return Results.Ok(new ProfessorNoteDto(studentId, "", DateTime.UtcNow));
@@ -753,6 +849,11 @@ app.MapGet("/api/notes/{activityId:int}", async (
     int activityId, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    var activity = await db.Activities.Include(a => a.Module)
+        .FirstOrDefaultAsync(a => a.Id == activityId);
+    if (activity is null) return Results.NotFound();
+    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+
     var notes = await db.ProfessorNotes
         .Where(n => n.ActivityId == activityId)
         .Select(n => new ProfessorNoteDto(n.StudentId, n.Note, n.UpdatedAt))
@@ -765,6 +866,11 @@ app.MapPut("/api/notes/{activityId:int}/{studentId:int}", async (
     AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    var activity = await db.Activities.Include(a => a.Module)
+        .FirstOrDefaultAsync(a => a.Id == activityId);
+    if (activity is null) return Results.NotFound();
+    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+
     var note = await db.ProfessorNotes
         .FirstOrDefaultAsync(n => n.ActivityId == activityId && n.StudentId == studentId);
     if (note is null)
@@ -798,11 +904,19 @@ app.MapGet("/api/templates", async (AppDbContext db, ClaimsPrincipal user) =>
         .Where(t => t.ProfessorId == professorId || isAdm)
         .OrderByDescending(t => t.CreatedAt)
         .ToListAsync();
+
+    // Precarrega noms de professors per a l'admin (evita N+1)
+    var professorIds  = list.Select(t => t.ProfessorId).Distinct().ToList();
+    var professorNames = await db.Professors
+        .Where(p => professorIds.Contains(p.Id))
+        .ToDictionaryAsync(p => p.Id, p => p.NomComplet);
+
     var dtos = list.Select(t =>
     {
         var criteria = System.Text.Json.JsonSerializer.Deserialize<List<CriterionItem>>(t.CriteriaJson)
             ?? new List<CriterionItem>();
-        return new ActivityTemplateDto(t.Id, t.Name, t.Description, criteria, t.CreatedAt);
+        professorNames.TryGetValue(t.ProfessorId, out var profName);
+        return new ActivityTemplateDto(t.Id, t.Name, t.Description, criteria, t.CreatedAt, profName);
     }).ToList();
     return Results.Ok(dtos);
 }).RequireAuthorization();
@@ -846,6 +960,11 @@ app.MapGet("/api/activities/{id:int}/log", async (
     int id, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    var activity = await db.Activities.Include(a => a.Module)
+        .FirstOrDefaultAsync(a => a.Id == id);
+    if (activity is null) return Results.NotFound();
+    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+
     var logs = await db.ActivityLogs
         .Where(l => l.ActivityId == id)
         .OrderByDescending(l => l.CreatedAt)

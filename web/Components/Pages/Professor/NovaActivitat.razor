@@ -35,7 +35,15 @@
                     <MudSelectItem T="int" Value="0">— Sense plantilla —</MudSelectItem>
                     @foreach (var t in _templates)
                     {
-                        <MudSelectItem T="int" Value="@t.Id">@t.Name</MudSelectItem>
+                        <MudSelectItem T="int" Value="@t.Id">
+                            @t.Name
+                            @if (!string.IsNullOrWhiteSpace(t.ProfessorName))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-1">
+                                    (@t.ProfessorName)
+                                </MudText>
+                            }
+                        </MudSelectItem>
                     }
                 </MudSelect>
             }

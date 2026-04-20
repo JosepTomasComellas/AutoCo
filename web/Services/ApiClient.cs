@@ -259,6 +259,52 @@ public class ApiClient
     public Task<List<ActivityLogDto>?> GetActivityLogAsync(int activityId) =>
         GetAsync<List<ActivityLogDto>>($"/api/activities/{activityId}/log");
 
+    public Task<bool> ReorderGroupsAsync(int activityId, List<int> orderedGroupIds) =>
+        PutNoContentAsync($"/api/activities/{activityId}/groups/reorder",
+            new ReorderGroupsRequest(orderedGroupIds));
+
+    // ── Perfil professor ──────────────────────────────────────────────────────
+
+    public Task<ProfessorDto?> GetOwnProfileAsync() =>
+        GetAsync<ProfessorDto>("/api/professors/me");
+
+    public Task<ProfessorDto?> UpdateOwnProfileAsync(UpdateOwnProfileRequest req) =>
+        PutAsync<ProfessorDto>("/api/professors/me", req);
+
+    // ── Reset de contrasenya ──────────────────────────────────────────────────
+
+    public Task<bool> RequestPasswordResetAsync(string email) =>
+        PostNoContentAsync("/api/auth/request-reset", new PasswordResetRequestDto(email));
+
+    public async Task<(bool Success, string? Error)> ConfirmPasswordResetAsync(
+        string email, string code, string newPassword)
+    {
+        var resp = await _http.PostAsync("/api/auth/confirm-reset",
+            Json(new PasswordResetConfirmDto(email, code, newPassword)));
+        if (resp.IsSuccessStatusCode) return (true, null);
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(
+                await resp.Content.ReadAsStringAsync());
+            var err = doc.RootElement.TryGetProperty("error", out var e) ? e.GetString() : null;
+            return (false, err ?? "Error desconegut.");
+        }
+        catch { return (false, "Error desconegut."); }
+    }
+
+    // ── Excel ─────────────────────────────────────────────────────────────────
+
+    public async Task<(byte[] Content, string FileName)?> ExportExcelAsync(int activityId)
+    {
+        var resp = await _http.GetAsync($"/api/results/{activityId}/excel");
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        var bytes = await resp.Content.ReadAsByteArrayAsync();
+        var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
+            ?? resp.Content.Headers.ContentDisposition?.FileName
+            ?? $"avaluacio_{activityId}.xlsx";
+        return (bytes, fileName.Trim('"'));
+    }
+
     // ── Backup / Restore (admin) ──────────────────────────────────────────────
 
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()
@@ -335,6 +381,13 @@ public class ApiClient
         var resp = await _http.PutAsync(url, Json(body));
         if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return default; }
         return await resp.Content.ReadFromJsonAsync<T>(_json);
+    }
+
+    private async Task<bool> PutNoContentAsync(string url, object? body)
+    {
+        var resp = await _http.PutAsync(url, Json(body));
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
+        return true;
     }
 
     private async Task<bool> DeleteAsync(string url)
