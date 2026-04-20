@@ -10,26 +10,37 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 ### Professor / Administrador
 - Gestió de **classes**, **alumnes** i **mòduls** (UF/MP), amb edició inline
+- **Avatars** d'alumne amb inicials i color per número de llista
+- **Mou alumnes** entre classes (elimina participació anterior i reassigna)
 - Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual des del tauler
+- **Criteris personalitzats** per activitat: cada activitat pot tenir la seva pròpia llista de criteris d'avaluació (afegir, reordenar, eliminar) o usar els globals
 - Configuració de **grups** per **arrossegar i deixar anar** (drag & drop): alumnes sense grup a l'esquerra, grups en 3 columnes a la dreta
 - Importació/exportació de grups per CSV
 - **Duplicació d'activitats** reutilitzant la configuració de grups i membres
+- **Duplicació creuada** d'activitats a una altra classe i mòdul
+- **Indicador de participació** en temps real a cada targeta d'activitat (polling cada 30 s)
+- **Recordatoris per correu** als alumnes que no han omplert l'avaluació (botó per activitat oberta)
+- **Desfer eliminació** — finestra de 5 s per cancel·lar l'eliminació d'activitats i alumnes
 - Consulta de **resultats** amb taula detallada per alumne: puntuació per criteri (Autoaval. / Coaval.), nota global i barra de progrés de participació
 - **Gràfiques comparatives** per grup (auto vs. co-avaluació, desglossament per criteri)
 - **Exportació CSV** de resultats
+- **Exportació PDF / impressió** de la pàgina de resultats directament des del navegador
 - **Còpies de seguretat** del servidor: exportació/importació JSON de tota la base de dades
 - Enviament de **credencials per correu** als alumnes (SMTP configurable)
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
 - **Exclusions per mòdul**: alumnes que no participen en un mòdul concret
+- **Filtre per mòdul** al tauler d'activitats
+- **KPIs al tauler**: classes, mòduls, alumnes, activitats, obertes i grups
+- **Mode fosc** amb preferència desada al navegador
 
 ### Alumne
 - Accés amb correu electrònic i contrasenya
-- Avaluació de tots els membres del grup (inclosa autoavaluació) per 5 criteris
+- Avaluació de tots els membres del grup (inclosa autoavaluació) per criteri
 - Puntuació amb **escala de 5 estrelles** mostrada com a lletra (E / D / C / B / A)
 - **Barra de progrés** d'avaluació completada en temps real (X/Y criteris puntuats)
 - Filtre d'activitats pendents al dashboard
 
-### Criteris d'avaluació (fixes per a totes les activitats)
+### Criteris d'avaluació globals (per defecte)
 
 | Clau | Descripció |
 |------|------------|
@@ -38,6 +49,8 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 | `responsabilitat` | Responsabilitat i Treball de qualitat |
 | `collaboracio` | Col·laboració i treball en equip |
 | `comunicacio` | Comunicació |
+
+Cada activitat pot sobreescriure aquests criteris amb la seva pròpia llista personalitzada.
 
 ### Escala de puntuació
 
@@ -67,7 +80,7 @@ AutoCo/
 │   │   └── Layout/
 │   ├── Services/    # ApiClient, UserStateService
 │   ├── wwwroot/
-│   │   ├── css/site.css   # Estils globals + DnD
+│   │   ├── css/site.css   # Estils globals + DnD + dark mode + print
 │   │   └── js/app.js      # Utilitats JS (download, dragover síncron)
 │   └── Dockerfile
 ├── shared/       # DTOs compartits entre api i web
@@ -90,6 +103,7 @@ AutoCo/
 
 ```
 Professor ──< Module ──< Activity ──< Group ──< GroupMember (Student)
+              │               └──< ActivityCriteria
               │                            └──< Evaluation (Evaluator→Evaluated)
               │                                        └──< EvaluationScore (per criteri)
 Class ────────┘
@@ -99,6 +113,7 @@ Class ────────┘
 
 - Un `Module` pertany a una `Class` i a un `Professor`
 - Una `Activity` pertany a un `Module`
+- `ActivityCriteria` conté els criteris personalitzats; si no n'hi ha, s'usen els globals
 - Un alumne avalua tots els membres del seu grup (inclòs ell mateix — `IsSelf = true`)
 
 ---
@@ -110,7 +125,7 @@ Class ────────┘
 - **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage` per a persistència de sessió (resisteix F5 sense perdre sessió)
 - **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació automàtica en modificar grups)
 - **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters · validació de valors de puntuació al backend
-- **Email:** SMTP configurable (Gmail, etc.) per enviar credencials
+- **Email:** SMTP configurable (Gmail, etc.) per enviar credencials i recordatoris
 - **Desplegament:** Docker Compose · nginx (SSL/TLS auto-signat o certificat propi)
 
 ---
@@ -215,7 +230,7 @@ Copia `.env.example` a `.env` i ajusta els valors:
 | `SMTP_FROM_NAME` | Nom remitent dels correus | |
 | `APP_WEB_URL` | URL pública de l'aplicació (p.ex. `https://autoco.centre.cat`) | |
 
-> El SMTP és opcional. Si no es configura, les funcions d'enviament de credencials per correu quedaran desactivades però la resta de l'aplicació funciona amb normalitat.
+> El SMTP és opcional. Si no es configura, les funcions d'enviament de credencials i recordatoris per correu quedaran desactivades però la resta de l'aplicació funciona amb normalitat.
 
 ### SSL
 
@@ -237,12 +252,18 @@ POST /api/classes/{id}/students/bulk                  # Importació massiva CSV
 POST /api/classes/{id}/students/{sid}/reset-password  # Reset contrasenya
 POST /api/classes/{id}/students/{sid}/send-password   # Enviar credencials per correu
 POST /api/classes/{id}/students/send-all-passwords    # Enviar credencials a tots
+POST /api/classes/{id}/students/{sid}/move            # Moure alumne a una altra classe
 GET/POST/PUT/DELETE /api/classes/{id}/modules         # Gestió mòduls
 GET/POST/DELETE    /api/modules/{id}/exclusions       # Exclusions per mòdul
 
 GET/POST/PUT/DELETE /api/activities                   # Gestió activitats
 POST /api/activities/{id}/toggle                      # Obrir/tancar activitat
-POST /api/activities/{id}/duplicate                   # Duplicar activitat
+POST /api/activities/{id}/duplicate                   # Duplicar activitat (mateixa classe)
+POST /api/activities/{id}/duplicate-cross             # Duplicar a una altra classe
+GET  /api/activities/{id}/participation               # Estat de participació (submitted/total)
+POST /api/activities/{id}/remind                      # Enviar recordatoris als pendents
+GET  /api/activities/{id}/criteria                    # Obtenir criteris de l'activitat
+PUT  /api/activities/{id}/criteria                    # Desar criteris personalitzats
 GET  /api/activities/{id}/groups/export               # Exportar grups (CSV)
 POST /api/activities/{id}/groups/import               # Importar grups (CSV)
 GET/POST/DELETE /api/activities/{id}/groups           # Gestió grups
@@ -263,7 +284,7 @@ GET/DELETE /api/admin/backup/files/{name}             # Descarregar/eliminar bac
 POST /api/admin/backup/files/{name}/restore           # Restaurar backup del servidor
 
 GET  /api/health                                      # Estat DB + Redis
-GET  /api/criteria                                    # Llista de criteris
+GET  /api/criteria                                    # Llista de criteris globals
 ```
 
 ---
