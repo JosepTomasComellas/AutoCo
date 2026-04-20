@@ -91,7 +91,7 @@
                                     </MudAvatar>
                                     <MudStack Spacing="0" Style="flex:1;min-width:0">
                                         <MudText Typo="Typo.subtitle1" Style="font-weight:600">@c.Name</MudText>
-                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
                                             @if (c.AcademicYear is not null)
                                             {
                                                 <MudText Typo="Typo.caption" Color="Color.Secondary">@c.AcademicYear</MudText>
@@ -100,6 +100,17 @@
                                             <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small"
                                                      Style="font-size:14px;color:var(--mud-palette-text-secondary)" />
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">@c.NumStudents alumnes</MudText>
+                                            @if (c.NumExclusions > 0)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">·</MudText>
+                                                <MudTooltip Text="Alumnes exclosos d'algun mòdul" Placement="Placement.Top">
+                                                    <MudStack Row="true" Spacing="0" AlignItems="AlignItems.Center" Style="cursor:help">
+                                                        <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Small"
+                                                                 Style="font-size:14px;color:var(--mud-palette-warning)" />
+                                                        <MudText Typo="Typo.caption" Color="Color.Warning" Class="ml-1">@c.NumExclusions exclus.</MudText>
+                                                    </MudStack>
+                                                </MudTooltip>
+                                            }
                                         </MudStack>
                                     </MudStack>
                                     <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
@@ -132,7 +143,7 @@
                                     else
                                     {
                                         <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                            Creada: @c.CreatedAt.ToString("dd/MM/yyyy") · @c.NumStudents alumnes
+                                            Creada: @c.CreatedAt.ToString("dd/MM/yyyy") · @c.NumStudents alumnes@(c.NumExclusions > 0 ? $" · {c.NumExclusions} exclusions" : "")
                                         </MudText>
                                     }
                                 </div>

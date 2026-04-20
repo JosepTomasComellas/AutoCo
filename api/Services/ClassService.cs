@@ -28,14 +28,19 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
     // ── Classes ──────────────────────────────────────────────────────────────
 
     public async Task<List<ClassDto>> GetAllAsync() =>
-        await db.Classes.Include(c => c.Students)
+        await db.Classes
+            .Include(c => c.Students)
+            .Include(c => c.Modules).ThenInclude(m => m.Exclusions)
             .OrderBy(c => c.Name)
             .Select(c => ToClassDto(c))
             .ToListAsync();
 
     public async Task<ClassDto?> GetByIdAsync(int id)
     {
-        var c = await db.Classes.Include(c => c.Students).FirstOrDefaultAsync(c => c.Id == id);
+        var c = await db.Classes
+            .Include(c => c.Students)
+            .Include(c => c.Modules).ThenInclude(m => m.Exclusions)
+            .FirstOrDefaultAsync(c => c.Id == id);
         return c is null ? null : ToClassDto(c);
     }
 
@@ -239,7 +244,8 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static ClassDto ToClassDto(Class c) => new(
-        c.Id, c.Name, c.AcademicYear, c.CreatedAt, c.Students.Count);
+        c.Id, c.Name, c.AcademicYear, c.CreatedAt, c.Students.Count,
+        c.Modules.Sum(m => m.Exclusions.Count));
 
     private static StudentDto ToStudentDto(Student s) => new(
         s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt);

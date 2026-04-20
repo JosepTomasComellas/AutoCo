@@ -21,7 +21,7 @@ public record SendAllResult(int Sent, int Skipped, List<string> Details);
 
 // ─── Classes ─────────────────────────────────────────────────────────────────
 public record ClassDto(
-    int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents);
+    int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents, int NumExclusions);
 
 public record CreateClassRequest(string Name, string? AcademicYear);
 public record UpdateClassRequest(string Name, string? AcademicYear);
