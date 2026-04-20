@@ -203,8 +203,15 @@
                     </HeaderTemplate>
                     <CellTemplate>@context.Item.NumLlista</CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Cognoms, Nom">
-                    <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
+                <TemplateColumn Title="Alumne">
+                    <CellTemplate>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudAvatar Style="@GetAvatarStyle(context.Item)" Size="Size.Small">
+                                @GetInitials(context.Item)
+                            </MudAvatar>
+                            <span>@context.Item.Cognoms, @context.Item.Nom</span>
+                        </MudStack>
+                    </CellTemplate>
                 </TemplateColumn>
                 <PropertyColumn Property="s => s.Email" Title="Correu" />
                 @if (UserState.IsAdmin)
@@ -609,6 +616,24 @@
         }
 
         return (students, errors);
+    }
+
+    // ── Avatars ──────────────────────────────────────────────────────────────
+
+    private static string GetInitials(StudentDto s)
+    {
+        var cog = s.Cognoms?.TrimStart().FirstOrDefault();
+        var nom = s.Nom?.TrimStart().FirstOrDefault();
+        return $"{cog}{nom}".ToUpper();
+    }
+
+    private static readonly string[] _avatarColors =
+        ["#CC0000", "#1e293b", "#0891b2", "#059669", "#7c3aed", "#d97706", "#db2777"];
+
+    private static string GetAvatarStyle(StudentDto s)
+    {
+        var color = _avatarColors[s.NumLlista % _avatarColors.Length];
+        return $"background:{color};color:white;font-size:0.68rem;width:28px;height:28px;min-width:28px";
     }
 
     private async Task SendPasswordAsync(StudentDto s)

@@ -49,41 +49,59 @@ else
 {
     <!-- Estadístiques ràpides -->
     <MudGrid Class="mb-4" Spacing="2">
-        <MudItem xs="6" sm="3">
+        <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
-                <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight:700">@_activities.Count</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Activitats totals</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Secondary" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_classesDtos.Count</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Classes</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="6" sm="3">
+        <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_moduls.Count</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Mòduls</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Info" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Color="Color.Info" Style="font-weight:700">@_totalAlumnes</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Alumnes</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight:700">@_activities.Count</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Activitats</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4">
+            <MudPaper Elevation="1" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.LockOpen" Color="Color.Success" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Success" Style="font-weight:700">@_activities.Count(a => a.IsOpen)</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">Obertes ara</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="6" sm="3">
+        <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
-                <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_activities.Sum(a => a.NumGroups)</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Grups totals</MudText>
-            </MudPaper>
-        </MudItem>
-        <MudItem xs="6" sm="3">
-            <MudPaper Elevation="1" Class="pa-3 text-center">
-                <MudText Typo="Typo.h5" Color="Color.Info" Style="font-weight:700">@_totalAlumnes</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Alumnes totals</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Warning" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Color="Color.Warning" Style="font-weight:700">@_activities.Sum(a => a.NumGroups)</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Grups</MudText>
             </MudPaper>
         </MudItem>
     </MudGrid>
 
     <!-- Filtres -->
     <MudGrid Class="mb-4" Spacing="2">
-        <MudItem xs="12" sm="6" md="4">
+        <MudItem xs="12" sm="6" md="3">
             <MudTextField @bind-Value="_cerca" Label="Cercar activitat" Variant="Variant.Outlined"
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                           Clearable="true" Immediate="true" Margin="Margin.Dense" />
         </MudItem>
-        <MudItem xs="12" sm="6" md="4">
-            <MudSelect T="int" @bind-Value="_classeId" Label="Filtrar per classe"
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="int" @bind-Value="_classeId" Label="Classe" AnchorOrigin="Origin.BottomCenter"
                        Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                 <MudSelectItem T="int" Value="0">Totes les classes</MudSelectItem>
                 @foreach (var c in _classes)
@@ -92,7 +110,17 @@ else
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" md="4" Class="d-flex align-center gap-3">
+        <MudItem xs="12" sm="6" md="3">
+            <MudSelect T="int" @bind-Value="_modulId" Label="Mòdul" AnchorOrigin="Origin.BottomCenter"
+                       Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                <MudSelectItem T="int" Value="0">Tots els mòduls</MudSelectItem>
+                @foreach (var m in _moduls)
+                {
+                    <MudSelectItem T="int" Value="@m.Key">@m.Value</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3" Class="d-flex align-center gap-3">
             <MudSwitch @bind-Value="_nomesObertes" Color="Color.Success" Label="Només obertes" Size="Size.Small" />
             <MudText Typo="Typo.caption" Color="Color.Secondary">
                 @_filtrades.Count de @_activities.Count
@@ -148,11 +176,13 @@ else
     private List<ClassDto>    _classesDtos = [];
     private bool _loading = true;
 
-    private string _cerca       = "";
-    private int    _classeId    = 0;
+    private string _cerca        = "";
+    private int    _classeId     = 0;
+    private int    _modulId      = 0;
     private bool   _nomesObertes = false;
 
     private Dictionary<int, string> _classes = [];
+    private Dictionary<int, string> _moduls  = [];
     private int _totalAlumnes => _classesDtos.Sum(c => c.NumStudents);
 
     private List<ActivityDto> _obertes  => _filtrades.Where(a =>  a.IsOpen).ToList();
@@ -163,6 +193,7 @@ else
                      a.Name.Contains(_cerca, StringComparison.OrdinalIgnoreCase) ||
                      (a.Description?.Contains(_cerca, StringComparison.OrdinalIgnoreCase) ?? false))
                  && (_classeId == 0 || a.ClassId == _classeId)
+                 && (_modulId  == 0 || a.ModuleId == _modulId)
                  && (!_nomesObertes || a.IsOpen))
         .ToList();
 
@@ -179,6 +210,9 @@ else
             .GroupBy(a => a.ClassId)
             .ToDictionary(g => g.Key, g => g.First().ClassName +
                 (g.First().ClassAcademicYear is not null ? $" ({g.First().ClassAcademicYear})" : ""));
+        _moduls = _activities
+            .GroupBy(a => a.ModuleId)
+            .ToDictionary(g => g.Key, g => $"{g.First().ModuleCode} – {g.First().ModuleName}");
         _loading = false;
     }
 

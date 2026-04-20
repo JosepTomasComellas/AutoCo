@@ -133,3 +133,41 @@ html, body {
     /* Evita que el footer fix solapi el contingut inferior */
     padding-bottom: 56px !important;
 }
+
+/* ── Mode fosc ───────────────────────────────────────────────────────────── */
+.app-dark .mud-main-content {
+    background: rgba(2, 6, 23, 0.88) !important;
+}
+.app-dark .progress-sticky {
+    background: rgba(2, 6, 23, 0.95);
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+.app-dark .dnd-zone {
+    background: rgba(30, 41, 59, 0.6);
+    border-color: #334155;
+}
+.app-dark .dnd-chip {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+.app-dark .dnd-chip:hover {
+    background: #334155;
+}
+.app-dark .dnd-chip--unassigned {
+    background: #2d1f0d;
+    border-color: #92400e;
+}
+
+/* ── Scroll horitzontal en taules (mòbil) ───────────────────────────────── */
+@media (max-width: 599px) {
+    .mud-table-container,
+    .mud-data-grid-container {
+        overflow-x: auto !important;
+    }
+    /* MudSimpleTable no té contenidor propi → afegim overflow al pare */
+    .mud-simple-table {
+        display: block;
+        overflow-x: auto;
+    }
+}

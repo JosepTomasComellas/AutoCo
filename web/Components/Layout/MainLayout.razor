@@ -4,12 +4,12 @@
 @inject NavigationManager Nav
 @inject ProtectedLocalStorage LocalStorage
 
-<MudThemeProvider Theme="_theme" />
+<MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<MudLayout>
+<MudLayout Class="@(_darkMode ? "app-dark" : "app-light")">
     <MudAppBar Elevation="3" Style="background:#1e293b">
         <!-- Logo clicable → dashboard del rol actiu -->
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0" Style="min-width:0;flex-shrink:0">
@@ -33,6 +33,10 @@
                          Class="d-none d-sm-block">
                     @UserState.NomComplet
                 </MudText>
+                <MudIconButton Icon="@(_darkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                               Color="Color.Inherit"
+                               title="@(_darkMode ? "Mode clar" : "Mode fosc")"
+                               OnClick="ToggleDarkMode" />
                 <MudIconButton Icon="@Icons.Material.Filled.Logout"
                                Color="Color.Inherit"
                                title="@($"Sortir ({UserState.NomComplet})")"
@@ -68,6 +72,7 @@
 
 @code {
     private bool _sessionChecked = false;
+    private bool _darkMode       = false;
 
     private string LogoHref => UserState.IsStudent   ? "/alumne/dashboard"
                              : UserState.IsProfessor ? "/professor/dashboard"
@@ -114,14 +119,32 @@
     {
         PaletteLight = new PaletteLight
         {
-            Primary       = "#CC0000",
-            PrimaryDarken = "#a30000",
-            Secondary     = "#1e293b",
+            Primary         = "#CC0000",
+            PrimaryDarken   = "#a30000",
+            Secondary       = "#1e293b",
             SecondaryDarken = "#0f172a",
-            AppbarBackground = "#1e293b",
-            Background    = "#e2e8f0",
-            Surface       = "#ffffff",
-            DrawerBackground = "#1e293b",
+            AppbarBackground  = "#1e293b",
+            Background      = "#e2e8f0",
+            Surface         = "#ffffff",
+            DrawerBackground  = "#1e293b",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary         = "#e53535",
+            PrimaryDarken   = "#CC0000",
+            Secondary       = "#94a3b8",
+            SecondaryDarken = "#64748b",
+            AppbarBackground  = "#0f172a",
+            Background      = "#020617",
+            BackgroundGray  = "#0f172a",
+            Surface         = "#1e293b",
+            DrawerBackground  = "#0f172a",
+            TextPrimary     = "#f1f5f9",
+            TextSecondary   = "#94a3b8",
+            ActionDefault   = "#94a3b8",
+            LinesDefault    = "rgba(255,255,255,0.08)",
+            TableLines      = "rgba(255,255,255,0.08)",
+            Divider         = "rgba(255,255,255,0.08)",
         }
     };
 
@@ -143,11 +166,24 @@
             }
         }
         catch { /* clau DataProtection caducada o dades invàlides → ignora */ }
+
+        try
+        {
+            var dm = await LocalStorage.GetAsync<bool>("autoco_darkmode");
+            if (dm.Success) _darkMode = dm.Value;
+        }
+        catch { }
         finally
         {
             _sessionChecked = true;
             StateHasChanged();
         }
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        _darkMode = !_darkMode;
+        await LocalStorage.SetAsync("autoco_darkmode", _darkMode);
     }
 
     private async Task Logout()
