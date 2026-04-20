@@ -301,27 +301,73 @@ $updateSh = @'
 # =============================================================================
 # AutoCo - Script d'actualitzacio
 # =============================================================================
+# Us: bash update.sh
+# Reconstrueix les imatges Docker i reinicia els contenidors.
+# Preserva el .env i els certificats SSL existents.
+# =============================================================================
 set -euo pipefail
 DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$DEPLOY_DIR/.env"
 
 echo "========================================================"
 echo "  AutoCo - Actualitzacio"
+echo "  Directori: $DEPLOY_DIR"
 echo "========================================================"
 
 cd "$DEPLOY_DIR"
 
-echo "[1/3] Aturant contenidors..."
+# ── 1. Verificar que el .env existeix ────────────────────────────────────────
+echo ""
+echo "[1/4] Comprovant .env..."
+if [ ! -f "$ENV_FILE" ]; then
+    if [ -f "$DEPLOY_DIR/.env.example" ]; then
+        cp "$DEPLOY_DIR/.env.example" "$ENV_FILE"
+        echo "    [!] .env no existia. Creat a partir de .env.example."
+        echo "        IMPORTANT: edita $ENV_FILE amb les variables de produccio!"
+        exit 1
+    else
+        echo "    [ERROR] No s'ha trobat ni .env ni .env.example. Atura't."
+        exit 1
+    fi
+fi
+echo "    .env trobat OK"
+
+# ── 2. Aturar contenidors (sense esborrar volums) ────────────────────────────
+echo ""
+echo "[2/4] Aturant contenidors..."
 docker compose down
+echo "    Contenidors aturats."
 
-echo "[2/3] Reconstruint imatges..."
+# ── 3. Reconstruir imatges ───────────────────────────────────────────────────
+echo ""
+echo "[3/4] Reconstruint imatges Docker..."
 docker compose build --no-cache
+echo "    Imatges reconstruides."
 
-echo "[3/3] Arrencant..."
+# ── 4. Arrencar ──────────────────────────────────────────────────────────────
+echo ""
+echo "[4/4] Arrencant contenidors..."
 docker compose up -d
 
 echo ""
-echo "Actualitzacio completada!"
+echo "    Esperant que els contenidors estiguin operatius..."
+for i in $(seq 1 20); do
+    if docker compose ps | grep -q "autoco-nginx.*Up"; then
+        break
+    fi
+    printf "."
+    sleep 3
+done
+echo ""
+
+echo ""
+echo "========================================================"
+echo "  Actualitzacio completada!"
+echo ""
 docker compose ps
+echo ""
+echo "  Logs en temps real: docker compose logs -f"
+echo "========================================================"
 '@
 
 # ── backup.sh ─────────────────────────────────────────────────────────────────
@@ -385,14 +431,19 @@ Get-ChildItem -Path $Dest -Recurse |
     }
 
 Write-Host ""
-Write-Host "  Passos per desplegar al servidor Linux:"
+Write-Host "  OPCIO A — Instal·lacio nova al servidor:"
 Write-Host ""
-Write-Host "  1. Copiar el directori al servidor:"
-Write-Host "       scp -r `"$Dest`" usuari@servidor:/opt/autoco"
+Write-Host "    1. Copiar el directori al servidor:"
+Write-Host "         scp -r `"$Dest`" usuari@servidor:/opt/autoco"
+Write-Host "    2. Editar les variables d'entorn:"
+Write-Host "         ssh usuari@servidor 'nano /opt/autoco/.env'"
+Write-Host "    3. Executar l'instal·lador:"
+Write-Host "         ssh usuari@servidor 'sudo bash /opt/autoco/install.sh'"
 Write-Host ""
-Write-Host "  2. Al servidor, editar les variables:"
-Write-Host "       nano /opt/autoco/.env"
+Write-Host "  OPCIO B — Actualitzacio d'un servidor ja existent (recomanada):"
 Write-Host ""
-Write-Host "  3. Executar l'instal·lador:"
-Write-Host "       sudo bash /opt/autoco/install.sh"
+Write-Host "    Executa directament des del repo:"
+Write-Host "         .\deploy\push-update.ps1 -Servidor IP_O_HOST -Usuari usuari"
+Write-Host ""
+Write-Host "    Aixo sincronitza el codi nou, preserva .env i SSL, i reinicia."
 Write-Host "========================================================"
