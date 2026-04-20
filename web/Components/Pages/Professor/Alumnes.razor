@@ -338,14 +338,98 @@
 
     private async Task<(List<CreateStudentRequest>, List<string>)> ParseXlsAsync()
     {
-        var students = new List<CreateStudentRequest>();
-        var errors   = new List<string>();
-
-        // Copiem a MemoryStream perquè ExcelDataReader necessita un stream seekable
+        // Llegim tot l'stream en memòria per poder detectar el format
         using var inputStream = _importFile!.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
         var ms = new System.IO.MemoryStream();
         await inputStream.CopyToAsync(ms);
         ms.Position = 0;
+
+        // Molts sistemes escolars web exporten "XLS" que en realitat és una taula HTML.
+        // Ho detectem llegint el primer byte: si és '<', és HTML.
+        if (ms.Length > 0 && ms.ReadByte() == (byte)'<')
+        {
+            ms.Position = 0;
+            return ParseHtmlTable(ms);
+        }
+
+        // Excel binari real (BIFF8 .xls o OpenXML .xlsx)
+        ms.Position = 0;
+        return ParseBinaryExcel(ms);
+    }
+
+    /// <summary>
+    /// Parseja la taula HTML exportada per la web de l'escola.
+    /// Format: &lt;tr&gt; amb 10 &lt;td&gt;: Num|Cognoms|Nom|DNI|Naix|Baixa|Repetidor|Tel1|Tel2|Email
+    /// Encoding: ISO-8859-1 (Windows-1252) — típic de sistemes web antics.
+    /// </summary>
+    private static (List<CreateStudentRequest>, List<string>) ParseHtmlTable(System.IO.MemoryStream ms)
+    {
+        var students = new List<CreateStudentRequest>();
+        var errors   = new List<string>();
+
+        // ISO-8859-1 per preservar caràcters accentuats (é, à, ç, ...)
+        var encoding = System.Text.Encoding.GetEncoding("iso-8859-1");
+        var content  = encoding.GetString(ms.ToArray());
+
+        // Extreure files <tr>...</tr>
+        var rows = System.Text.RegularExpressions.Regex.Matches(
+            content, @"<tr[^>]*>(.*?)</tr>",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+            System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        bool headerSkipped = false;
+        int  rowNum        = 0;
+
+        foreach (System.Text.RegularExpressions.Match row in rows)
+        {
+            rowNum++;
+            var rowHtml = row.Groups[1].Value;
+
+            // Primera fila amb <b> = capçalera → saltar
+            if (!headerSkipped)
+            {
+                if (rowHtml.Contains("<b>", StringComparison.OrdinalIgnoreCase))
+                    { headerSkipped = true; continue; }
+            }
+
+            // Extreure cel·les i eliminar etiquetes HTML interiors
+            var cells = System.Text.RegularExpressions.Regex.Matches(
+                rowHtml, @"<td[^>]*>(.*?)</td>",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                System.Text.RegularExpressions.RegexOptions.Singleline)
+                .Select(m => System.Text.RegularExpressions.Regex
+                    .Replace(m.Groups[1].Value, "<[^>]+>", "").Trim())
+                .ToList();
+
+            if (cells.Count < 10) continue; // fila incompleta o buida
+
+            var numRaw  = cells[0];
+            // Els cognoms tenen espais múltiples de padding → normalitzar
+            var cognoms = System.Text.RegularExpressions.Regex.Replace(cells[1].Trim(), @"\s+", " ");
+            var nom     = cells[2].Trim();
+            var baixa   = cells[5].Trim();
+            var email   = cells[9].Trim();
+
+            if (!string.IsNullOrEmpty(baixa)) continue; // alumne de baixa
+            if (string.IsNullOrEmpty(numRaw) && string.IsNullOrEmpty(nom)) continue; // fila buida
+
+            if (!int.TryParse(numRaw, out var numLlista))
+            { errors.Add($"Fila {rowNum}: número de llista invàlid ('{numRaw}')."); continue; }
+
+            if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cognoms) || string.IsNullOrEmpty(email))
+            { errors.Add($"Fila {rowNum}: camps obligatoris buits."); continue; }
+
+            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, email));
+        }
+
+        return (students, errors);
+    }
+
+    /// <summary>Parseja Excel binari real (.xls BIFF8 o .xlsx OpenXML) via ExcelDataReader.</summary>
+    private static (List<CreateStudentRequest>, List<string>) ParseBinaryExcel(System.IO.MemoryStream ms)
+    {
+        var students = new List<CreateStudentRequest>();
+        var errors   = new List<string>();
 
         using var excelReader = ExcelDataReader.ExcelReaderFactory.CreateReader(ms);
         var ds = excelReader.AsDataSet(new ExcelDataReader.ExcelDataSetConfiguration
@@ -356,9 +440,7 @@
         if (ds.Tables.Count == 0) return (students, errors);
         var sheet = ds.Tables[0];
 
-        // Estructura del fitxer de l'escola:
-        // Fila 0: nom de la classe  · Fila 1: buida  · Fila 2: capçaleres
-        // Dades des de fila 3:  col 0=Num, col 1=Cognoms, col 2=Nom, col 5=Baixa, col 9=Email
+        // Fila 0: nom classe · Fila 1: buida · Fila 2: capçaleres → dades des de fila 3
         for (int r = 3; r < sheet.Rows.Count; r++)
         {
             var row     = sheet.Rows[r];
@@ -368,10 +450,9 @@
             var baixa   = row[5]?.ToString()?.Trim() ?? "";
             var email   = row[9]?.ToString()?.Trim() ?? "";
 
-            if (!string.IsNullOrEmpty(baixa)) continue;              // alumne donat de baixa
-            if (string.IsNullOrEmpty(numRaw) && string.IsNullOrEmpty(nom)) continue; // fila buida
+            if (!string.IsNullOrEmpty(baixa)) continue;
+            if (string.IsNullOrEmpty(numRaw) && string.IsNullOrEmpty(nom)) continue;
 
-            // Excel emmagatzema números com a double (1.0, 2.0, ...)
             int numLlista;
             if (!int.TryParse(numRaw, out numLlista))
             {
