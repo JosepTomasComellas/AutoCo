@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.3
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.4
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -309,6 +309,11 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v1.6.4
+- **Bugfix i18n crític**: les claus de traducció es mostraven literalment (p.ex. `Lang_Catalan`) perquè `ResourceManagerStringLocalizerFactory` no podia calcular el nom del recurs embedded sense `[RootNamespace]`; afegit `[assembly: RootNamespaceAttribute("AutoCo.Web")]` a `Program.cs`
+- **Bugfix i18n Blazor Server**: `RequestLocalizationMiddleware` fixava la cultura al thread HTTP però els threads del circuit Blazor no l'heretaven; `App.razor` ara llegeix la cultura del `HttpContext` via `IRequestCultureFeature` i la propaga via `CultureInfo.DefaultThreadCurrentCulture/UICulture`
+- **Redis**: el warning `Memory overcommit must be enabled` és una advertència del host Linux — veure les instruccions de configuració al servidor
 
 ### v1.6.3
 - **Rendiment crític**: `BackupService.ImportAsync` passava de N+1 `SaveChangesAsync` (centenars de crides per backup gran) a exactament 10 crides independentment del volum de dades

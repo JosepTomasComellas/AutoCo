@@ -1,3 +1,7 @@
+// Necessari perquè ResourceManagerStringLocalizerFactory pugui calcular
+// el nom del recurs embedded correctament (Resources.SharedResources).
+[assembly: Microsoft.Extensions.Localization.RootNamespaceAttribute("AutoCo.Web")]
+
 using AutoCo.Web.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;

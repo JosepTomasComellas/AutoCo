@@ -1,4 +1,6 @@
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
+@using System.Globalization
+@using Microsoft.AspNetCore.Localization
 <!DOCTYPE html>
 <html lang="ca">
 <head>
@@ -27,3 +29,24 @@
     </script>
 </body>
 </html>
+
+@code {
+    // App.razor s'executa com a SSR (thread HTTP) → llegim la cultura establerta
+    // per RequestLocalizationMiddleware i la fixem com a DefaultThreadCurrentCulture
+    // perquè els threads del circuit Blazor Server l'heretin.
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (HttpContext is not null)
+        {
+            var feature = HttpContext.Features.Get<IRequestCultureFeature>();
+            if (feature is not null)
+            {
+                CultureInfo.DefaultThreadCurrentCulture   = feature.RequestCulture.Culture;
+                CultureInfo.DefaultThreadCurrentUICulture = feature.RequestCulture.UICulture;
+            }
+        }
+    }
+}
