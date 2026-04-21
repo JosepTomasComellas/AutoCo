@@ -23,12 +23,12 @@ public interface IActivityService
     Task<(byte[] Content, string FileName)?>  ExportGroupsAsync(int activityId, int professorId, bool isAdmin);
     Task<ImportGroupsResult> ImportGroupsAsync(int activityId, int professorId, bool isAdmin, string csvContent);
 
-    Task<List<GroupDto>>  GetGroupsAsync(int activityId);
-    Task<GroupDto>        CreateGroupAsync(int activityId, CreateGroupRequest req);
-    Task<bool>            DeleteGroupAsync(int activityId, int groupId);
-    Task<bool>            AddMemberAsync(int activityId, int groupId, int studentId);
-    Task<bool>            RemoveMemberAsync(int activityId, int groupId, int studentId);
-    Task<bool>            ReorderGroupsAsync(int activityId, List<int> orderedGroupIds);
+    Task<List<GroupDto>?>  GetGroupsAsync(int activityId, int professorId, bool isAdmin);
+    Task<GroupDto>         CreateGroupAsync(int activityId, CreateGroupRequest req);
+    Task<bool>             DeleteGroupAsync(int activityId, int groupId);
+    Task<bool>             AddMemberAsync(int activityId, int groupId, int studentId);
+    Task<bool>             RemoveMemberAsync(int activityId, int groupId, int studentId);
+    Task<bool>             ReorderGroupsAsync(int activityId, List<int> orderedGroupIds, int professorId, bool isAdmin);
 
     // Per al dashboard de l'alumne
     Task<List<StudentActivityDto>> GetStudentActivitiesAsync(int studentId, int classId);
@@ -305,7 +305,15 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
                 (isAdmin || a.Module.ProfessorId == professorId))
             ?? throw new UnauthorizedAccessException("Activitat no trobada o sense permisos.");
 
+        const int MaxBytes = 5 * 1024 * 1024; // 5 MB
+        const int MaxLines = 5_000;
+        if (System.Text.Encoding.UTF8.GetByteCount(csvContent) > MaxBytes)
+            throw new InvalidOperationException("El fitxer supera el límit de 5 MB.");
+
         var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length > MaxLines)
+            throw new InvalidOperationException($"El fitxer supera el límit de {MaxLines} línies.");
+
         int assigned = 0, skipped = 0;
         var errors   = new List<string>();
         var groupCache = new Dictionary<string, Group>(StringComparer.OrdinalIgnoreCase);
@@ -360,8 +368,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
 
     // ── Grups ────────────────────────────────────────────────────────────────
 
-    public async Task<List<GroupDto>> GetGroupsAsync(int activityId)
+    public async Task<List<GroupDto>?> GetGroupsAsync(int activityId, int professorId, bool isAdmin)
     {
+        // Valida que l'activitat pertany al professor (o que és admin)
+        var owns = await db.Activities
+            .AnyAsync(a => a.Id == activityId && (isAdmin || a.Module.ProfessorId == professorId));
+        if (!owns) return null;
+
         var groups = await db.Groups
             .Include(g => g.Members).ThenInclude(m => m.Student)
             .Where(g => g.ActivityId == activityId)
@@ -387,15 +400,24 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
         return new GroupDto(group.Id, group.ActivityId, group.Name, [], group.OrderIndex);
     }
 
-    public async Task<bool> ReorderGroupsAsync(int activityId, List<int> orderedGroupIds)
+    public async Task<bool> ReorderGroupsAsync(int activityId, List<int> orderedGroupIds, int professorId, bool isAdmin)
     {
+        // Valida que el professor és propietari de l'activitat
+        var owns = await db.Activities
+            .AnyAsync(a => a.Id == activityId && (isAdmin || a.Module.ProfessorId == professorId));
+        if (!owns) return false;
+
         var groups = await db.Groups
             .Where(g => g.ActivityId == activityId)
             .ToListAsync();
+
+        // Ignora IDs que no pertanyin a aquesta activitat (prevenció IDOR)
+        var validIds = new HashSet<int>(groups.Select(g => g.Id));
         for (int i = 0; i < orderedGroupIds.Count; i++)
         {
-            var g = groups.FirstOrDefault(x => x.Id == orderedGroupIds[i]);
-            if (g is not null) g.OrderIndex = i;
+            if (!validIds.Contains(orderedGroupIds[i])) continue;
+            var g = groups.First(x => x.Id == orderedGroupIds[i]);
+            g.OrderIndex = i;
         }
         await db.SaveChangesAsync();
         return true;

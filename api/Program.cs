@@ -579,6 +579,10 @@ app.MapPost("/api/activities/{id:int}/groups/import", async (int id, ImportGroup
     {
         return Results.BadRequest(new { error = ex.Message });
     }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
 }).RequireAuthorization();
 
 app.MapPut("/api/activities/{id:int}", async (int id, UpdateActivityRequest req,
@@ -626,9 +630,12 @@ app.MapPost("/api/activities/{id:int}/toggle", async (int id, IActivityService s
 
 // ── Grups ─────────────────────────────────────────────────────────────────────
 
-app.MapGet("/api/activities/{actId:int}/groups", async (int actId, IActivityService svc) =>
-    Results.Ok(await svc.GetGroupsAsync(actId)))
-    .RequireAuthorization();
+app.MapGet("/api/activities/{actId:int}/groups", async (int actId, IActivityService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var groups = await svc.GetGroupsAsync(actId, GetUserId(user), IsAdmin(user));
+    return groups is null ? Results.Forbid() : Results.Ok(groups);
+}).RequireAuthorization();
 
 app.MapPost("/api/activities/{actId:int}/groups", async (int actId,
     CreateGroupRequest req, IActivityService svc, ClaimsPrincipal user) =>
@@ -659,8 +666,8 @@ app.MapPut("/api/activities/{actId:int}/groups/reorder", async (
     int actId, ReorderGroupsRequest req, IActivityService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    await svc.ReorderGroupsAsync(actId, req.OrderedGroupIds);
-    return Results.NoContent();
+    var ok = await svc.ReorderGroupsAsync(actId, req.OrderedGroupIds, GetUserId(user), IsAdmin(user));
+    return ok ? Results.NoContent() : Results.Forbid();
 }).RequireAuthorization();
 
 app.MapDelete("/api/activities/{actId:int}/groups/{groupId:int}/members/{studentId:int}",

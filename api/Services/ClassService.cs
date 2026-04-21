@@ -253,14 +253,20 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         int sent = 0, skipped = 0;
         var details = new List<string>();
 
+        // Genera i desa tots els nous passwords d'un sol cop (evita N+1 SaveChanges)
+        var passwords = new Dictionary<int, string>(students.Count);
         foreach (var s in students)
         {
             var newPassword = PasswordHelper.Generate();
             s.PasswordHash = PasswordHelper.Hash(newPassword);
-            await db.SaveChangesAsync();
+            passwords[s.Id] = newPassword;
+        }
+        await db.SaveChangesAsync();
 
+        foreach (var s in students)
+        {
             if (!email.IsEnabled) { skipped++; continue; }
-            var ok = await email.SendStudentPasswordAsync(s.Email, s.NomComplet, s.Class.Name, newPassword);
+            var ok = await email.SendStudentPasswordAsync(s.Email, s.NomComplet, s.Class.Name, passwords[s.Id]);
             if (ok) sent++; else { skipped++; details.Add($"{s.NomComplet}: error."); }
         }
         return new SendAllResult(sent, skipped, details);
