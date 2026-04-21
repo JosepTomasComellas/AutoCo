@@ -194,27 +194,46 @@ docker compose up --build
 
 Accedeix a **https://localhost** (accepta l'avís del certificat auto-signat).
 
-### Opció B — Actualització del servidor (des de Windows)
+### Opció B — Actualització directa des del servidor (recomanada)
 
-```powershell
-# Genera el paquet de fitxers a copiar
-.\deploy\update.ps1
-
-# O envía directament al servidor via SSH (una sola comanda)
-.\deploy\push-update.ps1                  # requereix clau SSH configurada
-.\deploy\push-update.ps1 -ConfigurarClau  # primera vegada: instal·la la clau SSH
+**Configuració inicial (una sola vegada):**
+```bash
+cd /docker
+git clone https://github.com/JosepTomasComellas/AutoCo.git AutoCo-git
+cp AutoCo/.env AutoCo-git/.env
+cp -r AutoCo/nginx/ssl AutoCo-git/nginx/ssl
+rm -rf AutoCo && mv AutoCo-git AutoCo
 ```
 
-El paquet preserva automàticament el `.env` i els certificats SSL del servidor.
+**A partir d'ara, per aplicar qualsevol actualització:**
+```bash
+bash /docker/AutoCo/deploy/server-update.sh
+```
+
+El script fa `git pull`, reconstrueix les imatges i mostra la versió desplegada.
+
+### Opció C — Actualització del servidor des de Windows
+
+```powershell
+# Genera el paquet de fitxers i copia al servidor
+.\deploy\update.ps1
+scp -r "deploy\autoco-update-YYYYMMDD" root@servidor:/docker/AutoCo-new
+```
+
+```bash
+# Al servidor
+rsync -a --exclude='.env' --exclude='nginx/ssl' /docker/AutoCo-new/ /docker/AutoCo/
+bash /docker/AutoCo/update.sh
+```
 
 ### Comandes útils al servidor
 
 ```bash
-docker compose up --build   # Reconstruir i aixecar (aplicar canvis)
-docker compose down         # Aturar (dades preservades)
-docker compose down -v      # Aturar i esborrar totes les dades
-docker compose logs -f      # Logs en temps real
-bash /docker/AutoCo/backup.sh  # Backup manual de la BD
+bash /docker/AutoCo/deploy/server-update.sh  # Actualitzar des de GitHub
+docker compose logs -f           # Logs en temps real
+docker compose down              # Aturar (dades preservades)
+docker compose down -v           # Aturar i esborrar totes les dades
+bash /docker/AutoCo/backup.sh    # Backup manual de la BD
 ```
 
 ---
