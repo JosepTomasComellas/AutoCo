@@ -27,8 +27,12 @@ public class ParticipationNotificationService
     {
         lock (_lock)
         {
-            if (_handlers.TryGetValue(activityId, out var list))
-                list.Remove(handler);
+            if (!_handlers.TryGetValue(activityId, out var list)) return;
+            list.Remove(handler);
+            // Neteja l'entrada del diccionari quan ja no hi ha subscriptors
+            // per evitar acumulació de keys en aplicacions de llarga vida
+            if (list.Count == 0)
+                _handlers.TryRemove(activityId, out _);
         }
     }
 

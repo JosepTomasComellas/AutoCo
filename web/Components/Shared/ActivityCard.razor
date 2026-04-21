@@ -123,13 +123,26 @@
         // Si l'activitat és oberta, càrrega inicial de participació
         if (Act.IsOpen && _participation is null && !_loadingParticipation)
             await LoadParticipationAsync();
+
+        // Subscripció/desubscripció quan IsOpen canvia (p.ex. oberta des del dashboard)
+        if (Act.IsOpen && _participationHandler is null)
+            EnsureSubscribed();
+        else if (!Act.IsOpen && _participationHandler is not null)
+        {
+            ParticipationNotifier.Unsubscribe(Act.Id, _participationHandler);
+            _participationHandler = null;
+        }
     }
 
     protected override void OnAfterRender(bool firstRender)
     {
         if (!firstRender || !Act.IsOpen) return;
+        EnsureSubscribed();
+    }
 
-        // Subscripció a notificacions en temps real via Redis pub/sub
+    private void EnsureSubscribed()
+    {
+        if (_participationHandler is not null) return; // ja subscrit
         _participationHandler = async dto =>
         {
             _participation = dto;
@@ -159,11 +172,7 @@
         if (updated is not null)
         {
             Snackbar.Add(updated.IsOpen ? "Activitat oberta." : "Activitat tancada.", Severity.Success);
-            if (!updated.IsOpen && _participationHandler is not null)
-            {
-                ParticipationNotifier.Unsubscribe(Act.Id, _participationHandler);
-                _participationHandler = null;
-            }
+            // La desubscripció/subscripció es gestiona a OnParametersSetAsync quan Act canvia
             await OnUpdated.InvokeAsync(updated);
         }
     }

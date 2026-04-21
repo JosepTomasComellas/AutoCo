@@ -547,11 +547,12 @@ app.MapGet("/api/activities/{id:int}/criteria", async (int id, IActivityService 
 }).RequireAuthorization();
 
 app.MapPut("/api/activities/{id:int}/criteria", async (int id, SaveCriteriaRequest req,
-    IActivityService svc, ClaimsPrincipal user) =>
+    IActivityService svc, IResultsService results, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     if (!req.Items.Any()) return Results.BadRequest(new { error = "Cal almenys un criteri." });
     var list = await svc.SaveCriteriaAsync(id, GetUserId(user), IsAdmin(user), req);
+    await results.InvalidateCacheAsync(id); // criteris canviats → resultats i gràfica desactualitzats
     return Results.Ok(list);
 }).RequireAuthorization();
 
@@ -581,10 +582,11 @@ app.MapPost("/api/activities/{id:int}/groups/import", async (int id, ImportGroup
 }).RequireAuthorization();
 
 app.MapPut("/api/activities/{id:int}", async (int id, UpdateActivityRequest req,
-    IActivityService svc, ClaimsPrincipal user) =>
+    IActivityService svc, IResultsService results, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var a = await svc.UpdateAsync(id, GetUserId(user), IsAdmin(user), req);
+    if (a is not null) await results.InvalidateCacheAsync(id); // nom/descripció canviats → caché stale
     return a is null ? Results.NotFound() : Results.Ok(a);
 }).RequireAuthorization();
 
@@ -597,12 +599,13 @@ app.MapDelete("/api/activities/{id:int}", async (int id, IActivityService svc,
 }).RequireAuthorization();
 
 app.MapPost("/api/activities/{id:int}/toggle", async (int id, IActivityService svc,
-    AppDbContext db, ClaimsPrincipal user) =>
+    IResultsService results, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var a = await svc.ToggleOpenAsync(id, GetUserId(user), IsAdmin(user));
     if (a is not null)
     {
+        await results.InvalidateCacheAsync(id); // IsOpen canvia → caché de resultats stale
         try
         {
             var prof = await db.Professors.FindAsync(GetUserId(user));
