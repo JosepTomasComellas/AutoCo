@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using StackExchange.Redis;
+using AutoCo.Web.Resources;
 
 // Necessari per a ExcelDataReader: suport d'encodings Windows (cp1252, etc.)
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
@@ -32,17 +33,9 @@ builder.Services.AddMudServices();
 // ── Localització (i18n) ───────────────────────────────────────────────────────
 builder.Services.AddLocalization(opts => opts.ResourcesPath = "Resources");
 
-// Registre explícit per evitar errors de resolució del nom del recurs embedded.
-// AddLocalization() registra IStringLocalizer<T> via la factory, que calcula el nom
-// del recurs com "{ResourcesPath}.{TypeFullName}" sense el prefix de namespace arrel,
-// però necessita [assembly: RootNamespace] que en top-level statements pot ser ignorat.
-// Aquí forcem el nom exacte: "AutoCo.Web.Resources.SharedResources".
-builder.Services.AddTransient<IStringLocalizer<SharedResources>>(sp =>
-{
-    var factory = sp.GetRequiredService<IStringLocalizerFactory>();
-    var inner   = factory.Create("AutoCo.Web.Resources.SharedResources", "AutoCo.Web");
-    return new SharedResourcesLocalizer(inner);
-});
+// Usem DictionaryLocalizer (diccionaris estàtics) en lloc de ResourceManager/resx
+// per evitar problemes de resolució de recursos embeguts en Docker.
+builder.Services.AddSingleton<IStringLocalizer<SharedResources>, AutoCo.Web.Resources.DictionaryLocalizer>();
 
 var supportedCultures = new[] { "ca", "es" };
 builder.Services.Configure<Microsoft.AspNetCore.Builder.RequestLocalizationOptions>(opts =>
@@ -94,14 +87,3 @@ app.MapRazorComponents<AutoCo.Web.Components.App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
-
-// Wrapper que adapta IStringLocalizer → IStringLocalizer<SharedResources>
-// perquè la DI resolgui correctament el genèric sense dependre de la factory automàtica.
-internal sealed class SharedResourcesLocalizer(IStringLocalizer inner)
-    : IStringLocalizer<SharedResources>
-{
-    public LocalizedString this[string name] => inner[name];
-    public LocalizedString this[string name, params object[] arguments] => inner[name, arguments];
-    public IEnumerable<LocalizedString> GetAllStrings(bool includeParentCultures)
-        => inner.GetAllStrings(includeParentCultures);
-}
