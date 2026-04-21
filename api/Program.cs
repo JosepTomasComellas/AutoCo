@@ -85,6 +85,78 @@ using (var scope = app.Services.CreateScope())
     var db     = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
     db.Database.Migrate();
+
+    // ── Taules afegides al model sense migració formal (crea si no existeix) ──
+    // Idempotent: segur d'executar a cada arrencada. Necessari quan el projecte
+    // no té fitxers de migració i la BD va ser creada amb EnsureCreated o bé
+    // amb una versió anterior del model.
+    await db.Database.ExecuteSqlRawAsync("""
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityCriteria')
+        BEGIN
+            CREATE TABLE [ActivityCriteria] (
+                [Id]         INT          NOT NULL IDENTITY(1,1),
+                [ActivityId] INT          NOT NULL,
+                [Key]        NVARCHAR(50) NOT NULL,
+                [Label]      NVARCHAR(200) NOT NULL,
+                [OrderIndex] INT          NOT NULL,
+                CONSTRAINT [PK_ActivityCriteria] PRIMARY KEY ([Id]),
+                CONSTRAINT [FK_ActivityCriteria_Activities_ActivityId]
+                    FOREIGN KEY ([ActivityId]) REFERENCES [Activities]([Id]) ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX [IX_ActivityCriteria_ActivityId_Key]
+                ON [ActivityCriteria] ([ActivityId], [Key]);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorNotes')
+        BEGIN
+            CREATE TABLE [ProfessorNotes] (
+                [Id]         INT           NOT NULL IDENTITY(1,1),
+                [ActivityId] INT           NOT NULL,
+                [StudentId]  INT           NOT NULL,
+                [Note]       NVARCHAR(MAX) NOT NULL,
+                [UpdatedAt]  DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                CONSTRAINT [PK_ProfessorNotes] PRIMARY KEY ([Id]),
+                CONSTRAINT [FK_ProfessorNotes_Activities_ActivityId]
+                    FOREIGN KEY ([ActivityId]) REFERENCES [Activities]([Id]) ON DELETE CASCADE,
+                CONSTRAINT [FK_ProfessorNotes_Students_StudentId]
+                    FOREIGN KEY ([StudentId]) REFERENCES [Students]([Id])
+            );
+            CREATE UNIQUE INDEX [IX_ProfessorNotes_ActivityId_StudentId]
+                ON [ProfessorNotes] ([ActivityId], [StudentId]);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityTemplates')
+        BEGIN
+            CREATE TABLE [ActivityTemplates] (
+                [Id]          INT           NOT NULL IDENTITY(1,1),
+                [ProfessorId] INT           NOT NULL,
+                [Name]        NVARCHAR(300) NOT NULL,
+                [Description] NVARCHAR(MAX) NULL,
+                [CriteriaJson] NVARCHAR(MAX) NOT NULL DEFAULT N'[]',
+                [CreatedAt]   DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                CONSTRAINT [PK_ActivityTemplates] PRIMARY KEY ([Id])
+            );
+            CREATE INDEX [IX_ActivityTemplates_ProfessorId]
+                ON [ActivityTemplates] ([ProfessorId]);
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityLogs')
+        BEGIN
+            CREATE TABLE [ActivityLogs] (
+                [Id]           INT           NOT NULL IDENTITY(1,1),
+                [ActivityId]   INT           NOT NULL,
+                [ActivityName] NVARCHAR(300) NOT NULL,
+                [ActorName]    NVARCHAR(300) NULL,
+                [Action]       NVARCHAR(50)  NOT NULL,
+                [Details]      NVARCHAR(MAX) NULL,
+                [CreatedAt]    DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                CONSTRAINT [PK_ActivityLogs] PRIMARY KEY ([Id])
+            );
+            CREATE INDEX [IX_ActivityLogs_ActivityId]
+                ON [ActivityLogs] ([ActivityId]);
+        END
+        """);
+
     // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
     // que la BD s'aturi entre peticions i torna a arrencar amb cada connexió nova.
     try
