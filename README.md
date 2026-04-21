@@ -24,7 +24,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - Importació/exportació de grups per CSV
 - **Duplicació d'activitats** reutilitzant la configuració de grups
 - **Duplicació creuada** d'activitats a una altra classe i mòdul
-- **Indicador de participació** en temps real a cada targeta (polling 30 s)
+- **Indicador de participació** en temps real a cada targeta (Redis pub/sub, instantani)
 - **Recordatoris per correu** als alumnes que no han omplert l'avaluació
 - **Notificació automàtica al professor** quan el 100% de l'activitat s'ha completat
 - **Desfer eliminació** — finestra de 5 s per cancel·lar eliminació d'activitats i alumnes
@@ -60,8 +60,8 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Pàgina offline** en català quan no hi ha connexió al servidor
 
 **Qualitat i fiabilitat**
-- **Notificació en temps real** de participació via Redis pub/sub (substitueix el polling de 30 s)
-- **Tests unitaris** de `ResultsService`: 16 casos cobreixen càlcul de notes, caché, control d'accés i ordenació
+- **Notificació en temps real** de participació via Redis pub/sub (subscripció reactiva, sense polling)
+- **Tests unitaris** de `ResultsService`: 15 casos cobreixen càlcul de notes, caché, control d'accés i ordenació
 - **Validació CSV millorada**: format d'email, NumLlista duplicat, visualització completa d'errors inline
 
 ### Alumne
@@ -305,6 +305,45 @@ POST /api/admin/backup/import                         # Importar backup JSON
 GET  /api/health                                      # Estat DB + Redis
 GET  /api/criteria                                    # Llista de criteris globals
 ```
+
+---
+
+## Changelog
+
+### v1.6.0
+- **PWA**: `manifest.json`, service worker (cache-first d'assets, pàgina offline)
+- **Temps real**: Redis pub/sub substitueix el polling de 30 s a l'indicador de participació
+- **Validació CSV**: regex email, NumLlista duplicat, llista d'errors inline completa
+- **Tests unitaris**: 15 casos xUnit per a `ResultsService` (EF Core InMemory)
+- **i18n**: `IStringLocalizer` + fitxers `.resx` (ca/es), selector d'idioma a la navbar
+- **Bugfix**: caché de resultats no s'invalidava en canviar criteris, obrir/tancar o editar activitats
+- **Bugfix**: `ActivityCard` no es subscrivia a temps real si l'activitat s'obria post-render
+
+### v1.5.0
+- Perfil professor (nom, cognoms, contrasenya) des de la barra de navegació
+- Restabliment de contrasenya per email (OTP 6 dígits, Redis, 15 min)
+- Exportació Excel (.xlsx) amb color per rang de nota
+- Criteris d'avaluació editables inline a la pàgina de grups
+- Ordre de grups persistent (▲▼)
+- Paginació de la taula de resultats (25 files)
+- Seguretat: comprovació de propietat en endpoints de notes i log
+
+### v1.4.0
+- Notes del professor per alumne (editables inline)
+- Plantilles d'activitat (desa i reutilitza configuració + criteris)
+- Gràfiques comparatives Auto vs. Co per grup i per criteri (Chart.js)
+- Codis QR per classe (SVG, imprimibles)
+- Informe PDF individual per alumne
+- Duplicació creuada d'activitats entre classes
+- Registre d'activitat (qui ha obert, tancat, avaluat i quan)
+
+### v1.3.0 i anteriors
+- Gestió de classes, alumnes, mòduls i activitats
+- Grups per drag & drop, importació/exportació CSV
+- Autoavaluació i coavaluació per escala d'estrelles
+- Resultats amb filtres, exportació CSV
+- Mode fosc, selector de tema de color
+- Còpies de seguretat JSON
 
 ---
 
