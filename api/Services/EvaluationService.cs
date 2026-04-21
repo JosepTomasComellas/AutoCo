@@ -16,7 +16,7 @@ public interface IEvaluationService
 }
 
 public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactory,
-    IConnectionMultiplexer redis) : IEvaluationService
+    IConnectionMultiplexer redis, ILogger<EvaluationService> logger) : IEvaluationService
 {
     public async Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId)
     {
@@ -164,7 +164,7 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
                         RedisChannel.Literal($"autoco:participation:{activityId}"),
                         payload);
                 }
-                catch { /* la notificació en temps real és no-crítica */ }
+                catch (Exception ex) { logger.LogWarning(ex, "Error publicant participació a Redis (activitat {Id})", activityId); }
             });
 
             // ── Log de l'avaluació enviada ─────────────────────────────────
@@ -182,7 +182,7 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
                 });
                 await db.SaveChangesAsync();
             }
-            catch { /* el log és no-crític */ }
+            catch (Exception ex) { logger.LogWarning(ex, "Error desant log d'avaluació (activitat {Id})", activityId); }
 
             // ── Notificació si l'activitat és 100% completa ───────────────
             // IMPORTANT: usa un scope propi per evitar que el DbContext
@@ -224,7 +224,7 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
                                     capturedActivityName, mod.Class.Name, allGroupMembers.Count);
                         }
                     }
-                    catch { /* notificació no-crítica */ }
+                    catch (Exception ex) { logger.LogWarning(ex, "Error enviant notificació de compleció (activitat {Id})", capturedActivityId); }
                 });
             }
 

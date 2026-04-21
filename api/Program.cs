@@ -551,6 +551,7 @@ app.MapPut("/api/activities/{id:int}/criteria", async (int id, SaveCriteriaReque
 {
     if (!IsProfessor(user)) return Results.Forbid();
     if (!req.Items.Any()) return Results.BadRequest(new { error = "Cal almenys un criteri." });
+    if (req.Items.Count > 50) return Results.BadRequest(new { error = "No es poden desar més de 50 criteris per activitat." });
     var list = await svc.SaveCriteriaAsync(id, GetUserId(user), IsAdmin(user), req);
     await results.InvalidateCacheAsync(id); // criteris canviats → resultats i gràfica desactualitzats
     return Results.Ok(list);
@@ -641,15 +642,16 @@ app.MapPost("/api/activities/{actId:int}/groups", async (int actId,
     CreateGroupRequest req, IActivityService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var g = await svc.CreateGroupAsync(actId, req);
-    return Results.Created($"/api/activities/{actId}/groups/{g.Id}", g);
+    var g = await svc.CreateGroupAsync(actId, req, GetUserId(user), IsAdmin(user));
+    return g is null ? Results.Forbid()
+                     : Results.Created($"/api/activities/{actId}/groups/{g.Id}", g);
 }).RequireAuthorization();
 
 app.MapDelete("/api/activities/{actId:int}/groups/{groupId:int}", async (
     int actId, int groupId, IActivityService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var ok = await svc.DeleteGroupAsync(actId, groupId);
+    var ok = await svc.DeleteGroupAsync(actId, groupId, GetUserId(user), IsAdmin(user));
     return ok ? Results.NoContent() : Results.NotFound();
 }).RequireAuthorization();
 
@@ -658,7 +660,7 @@ app.MapPost("/api/activities/{actId:int}/groups/{groupId:int}/members", async (
     IActivityService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var ok = await svc.AddMemberAsync(actId, groupId, req.StudentId);
+    var ok = await svc.AddMemberAsync(actId, groupId, req.StudentId, GetUserId(user), IsAdmin(user));
     return ok ? Results.NoContent() : Results.BadRequest();
 }).RequireAuthorization();
 
@@ -675,7 +677,7 @@ app.MapDelete("/api/activities/{actId:int}/groups/{groupId:int}/members/{student
     ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var ok = await svc.RemoveMemberAsync(actId, groupId, studentId);
+    var ok = await svc.RemoveMemberAsync(actId, groupId, studentId, GetUserId(user), IsAdmin(user));
     return ok ? Results.NoContent() : Results.NotFound();
 }).RequireAuthorization();
 
@@ -774,7 +776,7 @@ app.MapGet("/api/health", async (AppDbContext db, StackExchange.Redis.IConnectio
     try { redisOk = redis.IsConnected; }                      catch { }
     var status = dbOk && redisOk ? "ok" : "degraded";
     return Results.Ok(new { status, db = dbOk ? "ok" : "error", redis = redisOk ? "ok" : "error" });
-});
+}).RequireAuthorization();
 
 // ════════════════════════════════════════════════════════════════════════════
 // BACKUP / RESTORE (admin only)

@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.1
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.2
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -309,6 +309,16 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v1.6.2
+- **Seguretat crítica**: IDOR a `CreateGroupAsync`, `DeleteGroupAsync`, `AddMemberAsync`, `RemoveMemberAsync` — qualsevol professor podia gestionar grups i membres d'activitats alienes; tots ara validen propietat de l'activitat
+- **Robustesa**: `ReorderGroupsAsync` usa `Dictionary.TryGetValue` en lloc de `.First()` per evitar `InvalidOperationException` en condicions de carrera
+- **Rendiment**: refactorització de `ImportGroupsAsync` en 3 fases (parse → crear grups → crear membres) eliminant tots els `SaveChangesAsync` dins del loop; es garanteix coherència i s'eviten duplicats en importacions simultànies
+- **Logging**: `EvaluationService` ara registra warns detallats en lloc de `catch { }` silent als `Task.Run` (notificació Redis, log d'activitat, notificació de compleció)
+- **Rendiment**: `ProfessorService.SendAllCredentialsAsync` N+1 corregit (un sol `SaveChangesAsync` per a tots els professors)
+- **Seguretat**: `/api/health` ara requereix autenticació per evitar information disclosure
+- **DoS**: `PUT /api/activities/{id}/criteria` limitat a 50 criteris màxim per activitat
+- **Seguretat**: `BackupService.ImportAsync` retorna missatge genèric en errors (sense detalls interns)
 
 ### v1.6.1
 - **Seguretat**: IDOR a `GetGroupsAsync` i `ReorderGroupsAsync` — qualsevol professor autenticat podia llegir/modificar grups d'activitats alienes; afegida validació de propietat

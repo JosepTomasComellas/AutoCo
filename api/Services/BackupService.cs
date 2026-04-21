@@ -2,6 +2,7 @@ using AutoCo.Api.Data;
 using AutoCo.Api.Data.Models;
 using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -18,7 +19,7 @@ public interface IBackupService
     Task<ImportResult>           RestoreFileAsync(string name);
 }
 
-public class BackupService(AppDbContext db, IConfiguration cfg) : IBackupService
+public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupService> logger) : IBackupService
 {
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -225,7 +226,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg) : IBackupService
         catch (Exception ex)
         {
             await tx.RollbackAsync();
-            return new ImportResult(false, ex.Message, 0, 0, 0, 0, 0, 0);
+            logger.LogError(ex, "Error important backup");
+            return new ImportResult(false, "Error intern en importar el backup. Consulta els logs del servidor.", 0, 0, 0, 0, 0, 0);
         }
     }
 

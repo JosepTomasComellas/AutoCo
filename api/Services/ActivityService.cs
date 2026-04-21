@@ -24,10 +24,10 @@ public interface IActivityService
     Task<ImportGroupsResult> ImportGroupsAsync(int activityId, int professorId, bool isAdmin, string csvContent);
 
     Task<List<GroupDto>?>  GetGroupsAsync(int activityId, int professorId, bool isAdmin);
-    Task<GroupDto>         CreateGroupAsync(int activityId, CreateGroupRequest req);
-    Task<bool>             DeleteGroupAsync(int activityId, int groupId);
-    Task<bool>             AddMemberAsync(int activityId, int groupId, int studentId);
-    Task<bool>             RemoveMemberAsync(int activityId, int groupId, int studentId);
+    Task<GroupDto?>        CreateGroupAsync(int activityId, CreateGroupRequest req, int professorId, bool isAdmin);
+    Task<bool>             DeleteGroupAsync(int activityId, int groupId, int professorId, bool isAdmin);
+    Task<bool>             AddMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin);
+    Task<bool>             RemoveMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin);
     Task<bool>             ReorderGroupsAsync(int activityId, List<int> orderedGroupIds, int professorId, bool isAdmin);
 
     // Per al dashboard de l'alumne
@@ -315,8 +315,14 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
             throw new InvalidOperationException($"El fitxer supera el límit de {MaxLines} línies.");
 
         int assigned = 0, skipped = 0;
-        var errors   = new List<string>();
-        var groupCache = new Dictionary<string, Group>(StringComparer.OrdinalIgnoreCase);
+        var errors = new List<string>();
+
+        // ── Fase 1: parseig i validació (sense tocar la BD) ──────────────────
+        // Recollim les assignacions vàlides i els noms de grups nous
+        var pendingAssignments = new List<(string GroupName, int StudentId)>();
+        var assignedStudents   = new HashSet<int>(
+            activity.Groups.SelectMany(g => g.Members).Select(m => m.StudentId));
+        var newGroupNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var line in lines.Skip(1)) // saltar capçalera
         {
@@ -336,29 +342,41 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
                 continue;
             }
 
-            var alreadyAssigned = activity.Groups.Any(g => g.Members.Any(m => m.StudentId == student.Id));
-            if (alreadyAssigned)
+            if (assignedStudents.Contains(student.Id))
             {
                 errors.Add($"Alumne ja assignat: {email}");
                 skipped++;
                 continue;
             }
 
-            if (!groupCache.TryGetValue(groupName, out var grup))
-            {
-                grup = activity.Groups.FirstOrDefault(g =>
-                    g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
-                if (grup is null)
-                {
-                    grup = new Group { ActivityId = activityId, Name = groupName };
-                    db.Groups.Add(grup);
-                    await db.SaveChangesAsync();
-                    activity.Groups.Add(grup);
-                }
-                groupCache[groupName] = grup;
-            }
+            assignedStudents.Add(student.Id);
+            pendingAssignments.Add((groupName, student.Id));
 
-            db.GroupMembers.Add(new GroupMember { GroupId = grup.Id, StudentId = student.Id });
+            // Marca el grup com a nou si no existeix ja
+            var existsInActivity = activity.Groups.Any(g =>
+                g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+            if (!existsInActivity)
+                newGroupNames.Add(groupName);
+        }
+
+        // ── Fase 2: crea tots els grups nous d'un sol cop (1 SaveChanges) ────
+        var groupCache = activity.Groups
+            .ToDictionary(g => g.Name, g => g, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var name in newGroupNames)
+        {
+            var grup = new Group { ActivityId = activityId, Name = name };
+            db.Groups.Add(grup);
+            groupCache[name] = grup;
+        }
+        if (newGroupNames.Count > 0)
+            await db.SaveChangesAsync(); // obté els Ids dels grups nous
+
+        // ── Fase 3: crea tots els membres d'un sol cop (1 SaveChanges) ────────
+        foreach (var (groupName, studentId) in pendingAssignments)
+        {
+            var grup = groupCache[groupName];
+            db.GroupMembers.Add(new GroupMember { GroupId = grup.Id, StudentId = studentId });
             assigned++;
         }
 
@@ -387,8 +405,12 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
             g.OrderIndex)).ToList();
     }
 
-    public async Task<GroupDto> CreateGroupAsync(int activityId, CreateGroupRequest req)
+    public async Task<GroupDto?> CreateGroupAsync(int activityId, CreateGroupRequest req, int professorId, bool isAdmin)
     {
+        var owns = await db.Activities
+            .AnyAsync(a => a.Id == activityId && (isAdmin || a.Module.ProfessorId == professorId));
+        if (!owns) return null;
+
         // OrderIndex = màxim actual + 1 per afegir al final
         var maxOrder = await db.Groups
             .Where(g => g.ActivityId == activityId)
@@ -412,30 +434,34 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
             .ToListAsync();
 
         // Ignora IDs que no pertanyin a aquesta activitat (prevenció IDOR)
-        var validIds = new HashSet<int>(groups.Select(g => g.Id));
+        var groupById = groups.ToDictionary(g => g.Id);
         for (int i = 0; i < orderedGroupIds.Count; i++)
         {
-            if (!validIds.Contains(orderedGroupIds[i])) continue;
-            var g = groups.First(x => x.Id == orderedGroupIds[i]);
+            if (!groupById.TryGetValue(orderedGroupIds[i], out var g)) continue;
             g.OrderIndex = i;
         }
         await db.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> DeleteGroupAsync(int activityId, int groupId)
+    public async Task<bool> DeleteGroupAsync(int activityId, int groupId, int professorId, bool isAdmin)
     {
         var group = await db.Groups
-            .FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId);
+            .Include(g => g.Activity).ThenInclude(a => a.Module)
+            .FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId
+                && (isAdmin || g.Activity.Module.ProfessorId == professorId));
         if (group is null) return false;
         db.Groups.Remove(group);
         await db.SaveChangesAsync();
         return true;
     }
 
-    public async Task<bool> AddMemberAsync(int activityId, int groupId, int studentId)
+    public async Task<bool> AddMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin)
     {
-        var group = await db.Groups.FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId);
+        var group = await db.Groups
+            .Include(g => g.Activity).ThenInclude(a => a.Module)
+            .FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId
+                && (isAdmin || g.Activity.Module.ProfessorId == professorId));
         if (group is null) return false;
 
         var alreadyAssigned = await db.GroupMembers
@@ -448,11 +474,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
         return true;
     }
 
-    public async Task<bool> RemoveMemberAsync(int activityId, int groupId, int studentId)
+    public async Task<bool> RemoveMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin)
     {
         var member = await db.GroupMembers
+            .Include(gm => gm.Group).ThenInclude(g => g.Activity).ThenInclude(a => a.Module)
             .FirstOrDefaultAsync(gm => gm.GroupId == groupId && gm.StudentId == studentId
-                && gm.Group.ActivityId == activityId);
+                && gm.Group.ActivityId == activityId
+                && (isAdmin || gm.Group.Activity.Module.ProfessorId == professorId));
         if (member is null) return false;
         db.GroupMembers.Remove(member);
         await db.SaveChangesAsync();

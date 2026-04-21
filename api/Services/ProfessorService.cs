@@ -92,14 +92,20 @@ public class ProfessorService(AppDbContext db, IEmailService email) : IProfessor
         int sent = 0, skipped = 0;
         var details = new List<string>();
 
+        // Genera i desa tots els nous passwords d'un sol cop (evita N+1 SaveChanges)
+        var passwords = new Dictionary<int, string>(professors.Count);
         foreach (var p in professors)
         {
             var newPassword = PasswordHelper.Generate();
             p.PasswordHash = PasswordHelper.Hash(newPassword);
-            await db.SaveChangesAsync();
+            passwords[p.Id] = newPassword;
+        }
+        await db.SaveChangesAsync();
 
+        foreach (var p in professors)
+        {
             if (!email.IsEnabled) { skipped++; continue; }
-            var ok = await email.SendProfessorCredentialsAsync(p.Email, p.NomComplet, newPassword);
+            var ok = await email.SendProfessorCredentialsAsync(p.Email, p.NomComplet, passwords[p.Id]);
             if (ok) sent++; else { skipped++; details.Add($"{p.NomComplet}: error."); }
         }
         return new SendAllResult(sent, skipped, details);
