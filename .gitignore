@@ -16,7 +16,7 @@ appsettings.Development.json
 
 # Docker / dades locals
 backups/
-data/
+/data/
 nginx/ssl/
 
 # Eines de sistema
