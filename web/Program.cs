@@ -27,6 +27,19 @@ builder.Services.AddSignalR()
 
 builder.Services.AddMudServices();
 
+// ── Localització (i18n) ───────────────────────────────────────────────────────
+builder.Services.AddLocalization(opts => opts.ResourcesPath = "Resources");
+
+var supportedCultures = new[] { "ca", "es" };
+builder.Services.Configure<Microsoft.AspNetCore.Builder.RequestLocalizationOptions>(opts =>
+{
+    opts.SetDefaultCulture("ca");
+    opts.AddSupportedCultures(supportedCultures);
+    opts.AddSupportedUICultures(supportedCultures);
+    // Prioritat: cookie → accept-language header → default (ca)
+    opts.ApplyCurrentCultureToResponseHeaders = true;
+});
+
 // Persistir les claus de DataProtection al sistema de fitxers (volum Docker independent de Redis)
 // Això evita que les claus es perdin si Redis reinicia, i manté la coherència
 // de cookies d'antiforgery i sessions de ProtectedLocalStorage entre desplegaments.
@@ -36,6 +49,10 @@ builder.Services.AddDataProtection()
 
 // Estat de l'usuari (substitueix ISession + SessionHelper)
 builder.Services.AddScoped<UserStateService>();
+
+// Notificacions de participació en temps real (Redis pub/sub → Blazor)
+builder.Services.AddSingleton<ParticipationNotificationService>();
+builder.Services.AddHostedService<ParticipationRedisSubscriber>();
 
 // HTTP client cap a l'API
 builder.Services.AddHttpClient<ApiClient>(client =>
@@ -56,6 +73,7 @@ if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
 
 app.UseStaticFiles();
+app.UseRequestLocalization();
 app.UseAntiforgery();
 
 app.MapRazorComponents<AutoCo.Web.Components.App>()

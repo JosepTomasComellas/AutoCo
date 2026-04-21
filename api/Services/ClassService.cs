@@ -172,10 +172,16 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
 
             var emailNorm = s.Email.Trim().ToLower();
 
+            if (!System.Text.RegularExpressions.Regex.IsMatch(emailNorm, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                errors.Add($"Alumne #{s.NumLlista}: format de correu invàlid ({emailNorm}).");
+                skipped++; continue;
+            }
+
             // Comprova duplicats dins el CSV i a la BD
             if (batchEmails.Contains(emailNorm) || await db.Students.AnyAsync(x => x.Email == emailNorm))
             {
-                errors.Add($"Email duplicat omès: {emailNorm}");
+                errors.Add($"Alumne #{s.NumLlista}: correu duplicat omès ({emailNorm}).");
                 skipped++; continue;
             }
             batchEmails.Add(emailNorm);

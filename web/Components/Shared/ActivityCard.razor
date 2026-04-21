@@ -4,6 +4,7 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject ParticipationNotificationService ParticipationNotifier
 
 <MudCard Elevation="@(Act.IsOpen ? 2 : 1)"
          Class="activity-card"
@@ -113,9 +114,9 @@
     [Parameter] public EventCallback<ActivityDto>  OnUpdated { get; set; }
     [Parameter] public EventCallback<ActivityDto>  OnDeleted { get; set; }
 
-    private ParticipationDto? _participation     = null;
+    private ParticipationDto? _participation        = null;
     private bool              _loadingParticipation = false;
-    private System.Threading.Timer? _pollTimer;
+    private Func<ParticipationDto, Task>? _participationHandler;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -126,15 +127,15 @@
 
     protected override void OnAfterRender(bool firstRender)
     {
-        if (!firstRender) return;
-        if (Act.IsOpen)
+        if (!firstRender || !Act.IsOpen) return;
+
+        // Subscripció a notificacions en temps real via Redis pub/sub
+        _participationHandler = async dto =>
         {
-            _pollTimer = new System.Threading.Timer(async _ =>
-            {
-                await LoadParticipationAsync();
-                await InvokeAsync(StateHasChanged);
-            }, null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
-        }
+            _participation = dto;
+            await InvokeAsync(StateHasChanged);
+        };
+        ParticipationNotifier.Subscribe(Act.Id, _participationHandler);
     }
 
     private async Task LoadParticipationAsync()
@@ -145,7 +146,11 @@
         _loadingParticipation = false;
     }
 
-    public void Dispose() => _pollTimer?.Dispose();
+    public void Dispose()
+    {
+        if (_participationHandler is not null)
+            ParticipationNotifier.Unsubscribe(Act.Id, _participationHandler);
+    }
 
     private async Task ToggleAsync()
     {
@@ -154,7 +159,11 @@
         if (updated is not null)
         {
             Snackbar.Add(updated.IsOpen ? "Activitat oberta." : "Activitat tancada.", Severity.Success);
-            if (!updated.IsOpen) { _pollTimer?.Dispose(); _pollTimer = null; }
+            if (!updated.IsOpen && _participationHandler is not null)
+            {
+                ParticipationNotifier.Unsubscribe(Act.Id, _participationHandler);
+                _participationHandler = null;
+            }
             await OnUpdated.InvokeAsync(updated);
         }
     }

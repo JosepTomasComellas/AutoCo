@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.5.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -43,11 +43,26 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Pàgina de perfil** del professor: canvi de nom, cognoms i contrasenya des de la barra de navegació
 - **Restabliment de contrasenya per email**: OTP de 6 dígits vàlid 15 minuts (Redis)
 
+**Multi-idioma (i18n)**
+- **Selector d'idioma** a la barra de navegació: català (per defecte) i castellà
+- Infraestructura `IStringLocalizer` amb fitxers `.resx` — extensible a qualsevol cultura
+- Pàgines de login i navegació principal ja localitzades; resta de pàgines extensibles amb el mateix patró
+
 **Administració**
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
 - **Còpies de seguretat**: exportació/importació JSON de tota la base de dades
 - **KPIs al tauler**: classes, mòduls, alumnes, activitats, obertes i grups
 - **Mode fosc** i **selector de tema de color** (6 opcions) amb preferències desades al navegador
+
+**PWA (Progressive Web App)**
+- **Instal·lable** com a aplicació nativa en escriptori, Android i iOS
+- **Caché d'assets estàtics** (CSS, JS) per càrrega més ràpida
+- **Pàgina offline** en català quan no hi ha connexió al servidor
+
+**Qualitat i fiabilitat**
+- **Notificació en temps real** de participació via Redis pub/sub (substitueix el polling de 30 s)
+- **Tests unitaris** de `ResultsService`: 16 casos cobreixen càlcul de notes, caché, control d'accés i ordenació
+- **Validació CSV millorada**: format d'email, NumLlista duplicat, visualització completa d'errors inline
 
 ### Alumne
 - Accés amb correu electrònic i contrasenya (o via codi QR de la classe)
@@ -107,6 +122,7 @@ AutoCo/
 ├── shared/       # DTOs + AppVersion compartits entre api i web
 ├── nginx/        # Proxy invers amb SSL automàtic
 ├── deploy/       # Scripts de desplegament (update.ps1, push-update.ps1)
+├── AutoCo.Tests/ # Tests unitaris xUnit (ResultsService, EF Core InMemory)
 └── docker-compose.yml
 ```
 
@@ -143,8 +159,12 @@ ActivityTemplate (per professor, criteris JSON)
 - **QR:** [Net.Codecrete.QrCodeGenerator](https://github.com/manuelbl/QrCodeGenerator) (SVG pur, sense deps)
 - **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage`
 - **Caché:** Redis (`IDistributedCache`, TTL 5 min, invalidació automàtica)
+- **Temps real:** Redis pub/sub → `ParticipationNotificationService` → Blazor (reemplaça polling)
 - **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters
 - **Email:** MailKit + SMTP configurable (credencials, recordatoris, notificació de compleció)
+- **PWA:** `manifest.json` + Service Worker (cache-first assets, pàgina offline)
+- **i18n:** `IStringLocalizer` + fitxers `.resx` (català per defecte, castellà)
+- **Tests:** xUnit + EF Core InMemory (16 tests unitaris de `ResultsService`)
 - **Desplegament:** Docker Compose · nginx (SSL/TLS auto-signat o certificat propi)
 
 ---

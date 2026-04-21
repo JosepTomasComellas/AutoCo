@@ -3,6 +3,8 @@ using AutoCo.Api.Data.Models;
 using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
+using System.Text.Json;
 
 namespace AutoCo.Api.Services;
 
@@ -13,7 +15,8 @@ public interface IEvaluationService
                                        IEmailService? email = null);
 }
 
-public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactory) : IEvaluationService
+public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactory,
+    IConnectionMultiplexer redis) : IEvaluationService
 {
     public async Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId)
     {
@@ -137,6 +140,32 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
 
             await db.SaveChangesAsync();
             await tx.CommitAsync();
+
+            // ── Publicar participació actualitzada a Redis (temps real) ────
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope   = scopeFactory.CreateScope();
+                    var scopedDb      = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                    var total = await scopedDb.GroupMembers
+                        .Where(gm => gm.Group.ActivityId == activityId)
+                        .Select(gm => gm.StudentId).Distinct().CountAsync();
+
+                    var submitted = await scopedDb.Evaluations
+                        .Where(e => e.ActivityId == activityId && e.IsSelf)
+                        .Select(e => e.EvaluatorId).Distinct().CountAsync();
+
+                    var dto     = new ParticipationDto(activityId, submitted, total);
+                    var payload = JsonSerializer.Serialize(dto);
+                    var pub     = redis.GetSubscriber();
+                    await pub.PublishAsync(
+                        RedisChannel.Literal($"autoco:participation:{activityId}"),
+                        payload);
+                }
+                catch { /* la notificació en temps real és no-crítica */ }
+            });
 
             // ── Log de l'avaluació enviada ─────────────────────────────────
             try

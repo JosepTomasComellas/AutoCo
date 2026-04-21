@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" />
+              <xsd:attribute name="xml:space" msdata:IsReadOnly="true" type="xsd:NCName" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms</value></resheader>
+
+  <!-- ── Autenticació ───────────────────────────────────────────────────────── -->
+  <data name="Login_Teacher_Title" xml:space="preserve"><value>Accés Professor</value></data>
+  <data name="Login_Student_Title" xml:space="preserve"><value>Accés Alumne</value></data>
+  <data name="Login_Subtitle" xml:space="preserve"><value>AutoCo · Avaluació entre iguals</value></data>
+  <data name="Login_Email" xml:space="preserve"><value>Correu electrònic</value></data>
+  <data name="Login_Password" xml:space="preserve"><value>Contrasenya</value></data>
+  <data name="Login_Submit" xml:space="preserve"><value>Entrar</value></data>
+  <data name="Login_ForgotPassword" xml:space="preserve"><value>Has oblidat la contrasenya?</value></data>
+  <data name="Login_Back" xml:space="preserve"><value>← Tornar</value></data>
+  <data name="Login_Error_EmptyFields" xml:space="preserve"><value>Omple tots els camps.</value></data>
+  <data name="Login_Error_InvalidCredentials" xml:space="preserve"><value>Credencials incorrectes.</value></data>
+
+  <!-- ── Navegació i barra superior ────────────────────────────────────────── -->
+  <data name="Nav_MyProfile" xml:space="preserve"><value>El meu perfil</value></data>
+  <data name="Nav_ColorTheme" xml:space="preserve"><value>Tema de color</value></data>
+  <data name="Nav_Language" xml:space="preserve"><value>Idioma</value></data>
+  <data name="Nav_DarkMode" xml:space="preserve"><value>Mode fosc</value></data>
+  <data name="Nav_LightMode" xml:space="preserve"><value>Mode clar</value></data>
+  <data name="Nav_Logout" xml:space="preserve"><value>Sortir</value></data>
+  <data name="Nav_LogoutTitle" xml:space="preserve"><value>Sortir ({0})</value></data>
+
+  <!-- ── Accions comunes ────────────────────────────────────────────────────── -->
+  <data name="Action_Save" xml:space="preserve"><value>Desar</value></data>
+  <data name="Action_Cancel" xml:space="preserve"><value>Cancel·lar</value></data>
+  <data name="Action_Delete" xml:space="preserve"><value>Eliminar</value></data>
+  <data name="Action_Add" xml:space="preserve"><value>Afegir</value></data>
+  <data name="Action_Edit" xml:space="preserve"><value>Editar</value></data>
+  <data name="Action_Close" xml:space="preserve"><value>Tancar</value></data>
+  <data name="Action_Open" xml:space="preserve"><value>Obrir</value></data>
+  <data name="Action_Import" xml:space="preserve"><value>Importar</value></data>
+  <data name="Action_Export" xml:space="preserve"><value>Exportar</value></data>
+  <data name="Action_Send" xml:space="preserve"><value>Enviar</value></data>
+  <data name="Action_Confirm" xml:space="preserve"><value>Confirmar</value></data>
+
+  <!-- ── Etiquetes comunes ──────────────────────────────────────────────────── -->
+  <data name="Label_Student" xml:space="preserve"><value>Alumne</value></data>
+  <data name="Label_Teacher" xml:space="preserve"><value>Professor</value></data>
+  <data name="Label_Admin" xml:space="preserve"><value>Administrador</value></data>
+  <data name="Label_Class" xml:space="preserve"><value>Classe</value></data>
+  <data name="Label_Group" xml:space="preserve"><value>Grup</value></data>
+  <data name="Label_Activity" xml:space="preserve"><value>Activitat</value></data>
+  <data name="Label_Module" xml:space="preserve"><value>Mòdul</value></data>
+  <data name="Label_Results" xml:space="preserve"><value>Resultats</value></data>
+  <data name="Label_Name" xml:space="preserve"><value>Nom</value></data>
+  <data name="Label_Surname" xml:space="preserve"><value>Cognoms</value></data>
+  <data name="Label_Description" xml:space="preserve"><value>Descripció</value></data>
+
+  <!-- ── Missatges d'estat ─────────────────────────────────────────────────── -->
+  <data name="Msg_Loading" xml:space="preserve"><value>Carregant...</value></data>
+  <data name="Msg_NoData" xml:space="preserve"><value>Sense dades</value></data>
+  <data name="Msg_Saved" xml:space="preserve"><value>Desat correctament.</value></data>
+  <data name="Msg_Deleted" xml:space="preserve"><value>Eliminat correctament.</value></data>
+  <data name="Msg_Error" xml:space="preserve"><value>S'ha produït un error.</value></data>
+
+  <!-- ── Idiomes ────────────────────────────────────────────────────────────── -->
+  <data name="Lang_Catalan" xml:space="preserve"><value>Català</value></data>
+  <data name="Lang_Spanish" xml:space="preserve"><value>Español</value></data>
+</root>

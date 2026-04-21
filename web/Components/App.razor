@@ -7,6 +7,8 @@
     <base href="/" />
     <title>AutoCo Avaluació</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#1976d2" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="/css/site.css" rel="stylesheet" />
@@ -18,5 +20,10 @@
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
     <script src="/js/app.js"></script>
     <script src="/js/charts.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js');
+        }
+    </script>
 </body>
 </html>

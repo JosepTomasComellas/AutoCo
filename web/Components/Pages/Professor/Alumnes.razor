@@ -131,6 +131,30 @@
                     </MudButton>
                 </MudCardActions>
             </MudCard>
+
+            @if (_importSummary is not null || _importErrors.Any())
+            {
+                <MudPaper Elevation="0" Class="pa-3" Style="border:1px solid var(--mud-palette-divider);border-radius:8px">
+                    @if (_importSummary is not null)
+                    {
+                        <MudText Typo="Typo.body2" Class="mb-1" Style="font-weight:600">@_importSummary</MudText>
+                    }
+                    @if (_importErrors.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Error" Style="font-weight:600">
+                            @_importErrors.Count error@(_importErrors.Count == 1 ? "" : "s"):
+                        </MudText>
+                        <MudList T="string" Dense="true" Class="mt-1 pa-0">
+                            @foreach (var err in _importErrors)
+                            {
+                                <MudListItem T="string" Dense="true" Class="pa-0">
+                                    <MudText Typo="Typo.caption" Color="Color.Error">• @err</MudText>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                </MudPaper>
+            }
         </MudItem>
     }
 
@@ -267,7 +291,9 @@
     private string _correu       = "";
     private int    _editStudentId = 0;
 
-    private IBrowserFile? _importFile;
+    private IBrowserFile?  _importFile;
+    private List<string>   _importErrors = [];
+    private string?        _importSummary;
 
     // ── Selecció massiva ──────────────────────────────────────────────────────
     private HashSet<int> _selected = [];
@@ -485,27 +511,36 @@
         _saving = false;
     }
 
-    private void OnImportFileSelected(IBrowserFile file) => _importFile = file;
+    private void OnImportFileSelected(IBrowserFile file)
+    {
+        _importFile    = file;
+        _importErrors  = [];
+        _importSummary = null;
+    }
 
     private async Task ImportAsync()
     {
         if (_importFile is null) return;
-        _saving = true;
+        _saving      = true;
+        _importErrors = [];
+        _importSummary = null;
 
         var ext = System.IO.Path.GetExtension(_importFile.Name).ToLowerInvariant();
         List<CreateStudentRequest> students;
-        List<string> errors;
+        List<string> parseErrors;
 
         if (ext is ".xls" or ".xlsx")
-            (students, errors) = await ParseXlsAsync();
+            (students, parseErrors) = await ParseXlsAsync();
         else
-            (students, errors) = await ParseCsvAsync();
+            (students, parseErrors) = await ParseCsvAsync();
+
+        _importErrors.AddRange(parseErrors);
 
         if (students.Count == 0)
         {
-            Snackbar.Add(errors.Any()
-                ? "Errors al fitxer: " + string.Join("; ", errors.Take(3))
-                : "Fitxer buit o sense dades vàlides.", Severity.Warning);
+            _importSummary = parseErrors.Any()
+                ? "El fitxer conté errors i no s'ha importat cap alumne."
+                : "Fitxer buit o sense dades vàlides.";
             _saving = false;
             return;
         }
@@ -514,9 +549,16 @@
         var result = await Api.BulkAddStudentsAsync(ClassId, new BulkCreateStudentsRequest(students));
         if (result is not null)
         {
-            Snackbar.Add($"Importació: {result.Created} creats, {result.Skipped} omesos.", Severity.Success);
-            if (result.Errors.Any())
-                Snackbar.Add(string.Join(" | ", result.Errors.Take(3)), Severity.Warning);
+            _importErrors.AddRange(result.Errors);
+            var parts = new List<string>();
+            if (result.Created > 0) parts.Add($"{result.Created} alumnes creats");
+            if (result.Skipped > 0) parts.Add($"{result.Skipped} omesos");
+            _importSummary = string.Join(", ", parts) + ".";
+
+            if (result.Created > 0)
+                Snackbar.Add(_importSummary, Severity.Success);
+            else
+                Snackbar.Add("No s'ha creat cap alumne nou.", Severity.Warning);
         }
         _importFile = null;
         await LoadAsync();
@@ -525,8 +567,10 @@
 
     private async Task<(List<CreateStudentRequest>, List<string>)> ParseCsvAsync()
     {
-        var students = new List<CreateStudentRequest>();
-        var errors   = new List<string>();
+        var students    = new List<CreateStudentRequest>();
+        var errors      = new List<string>();
+        var usedNums    = new HashSet<int>();
+        var usedEmails  = new HashSet<string>();
 
         using var stream = _importFile!.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
         using var reader = new System.IO.StreamReader(stream);
@@ -545,9 +589,15 @@
             if (!int.TryParse(cols[0].Trim(), out var num)) { errors.Add($"Línia {lineNum}: NumLlista invàlid."); continue; }
             var nom    = cols[1].Trim();
             var cog    = cols[2].Trim();
-            var correu = cols[3].Trim();
+            var correu = cols[3].Trim().ToLower();
             if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cog) || string.IsNullOrEmpty(correu))
             { errors.Add($"Línia {lineNum}: camps buits."); continue; }
+            if (!IsValidEmail(correu))
+            { errors.Add($"Línia {lineNum}: format de correu invàlid ('{correu}')."); continue; }
+            if (!usedNums.Add(num))
+            { errors.Add($"Línia {lineNum}: NumLlista {num} duplicat al fitxer."); continue; }
+            if (!usedEmails.Add(correu))
+            { errors.Add($"Línia {lineNum}: correu '{correu}' duplicat al fitxer."); continue; }
             students.Add(new CreateStudentRequest(nom, cog, num, correu));
         }
 
@@ -582,8 +632,10 @@
     /// </summary>
     private static (List<CreateStudentRequest>, List<string>) ParseHtmlTable(System.IO.MemoryStream ms)
     {
-        var students = new List<CreateStudentRequest>();
-        var errors   = new List<string>();
+        var students   = new List<CreateStudentRequest>();
+        var errors     = new List<string>();
+        var usedNums   = new HashSet<int>();
+        var usedEmails = new HashSet<string>();
 
         // ISO-8859-1 per preservar caràcters accentuats (é, à, ç, ...)
         var encoding = System.Text.Encoding.GetEncoding("iso-8859-1");
@@ -637,7 +689,15 @@
             if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cognoms) || string.IsNullOrEmpty(email))
             { errors.Add($"Fila {rowNum}: camps obligatoris buits."); continue; }
 
-            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, email));
+            var emailNorm = email.ToLower();
+            if (!IsValidEmail(emailNorm))
+            { errors.Add($"Fila {rowNum}: format de correu invàlid ('{email}')."); continue; }
+            if (!usedNums.Add(numLlista))
+            { errors.Add($"Fila {rowNum}: NumLlista {numLlista} duplicat al fitxer."); continue; }
+            if (!usedEmails.Add(emailNorm))
+            { errors.Add($"Fila {rowNum}: correu '{email}' duplicat al fitxer."); continue; }
+
+            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, emailNorm));
         }
 
         return (students, errors);
@@ -646,8 +706,10 @@
     /// <summary>Parseja Excel binari real (.xls BIFF8 o .xlsx OpenXML) via ExcelDataReader.</summary>
     private static (List<CreateStudentRequest>, List<string>) ParseBinaryExcel(System.IO.MemoryStream ms)
     {
-        var students = new List<CreateStudentRequest>();
-        var errors   = new List<string>();
+        var students   = new List<CreateStudentRequest>();
+        var errors     = new List<string>();
+        var usedNums   = new HashSet<int>();
+        var usedEmails = new HashSet<string>();
 
         using var excelReader = ExcelDataReader.ExcelReaderFactory.CreateReader(ms);
         var ds = excelReader.AsDataSet(new ExcelDataReader.ExcelDataSetConfiguration
@@ -683,10 +745,26 @@
             if (string.IsNullOrEmpty(nom) || string.IsNullOrEmpty(cognoms) || string.IsNullOrEmpty(email))
             { errors.Add($"Fila {r + 1}: camps obligatoris buits."); continue; }
 
-            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, email));
+            var emailNorm = email.ToLower();
+            if (!IsValidEmail(emailNorm))
+            { errors.Add($"Fila {r + 1}: format de correu invàlid ('{email}')."); continue; }
+            if (!usedNums.Add(numLlista))
+            { errors.Add($"Fila {r + 1}: NumLlista {numLlista} duplicat al fitxer."); continue; }
+            if (!usedEmails.Add(emailNorm))
+            { errors.Add($"Fila {r + 1}: correu '{email}' duplicat al fitxer."); continue; }
+
+            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, emailNorm));
         }
 
         return (students, errors);
+    }
+
+    private static bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email)) return false;
+        return System.Text.RegularExpressions.Regex.IsMatch(email,
+            @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
     }
 
     // ── Avatars ──────────────────────────────────────────────────────────────

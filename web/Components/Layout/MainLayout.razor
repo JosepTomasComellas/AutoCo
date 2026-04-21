@@ -3,6 +3,8 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject ProtectedLocalStorage LocalStorage
+@inject IJSRuntime JS
+@inject IStringLocalizer<AutoCo.Web.Resources.SharedResources> Loc
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
@@ -36,12 +38,34 @@
                 @if (UserState.IsProfessor)
                 {
                     <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
-                                   Color="Color.Inherit" title="El meu perfil"
+                                   Color="Color.Inherit" title="@Loc["Nav_MyProfile"]"
                                    Href="/professor/perfil" />
                 }
+                <!-- Selector d'idioma -->
+                <MudMenu Icon="@Icons.Material.Filled.Translate" Color="Color.Inherit"
+                         title="@Loc["Nav_Language"]" Dense="true" AnchorOrigin="Origin.BottomRight">
+                    <MudMenuItem OnClick='() => JS.InvokeVoidAsync("setCulture", "ca")'>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudText Typo="Typo.body2">@Loc["Lang_Catalan"]</MudText>
+                            @if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ca")
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" />
+                            }
+                        </MudStack>
+                    </MudMenuItem>
+                    <MudMenuItem OnClick='() => JS.InvokeVoidAsync("setCulture", "es")'>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudText Typo="Typo.body2">@Loc["Lang_Spanish"]</MudText>
+                            @if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "es")
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" />
+                            }
+                        </MudStack>
+                    </MudMenuItem>
+                </MudMenu>
                 <!-- Selector de color primari -->
                 <MudMenu Icon="@Icons.Material.Filled.Palette" Color="Color.Inherit"
-                         title="Tema de color" Dense="true" AnchorOrigin="Origin.BottomRight">
+                         title="@Loc["Nav_ColorTheme"]" Dense="true" AnchorOrigin="Origin.BottomRight">
                     @foreach (var (name, hex) in _colorOptions)
                     {
                         <MudMenuItem OnClick="() => ChangeColorAsync(hex)">
@@ -59,11 +83,11 @@
                 </MudMenu>
                 <MudIconButton Icon="@(_darkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                                Color="Color.Inherit"
-                               title="@(_darkMode ? "Mode clar" : "Mode fosc")"
+                               title="@(_darkMode ? Loc["Nav_LightMode"].Value : Loc["Nav_DarkMode"].Value)"
                                OnClick="ToggleDarkMode" />
                 <MudIconButton Icon="@Icons.Material.Filled.Logout"
                                Color="Color.Inherit"
-                               title="@($"Sortir ({UserState.NomComplet})")"
+                               title="@string.Format(Loc["Nav_LogoutTitle"].Value, UserState.NomComplet)"
                                OnClick="Logout" />
             </MudStack>
         }

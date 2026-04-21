@@ -3,6 +3,7 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject ProtectedLocalStorage LocalStorage
+@inject IStringLocalizer<AutoCo.Web.Resources.SharedResources> Loc
 
 <PageTitle>Accés Professor – AutoCo</PageTitle>
 
@@ -15,10 +16,10 @@
                          Style="color:rgba(255,255,255,.9);font-size:2rem;flex-shrink:0" />
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.h6" Style="color:white;font-weight:700;line-height:1.2">
-                        Accés Professor
+                        @Loc["Login_Teacher_Title"]
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.55)">
-                        AutoCo · Avaluació entre iguals
+                        @Loc["Login_Subtitle"]
                     </MudText>
                 </MudStack>
             </div>
@@ -29,13 +30,13 @@
                     <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
                 }
 
-                <MudTextField @bind-Value="_email" Label="Correu electrònic"
+                <MudTextField @bind-Value="_email" Label="@Loc["Login_Email"]"
                               Variant="Variant.Outlined" Class="mb-3"
                               Immediate="true" InputType="InputType.Email"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Email"
                               @onkeydown="OnKeyDown" />
-                <MudTextField @bind-Value="_password" Label="Contrasenya"
+                <MudTextField @bind-Value="_password" Label="@Loc["Login_Password"]"
                               Variant="Variant.Outlined" Class="mb-5"
                               Immediate="true"
                               InputType="@_pwdType"
@@ -50,15 +51,15 @@
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    Entrar
+                    @Loc["Login_Submit"]
                 </MudButton>
 
                 <MudLink Href="/auth/reset-contrasenya" Class="d-block text-center mt-3"
                          Color="Color.Default" Typo="Typo.caption">
-                    Has oblidat la contrasenya?
+                    @Loc["Login_ForgotPassword"]
                 </MudLink>
                 <MudLink Href="/" Class="d-block text-center mt-2" Color="Color.Secondary">
-                    ← Tornar
+                    @Loc["Login_Back"]
                 </MudLink>
             </div>
 
@@ -93,12 +94,12 @@
     {
         if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
         {
-            _error = "Omple tots els camps."; return;
+            _error = Loc["Login_Error_EmptyFields"]; return;
         }
         _loading = true; _error = null;
         var result = await Api.LoginProfessorAsync(_email.Trim(), _password);
         _loading = false;
-        if (result is null) { _error = "Credencials incorrectes."; return; }
+        if (result is null) { _error = Loc["Login_Error_InvalidCredentials"]; return; }
         await LocalStorage.SetAsync("autoco_session", result);
         UserState.SetLogin(result);
         Nav.NavigateTo("/professor/dashboard");
