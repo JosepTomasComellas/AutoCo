@@ -1,12 +1,12 @@
-// Necessari perquè ResourceManagerStringLocalizerFactory pugui calcular
-// el nom del recurs embedded correctament (Resources.SharedResources).
-[assembly: Microsoft.Extensions.Localization.RootNamespaceAttribute("AutoCo.Web")]
-
 using AutoCo.Web.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using MudBlazor.Services;
 using StackExchange.Redis;
+
+// Necessari perquè ResourceManagerStringLocalizerFactory pugui calcular
+// el nom del recurs embedded correctament (Resources.SharedResources).
+[assembly: Microsoft.Extensions.Localization.RootNamespaceAttribute("AutoCo.Web")]
 
 // Necessari per a ExcelDataReader: suport d'encodings Windows (cp1252, etc.)
 System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
