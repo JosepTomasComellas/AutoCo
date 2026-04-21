@@ -1,4 +1,4 @@
-namespace AutoCo.Web.Resources;
+namespace AutoCo.Web;
 
 /// <summary>
 /// Classe marcadora per a IStringLocalizer&lt;SharedResources&gt;.
