@@ -1,6 +1,7 @@
 using AutoCo.Web.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using StackExchange.Redis;
 
