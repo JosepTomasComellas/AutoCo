@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.2
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.3
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -309,6 +309,13 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v1.6.3
+- **Rendiment crític**: `BackupService.ImportAsync` passava de N+1 `SaveChangesAsync` (centenars de crides per backup gran) a exactament 10 crides independentment del volum de dades
+- **Seguretat**: codi OTP de restabliment de contrasenya usat `new Random()` (predictible) — substituït per `RandomNumberGenerator.GetInt32()` (criptogràficament segur)
+- **Robustesa**: `ModuleService.CreateAsync` usava l'operador `!` null-forgiving sense validació — ara llança `InvalidOperationException` si el professor no existeix
+- **Logging**: `catch {}` al log de toggle d'activitat substituït per `logger.LogWarning` amb context
+- **Robustesa**: `GetUserId` usava `int.Parse` (pot llançar `FormatException`) — substituït per `int.TryParse` amb fallback segur
 
 ### v1.6.2
 - **Seguretat crítica**: IDOR a `CreateGroupAsync`, `DeleteGroupAsync`, `AddMemberAsync`, `RemoveMemberAsync` — qualsevol professor podia gestionar grups i membres d'activitats alienes; tots ara validen propietat de l'activitat

@@ -108,7 +108,7 @@ app.UseAuthorization();
 
 // ── Helpers locals ────────────────────────────────────────────────────────────
 static int GetUserId(ClaimsPrincipal user) =>
-    int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    int.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
 
 static bool IsAdmin(ClaimsPrincipal user) =>
     user.IsInRole("Admin");
@@ -141,7 +141,7 @@ app.MapPost("/api/auth/request-reset", async (
         p => p.Email == req.Email.Trim().ToLower());
     if (prof is not null && email.IsEnabled)
     {
-        var code = new Random().Next(100000, 999999).ToString();
+        var code = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
         await cache.SetStringAsync($"autoco:reset:{req.Email.Trim().ToLower()}", code,
             new Microsoft.Extensions.Caching.Distributed.DistributedCacheEntryOptions
             { AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15) });
@@ -604,7 +604,7 @@ app.MapDelete("/api/activities/{id:int}", async (int id, IActivityService svc,
 }).RequireAuthorization();
 
 app.MapPost("/api/activities/{id:int}/toggle", async (int id, IActivityService svc,
-    IResultsService results, AppDbContext db, ClaimsPrincipal user) =>
+    IResultsService results, AppDbContext db, ClaimsPrincipal user, ILogger<Program> logger) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var a = await svc.ToggleOpenAsync(id, GetUserId(user), IsAdmin(user));
@@ -624,7 +624,7 @@ app.MapPost("/api/activities/{id:int}/toggle", async (int id, IActivityService s
             });
             await db.SaveChangesAsync();
         }
-        catch { }
+        catch (Exception ex) { logger.LogWarning(ex, "Error desant log de toggle (activitat {Id})", id); }
     }
     return a is null ? Results.NotFound() : Results.Ok(a);
 }).RequireAuthorization();

@@ -45,7 +45,8 @@ public class ModuleService(AppDbContext db) : IModuleService
         var classe = await db.Classes.FindAsync(classId)
             ?? throw new InvalidOperationException("Classe no trobada.");
 
-        var professor = await db.Professors.FindAsync(professorId)!;
+        var professor = await db.Professors.FindAsync(professorId)
+            ?? throw new InvalidOperationException("Professor no trobat.");
 
         var modul = new Module
         {
@@ -57,7 +58,7 @@ public class ModuleService(AppDbContext db) : IModuleService
         db.Modules.Add(modul);
         await db.SaveChangesAsync();
         modul.Class     = classe;
-        modul.Professor = professor!;
+        modul.Professor = professor;
         modul.Activities = [];
         return ToDto(modul);
     }

@@ -94,126 +94,124 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             await db.Classes.ExecuteDeleteAsync();
             await db.Professors.ExecuteDeleteAsync();
 
-            // Mapes: ID original → ID nou assignat per la BD
-            var profMap    = new Dictionary<int, int>();
-            var classMap   = new Dictionary<int, int>();
-            var studentMap = new Dictionary<int, int>();
-            var moduleMap  = new Dictionary<int, int>();
-            var groupMap   = new Dictionary<int, int>();
-            var actMap     = new Dictionary<int, int>();
-
-            // Professors
-            foreach (var p in bk.Professors)
+            // ── Professors (1 SaveChanges) ────────────────────────────────────
+            var profEnts = bk.Professors.Select(p => new Professor
             {
-                var ent = new Professor
-                {
-                    Email = p.Email, Nom = p.Nom, Cognoms = p.Cognoms,
-                    IsAdmin = p.IsAdmin, PasswordHash = p.PasswordHash, CreatedAt = p.CreatedAt
-                };
-                db.Professors.Add(ent);
-                await db.SaveChangesAsync();
-                profMap[p.Id] = ent.Id;
-            }
+                Email = p.Email, Nom = p.Nom, Cognoms = p.Cognoms,
+                IsAdmin = p.IsAdmin, PasswordHash = p.PasswordHash, CreatedAt = p.CreatedAt
+            }).ToList();
+            db.Professors.AddRange(profEnts);
+            await db.SaveChangesAsync();
+            var profMap = bk.Professors.Zip(profEnts)
+                .ToDictionary(x => x.First.Id, x => x.Second.Id);
 
-            // Classes + alumnes + mòduls
-            foreach (var c in bk.Classes)
+            // ── Classes (1 SaveChanges) ───────────────────────────────────────
+            var classEnts = bk.Classes.Select(c => new Class
+                { Name = c.Name, AcademicYear = c.AcademicYear, CreatedAt = c.CreatedAt }).ToList();
+            db.Classes.AddRange(classEnts);
+            await db.SaveChangesAsync();
+
+            // ── Students (1 SaveChanges) ──────────────────────────────────────
+            var studentPairs = new List<(StudentBackupDto Dto, Student Ent)>();
+            for (int ci = 0; ci < bk.Classes.Count; ci++)
             {
-                var classEnt = new Class
-                    { Name = c.Name, AcademicYear = c.AcademicYear, CreatedAt = c.CreatedAt };
-                db.Classes.Add(classEnt);
-                await db.SaveChangesAsync();
-                classMap[c.Id] = classEnt.Id;
-
-                foreach (var s in c.Students)
+                foreach (var s in bk.Classes[ci].Students)
                 {
-                    var sEnt = new Student
+                    var ent = new Student
                     {
-                        ClassId = classEnt.Id, Nom = s.Nom, Cognoms = s.Cognoms,
+                        ClassId = classEnts[ci].Id, Nom = s.Nom, Cognoms = s.Cognoms,
                         NumLlista = s.NumLlista, Email = s.Email,
                         PasswordHash = s.PasswordHash, CreatedAt = s.CreatedAt
                     };
-                    db.Students.Add(sEnt);
-                    await db.SaveChangesAsync();
-                    studentMap[s.Id] = sEnt.Id;
-                }
-
-                foreach (var m in c.Modules)
-                {
-                    if (!profMap.TryGetValue(m.ProfessorId, out var newProfId)) continue;
-                    var mEnt = new Module
-                    {
-                        ClassId = classEnt.Id, ProfessorId = newProfId,
-                        Code = m.Code, Name = m.Name, CreatedAt = m.CreatedAt
-                    };
-                    db.Modules.Add(mEnt);
-                    await db.SaveChangesAsync();
-                    moduleMap[m.Id] = mEnt.Id;
-
-                    foreach (var exclStudentId in m.ExcludedStudentIds)
-                    {
-                        if (!studentMap.TryGetValue(exclStudentId, out var newStId)) continue;
-                        db.ModuleExclusions.Add(new ModuleExclusion
-                            { ModuleId = mEnt.Id, StudentId = newStId });
-                    }
-                    await db.SaveChangesAsync();
+                    studentPairs.Add((s, ent));
+                    db.Students.Add(ent);
                 }
             }
+            await db.SaveChangesAsync();
+            var studentMap = studentPairs.ToDictionary(x => x.Dto.Id, x => x.Ent.Id);
 
-            // Activitats + grups + membres + avaluacions
-            int totalEvals = 0;
+            // ── Modules (1 SaveChanges) ───────────────────────────────────────
+            var modulePairs = new List<(ModuleBackupDto Dto, Module Ent)>();
+            for (int ci = 0; ci < bk.Classes.Count; ci++)
+            {
+                foreach (var m in bk.Classes[ci].Modules)
+                {
+                    if (!profMap.TryGetValue(m.ProfessorId, out var newProfId)) continue;
+                    var ent = new Module
+                    {
+                        ClassId = classEnts[ci].Id, ProfessorId = newProfId,
+                        Code = m.Code, Name = m.Name, CreatedAt = m.CreatedAt
+                    };
+                    modulePairs.Add((m, ent));
+                    db.Modules.Add(ent);
+                }
+            }
+            await db.SaveChangesAsync();
+            var moduleMap = modulePairs.ToDictionary(x => x.Dto.Id, x => x.Ent.Id);
+
+            // ── Exclusions (1 SaveChanges) ────────────────────────────────────
+            foreach (var (mDto, mEnt) in modulePairs)
+                foreach (var exclId in mDto.ExcludedStudentIds)
+                    if (studentMap.TryGetValue(exclId, out var newStId))
+                        db.ModuleExclusions.Add(new ModuleExclusion { ModuleId = mEnt.Id, StudentId = newStId });
+            await db.SaveChangesAsync();
+
+            // ── Activities (1 SaveChanges) ────────────────────────────────────
+            var actPairs = new List<(ActivityBackupDto Dto, Activity Ent)>();
             foreach (var a in bk.Activities)
             {
                 if (!moduleMap.TryGetValue(a.ModuleId, out var newModId)) continue;
-                var actEnt = new Activity
+                var ent = new Activity
                 {
                     ModuleId = newModId, Name = a.Name, Description = a.Description,
                     IsOpen = a.IsOpen, CreatedAt = a.CreatedAt
                 };
-                db.Activities.Add(actEnt);
-                await db.SaveChangesAsync();
-                actMap[a.Id] = actEnt.Id;
-
-                foreach (var g in a.Groups)
-                {
-                    var gEnt = new Group { ActivityId = actEnt.Id, Name = g.Name };
-                    db.Groups.Add(gEnt);
-                    await db.SaveChangesAsync();
-                    groupMap[g.Id] = gEnt.Id;
-
-                    foreach (var sid in g.StudentIds)
-                    {
-                        if (!studentMap.TryGetValue(sid, out var newSid)) continue;
-                        db.GroupMembers.Add(new GroupMember { GroupId = gEnt.Id, StudentId = newSid });
-                    }
-                    await db.SaveChangesAsync();
-                }
-
-                foreach (var ev in a.Evaluations)
-                {
-                    if (!studentMap.TryGetValue(ev.EvaluatorId, out var newEvaluatorId)) continue;
-                    if (!studentMap.TryGetValue(ev.EvaluatedId, out var newEvaluatedId)) continue;
-
-                    var evEnt = new Evaluation
-                    {
-                        ActivityId  = actEnt.Id,
-                        EvaluatorId = newEvaluatorId,
-                        EvaluatedId = newEvaluatedId,
-                        IsSelf      = ev.IsSelf,
-                        Comment     = ev.Comment,
-                        UpdatedAt   = ev.UpdatedAt
-                    };
-                    db.Evaluations.Add(evEnt);
-                    await db.SaveChangesAsync();
-
-                    foreach (var (key, score) in ev.Scores)
-                    {
-                        db.EvaluationScores.Add(new EvaluationScore
-                            { EvaluationId = evEnt.Id, CriteriaKey = key, Score = score });
-                    }
-                    await db.SaveChangesAsync();
-                    totalEvals++;
-                }
+                actPairs.Add((a, ent));
+                db.Activities.Add(ent);
             }
+            await db.SaveChangesAsync();
+
+            // ── Groups (1 SaveChanges) ────────────────────────────────────────
+            var groupPairs = new List<(GroupBackupDto Dto, Group Ent)>();
+            foreach (var (aDto, actEnt) in actPairs)
+                foreach (var g in aDto.Groups)
+                {
+                    var ent = new Group { ActivityId = actEnt.Id, Name = g.Name };
+                    groupPairs.Add((g, ent));
+                    db.Groups.Add(ent);
+                }
+            await db.SaveChangesAsync();
+
+            // ── Group Members (1 SaveChanges) ─────────────────────────────────
+            foreach (var (gDto, gEnt) in groupPairs)
+                foreach (var sid in gDto.StudentIds)
+                    if (studentMap.TryGetValue(sid, out var newSid))
+                        db.GroupMembers.Add(new GroupMember { GroupId = gEnt.Id, StudentId = newSid });
+            await db.SaveChangesAsync();
+
+            // ── Evaluations (1 SaveChanges) ───────────────────────────────────
+            var evalPairs = new List<(Evaluation Ent, Dictionary<string, double> Scores)>();
+            foreach (var (aDto, actEnt) in actPairs)
+                foreach (var ev in aDto.Evaluations)
+                {
+                    if (!studentMap.TryGetValue(ev.EvaluatorId, out var newEvatorId)) continue;
+                    if (!studentMap.TryGetValue(ev.EvaluatedId, out var newEvatedId)) continue;
+                    var ent = new Evaluation
+                    {
+                        ActivityId  = actEnt.Id, EvaluatorId = newEvatorId, EvaluatedId = newEvatedId,
+                        IsSelf = ev.IsSelf, Comment = ev.Comment, UpdatedAt = ev.UpdatedAt
+                    };
+                    evalPairs.Add((ent, ev.Scores));
+                    db.Evaluations.Add(ent);
+                }
+            await db.SaveChangesAsync(); // obté els Ids per als Scores
+
+            // ── Evaluation Scores (1 SaveChanges) ─────────────────────────────
+            foreach (var (evEnt, scores) in evalPairs)
+                foreach (var (key, score) in scores)
+                    db.EvaluationScores.Add(new EvaluationScore
+                        { EvaluationId = evEnt.Id, CriteriaKey = key, Score = score });
+            await db.SaveChangesAsync();
 
             await tx.CommitAsync();
 
@@ -221,7 +219,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 bk.Professors.Count, bk.Classes.Count,
                 bk.Classes.Sum(c => c.Students.Count),
                 bk.Classes.Sum(c => c.Modules.Count),
-                bk.Activities.Count, totalEvals);
+                bk.Activities.Count, evalPairs.Count);
         }
         catch (Exception ex)
         {
