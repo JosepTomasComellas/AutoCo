@@ -44,7 +44,7 @@
                 <!-- Selector d'idioma -->
                 <MudMenu Icon="@Icons.Material.Filled.Translate" Color="Color.Inherit"
                          title="@Loc["Nav_Language"]" Dense="true" AnchorOrigin="Origin.BottomRight">
-                    <MudMenuItem OnClick='() => JS.InvokeVoidAsync("setCulture", "ca")'>
+                    <MudMenuItem OnClick='async () => await JS.InvokeVoidAsync("setCulture", "ca")'>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudText Typo="Typo.body2">@Loc["Lang_Catalan"]</MudText>
                             @if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ca")
@@ -53,7 +53,7 @@
                             }
                         </MudStack>
                     </MudMenuItem>
-                    <MudMenuItem OnClick='() => JS.InvokeVoidAsync("setCulture", "es")'>
+                    <MudMenuItem OnClick='async () => await JS.InvokeVoidAsync("setCulture", "es")'>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudText Typo="Typo.body2">@Loc["Lang_Spanish"]</MudText>
                             @if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "es")

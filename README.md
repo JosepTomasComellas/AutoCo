@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.4
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.5
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -309,6 +309,10 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v1.6.5
+- **Bugfix i18n**: selector d'idioma no feia res en fer clic — `InvokeVoidAsync` al `OnClick` de `MudMenuItem` retornava `ValueTask` sense ser awaited i l'excepció era silenciosa; canviat a `async () => await JS.InvokeVoidAsync(...)`
+- **Bugfix i18n**: recursos de localització no trobats — registre explícit de `IStringLocalizer<SharedResources>` via `factory.Create("AutoCo.Web.Resources.SharedResources", "AutoCo.Web")` que apunta directament al recurs embedded correcte; afegit using `Microsoft.Extensions.Localization`
 
 ### v1.6.4
 - **Bugfix i18n crític**: les claus de traducció es mostraven literalment (p.ex. `Lang_Catalan`) perquè `ResourceManagerStringLocalizerFactory` no podia calcular el nom del recurs embedded sense `[RootNamespace]`; afegit `[assembly: RootNamespaceAttribute("AutoCo.Web")]` a `Program.cs`
