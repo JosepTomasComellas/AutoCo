@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.1
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -164,7 +164,7 @@ ActivityTemplate (per professor, criteris JSON)
 - **Email:** MailKit + SMTP configurable (credencials, recordatoris, notificació de compleció)
 - **PWA:** `manifest.json` + Service Worker (cache-first assets, pàgina offline)
 - **i18n:** `IStringLocalizer` + fitxers `.resx` (català per defecte, castellà)
-- **Tests:** xUnit + EF Core InMemory (16 tests unitaris de `ResultsService`)
+- **Tests:** xUnit + EF Core InMemory (15 tests unitaris de `ResultsService`)
 - **Desplegament:** Docker Compose · nginx (SSL/TLS auto-signat o certificat propi)
 
 ---
@@ -309,6 +309,12 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v1.6.1
+- **Seguretat**: IDOR a `GetGroupsAsync` i `ReorderGroupsAsync` — qualsevol professor autenticat podia llegir/modificar grups d'activitats alienes; afegida validació de propietat
+- **Seguretat**: `ReorderGroupsAsync` ara ignora IDs de grups que no pertanyen a l'activitat
+- **Rendiment**: `SendAllPasswordsAsync` tenia N+1 `SaveChangesAsync` dins el bucle — ara desa tots els hashes d'un cop
+- **Robustesa**: `ImportGroupsAsync` afegit límit de 5 MB i 5.000 línies per prevenir DoS
 
 ### v1.6.0
 - **PWA**: `manifest.json`, service worker (cache-first d'assets, pàgina offline)
