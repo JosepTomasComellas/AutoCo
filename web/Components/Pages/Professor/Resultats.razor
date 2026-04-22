@@ -4,13 +4,14 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Resultats – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard" Variant="Variant.Text">
-        Tauler
+        @Loc["Nav_Dashboard"]
     </MudButton>
     @if (_results is not null)
     {
@@ -19,13 +20,13 @@
     }
     <MudSpacer />
     <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary"
-                   title="Actualitzar" OnClick="LoadAsync" />
+                   title="@Loc["Action_Refresh"]" OnClick="LoadAsync" />
     @if (_results is not null)
     {
         <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.BarChart"
                    Href="@($"/professor/grafic/{ActivityId}")">
-            Gràfic
+            @Loc["Results_Chart"]
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Download"
@@ -51,11 +52,11 @@
 }
 else if (_results is null)
 {
-    <MudAlert Severity="Severity.Error">Activitat no trobada o sense permisos.</MudAlert>
+    <MudAlert Severity="Severity.Error">@Loc["Results_NotFound"]</MudAlert>
 }
 else if (!_results.Students.Any())
 {
-    <MudAlert Severity="Severity.Info">Encara no hi ha avaluacions.</MudAlert>
+    <MudAlert Severity="Severity.Info">@Loc["Results_NoEvals"]</MudAlert>
 }
 else
 {
@@ -69,18 +70,18 @@ else
         <MudProgressLinear Value="pctCompletat" Color="@(totCompletat ? Color.Success : Color.Primary)"
                            Rounded="true" Style="flex:1;height:8px" />
         <MudText Typo="Typo.caption" Color="@(totCompletat ? Color.Success : Color.Secondary)">
-            @ambCoaval / @totalAlumnes avaluats (@pctCompletat.ToString("F0")%)
+            @Loc["Results_EvalProgress", ambCoaval, totalAlumnes, pctCompletat.ToString("F0")]
         </MudText>
     </MudStack>
 
     <!-- Filtres avançats -->
     <MudExpansionPanels Class="mb-4">
-        <MudExpansionPanel Text="Filtres avançats" Icon="@Icons.Material.Filled.FilterList">
+        <MudExpansionPanel Text="@Loc["Results_AdvancedFilters"]" Icon="@Icons.Material.Filled.FilterList">
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="string" @bind-Value="_filterGroup" Label="Grup" Variant="Variant.Outlined"
+                    <MudSelect T="string" @bind-Value="_filterGroup" Label="@Loc["Results_ColGroup"]" Variant="Variant.Outlined"
                                Margin="Margin.Dense" Clearable="true">
-                        <MudSelectItem T="string" Value='""'>Tots els grups</MudSelectItem>
+                        <MudSelectItem T="string" Value='""'>@Loc["Results_AllGroups"]</MudSelectItem>
                         @foreach (var g in _results.Students.Select(s => s.GroupName).Distinct().Order())
                         {
                             <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
@@ -88,22 +89,22 @@ else
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="string" @bind-Value="_filterGrade" Label="Rang de nota (coaval.)"
+                    <MudSelect T="string" @bind-Value="_filterGrade" Label="@Loc["Results_GradeRange"]"
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                        <MudSelectItem T="string" Value='""'>Tots els rangs</MudSelectItem>
-                        <MudSelectItem T="string" Value='"high"'>Alta (≥ 8)</MudSelectItem>
-                        <MudSelectItem T="string" Value='"mid"'>Mitjana (5 – 7.9)</MudSelectItem>
-                        <MudSelectItem T="string" Value='"low"'>Baixa (&lt; 5)</MudSelectItem>
-                        <MudSelectItem T="string" Value='"none"'>Sense coavaluació</MudSelectItem>
+                        <MudSelectItem T="string" Value='""'>@Loc["Results_AllRanges"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"high"'>@Loc["Results_HighGrade"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"mid"'>@Loc["Results_MidGrade"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"low"'>@Loc["Results_LowGrade"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"none"'>@Loc["Results_NoPeer"]</MudSelectItem>
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
                     <MudSwitch @bind-Value="_showNotes" Color="Color.Primary"
-                               Label="Mostrar notes" Size="Size.Small" />
+                               Label="@Loc["Results_ShowNotes"]" Size="Size.Small" />
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @_filteredStudents.Count de @totalAlumnes alumnes
+                        @Loc["Results_CountOf", _filteredStudents.Count, totalAlumnes]
                     </MudText>
                 </MudItem>
             </MudGrid>
@@ -117,16 +118,16 @@ else
         <Columns>
             <TemplateColumn Title="#">
                 <HeaderTemplate>
-                    <MudTooltip Text="Núm. de llista" Placement="Placement.Top">
+                    <MudTooltip Text="@Loc["Results_TooltipListNum"]" Placement="Placement.Top">
                         <span style="cursor:help">#</span>
                     </MudTooltip>
                 </HeaderTemplate>
                 <CellTemplate>@context.Item.NumLlista</CellTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="Cognoms, Nom" Sortable="true">
+            <TemplateColumn Title="@Loc["Results_ColNom"]" Sortable="true">
                 <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
             </TemplateColumn>
-            <PropertyColumn Property="s => s.GroupName" Title="Grup" Sortable="true" />
+            <PropertyColumn Property="s => s.GroupName" Title="@Loc["Results_ColGroup"]" Sortable="true" />
             @foreach (var c in _results.Criteria)
             {
                 var key = c.Key;
@@ -134,7 +135,7 @@ else
                 <TemplateColumn Title="@label">
                     <HeaderTemplate>
                         <MudText Typo="Typo.caption" Style="white-space:normal;text-align:center">
-                            @label<br/><small>Auto / Co</small>
+                            @label<br/><small>@Loc["Results_ColAutoCoShort"]</small>
                         </MudText>
                     </HeaderTemplate>
                     <CellTemplate>
@@ -152,11 +153,11 @@ else
                     </CellTemplate>
                 </TemplateColumn>
             }
-            <TemplateColumn Title="Autoaval." Sortable="true"
+            <TemplateColumn Title="@Loc["Results_ColAutoaval"]" Sortable="true"
                             SortBy='(StudentResultDto s) => s.AutAvgGlobal ?? -1'>
                 <HeaderTemplate>
-                    <MudTooltip Text="Nota global d'autoavaluació" Placement="Placement.Top">
-                        <span style="cursor:help">Autoaval.</span>
+                    <MudTooltip Text="@Loc["Results_TooltipAutoaval"]" Placement="Placement.Top">
+                        <span style="cursor:help">@Loc["Results_ColAutoaval"]</span>
                     </MudTooltip>
                 </HeaderTemplate>
                 <CellTemplate>
@@ -169,11 +170,11 @@ else
                     </span>
                 </CellTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="Coaval." Sortable="true"
+            <TemplateColumn Title="@Loc["Results_ColCoaval"]" Sortable="true"
                             SortBy='(StudentResultDto s) => s.AvgGlobal ?? -1'>
                 <HeaderTemplate>
-                    <MudTooltip Text="Nota global de coavaluació (mitjana de companys)" Placement="Placement.Top">
-                        <span style="cursor:help">Coaval.</span>
+                    <MudTooltip Text="@Loc["Results_TooltipCoaval"]" Placement="Placement.Top">
+                        <span style="cursor:help">@Loc["Results_ColCoaval"]</span>
                     </MudTooltip>
                 </HeaderTemplate>
                 <CellTemplate>
@@ -186,18 +187,18 @@ else
                     </span>
                 </CellTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="Coavs.">
+            <TemplateColumn Title="@Loc["Results_ColCoavs"]">
                 <HeaderTemplate>
-                    <MudTooltip Text="Nombre de companys que han avaluat aquest alumne" Placement="Placement.Top">
-                        <span style="cursor:help">Coavs.</span>
+                    <MudTooltip Text="@Loc["Results_TooltipCoavs"]" Placement="Placement.Top">
+                        <span style="cursor:help">@Loc["Results_ColCoavs"]</span>
                     </MudTooltip>
                 </HeaderTemplate>
                 <CellTemplate>@context.Item.NumPeerEvaluators</CellTemplate>
             </TemplateColumn>
-            <PropertyColumn Property="s => s.SelfComment" Title="Comentari alumne" />
+            <PropertyColumn Property="s => s.SelfComment" Title="@Loc["Results_ColStudentComment"]" />
             @if (_showNotes)
             {
-                <TemplateColumn Title="Nota professor">
+                <TemplateColumn Title="@Loc["Results_ColTeacherNote"]">
                     <CellTemplate>
                         @{
                             var sid  = context.Item.StudentId;
@@ -210,7 +211,7 @@ else
                                 <MudTextField @bind-Value="_editNoteText"
                                               Variant="Variant.Outlined" Margin="Margin.Dense"
                                               Style="min-width:180px" Immediate="true"
-                                              Placeholder="Nota del professor..." />
+                                              Placeholder="@Loc["Results_TeacherNotePh"]" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success"
                                                Size="Size.Small" OnClick="() => SaveNoteAsync(sid)" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default"
@@ -238,7 +239,7 @@ else
     </MudDataGrid>
 
     <!-- Detall coavaluacions -->
-    <MudText Typo="Typo.h6" Class="mb-3">Detall coavaluacions</MudText>
+    <MudText Typo="Typo.h6" Class="mb-3">@Loc["Results_DetailCoeval"]</MudText>
     @foreach (var s in _filteredStudents.Where(x => x.PeerEvaluations.Any()))
     {
         var sid = s.StudentId;
@@ -248,7 +249,7 @@ else
                     <MudText Typo="Typo.body1">@s.Cognoms, @s.Nom (@s.GroupName)</MudText>
                     <MudSpacer />
                     <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Primary"
-                                   Size="Size.Small" title="Informe individual"
+                                   Size="Size.Small" title="@Loc["Results_IndividualReport"]"
                                    Href="@($"/professor/informe/{ActivityId}/{sid}")"
                                    @onclick:stopPropagation="true" />
                 </MudStack>
@@ -256,7 +257,7 @@ else
             <ChildContent>
             <MudDataGrid T="PeerEvaluationDto" Items="s.PeerEvaluations" Dense="true">
                 <Columns>
-                    <PropertyColumn Property="p => p.EvaluatorName" Title="Avaluador/a" />
+                    <PropertyColumn Property="p => p.EvaluatorName" Title="@Loc["Results_ColEvaluator"]" />
                     @foreach (var c in _results.Criteria)
                     {
                         var key = c.Key;
@@ -271,7 +272,7 @@ else
                             </CellTemplate>
                         </TemplateColumn>
                     }
-                    <PropertyColumn Property="p => p.Comment" Title="Comentari" />
+                    <PropertyColumn Property="p => p.Comment" Title="@Loc["Results_ColComment"]" />
                 </Columns>
             </MudDataGrid>
             </ChildContent>
@@ -284,15 +285,15 @@ else
         <MudDivider Class="my-6" />
         <MudText Typo="Typo.h6" Class="mb-3">
             <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Class="mr-1" Style="vertical-align:middle" />
-            Registre d'activitat
+            @Loc["Results_ActivityLog"]
         </MudText>
         <MudSimpleTable Dense="true" Hover="true" Style="background:transparent;max-height:300px;overflow-y:auto">
             <thead>
                 <tr>
-                    <th>Data/hora</th>
-                    <th>Acció</th>
-                    <th>Actor</th>
-                    <th>Detalls</th>
+                    <th>@Loc["Results_LogColDate"]</th>
+                    <th>@Loc["Results_LogColAction"]</th>
+                    <th>@Loc["Results_LogColActor"]</th>
+                    <th>@Loc["Results_LogColDetails"]</th>
                 </tr>
             </thead>
             <tbody>
@@ -380,7 +381,7 @@ else
         if (saved is not null)
         {
             _notes[studentId] = saved.Note;
-            Snackbar.Add("Nota desada.", Severity.Success);
+            Snackbar.Add(Loc["Results_NoteSaved"].Value, Severity.Success);
         }
         CancelNoteEdit();
     }
@@ -398,13 +399,13 @@ else
         _           => Color.Default
     };
 
-    private static string LogLabel(string action) => action switch
+    private string LogLabel(string action) => action switch
     {
-        "created"   => "Creada",
-        "opened"    => "Oberta",
-        "closed"    => "Tancada",
-        "evaluated" => "Avaluació enviada",
-        "deleted"   => "Esborrada",
+        "created"   => Loc["Results_LogCreated"].Value,
+        "opened"    => Loc["Results_LogOpened"].Value,
+        "closed"    => Loc["Results_LogClosed"].Value,
+        "evaluated" => Loc["Results_LogEvaluated"].Value,
+        "deleted"   => Loc["Results_LogDeleted"].Value,
         _           => action
     };
 
@@ -412,7 +413,7 @@ else
     {
         Api.SetToken(UserState.Token!);
         var result = await Api.ExportCsvAsync(ActivityId);
-        if (result is null) { Snackbar.Add("Error en exportar CSV.", Severity.Error); return; }
+        if (result is null) { Snackbar.Add(Loc["Results_CsvError"].Value, Severity.Error); return; }
         var (bytes, fileName) = result.Value;
         var base64 = Convert.ToBase64String(bytes);
         await JS.InvokeVoidAsync("downloadBase64File", base64, fileName, "text/csv");
@@ -422,7 +423,7 @@ else
     {
         Api.SetToken(UserState.Token!);
         var result = await Api.ExportExcelAsync(ActivityId);
-        if (result is null) { Snackbar.Add("Error en exportar Excel.", Severity.Error); return; }
+        if (result is null) { Snackbar.Add(Loc["Results_ExcelError"].Value, Severity.Error); return; }
         var (bytes, fileName) = result.Value;
         var base64 = Convert.ToBase64String(bytes);
         await JS.InvokeVoidAsync("downloadBase64File", base64, fileName,

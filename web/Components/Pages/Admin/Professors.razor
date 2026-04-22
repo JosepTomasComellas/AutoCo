@@ -4,26 +4,27 @@
 @inject NavigationManager Nav
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Gestió de professors – AutoCo</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
-               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+               Variant="Variant.Text" Color="Color.Default">@Loc["Nav_Dashboard"]</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
     <MudIcon Icon="@Icons.Material.Filled.ManageAccounts" Color="Color.Secondary" Class="mr-1" />
-    <MudText Typo="Typo.h5" Style="font-weight:700">Gestió de professors</MudText>
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["Profs_Title"]</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.CloudDone"
                Href="/admin/backup">
-        Còpies de seguretat
+        @Loc["Profs_Backups"]
     </MudButton>
     <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                StartIcon="@Icons.Material.Filled.MarkEmailRead"
                OnClick="SendAllAsync">
-        Enviar credencials a tots
+        @Loc["Profs_SendAll"]
     </MudButton>
 </MudStack>
 
@@ -39,32 +40,32 @@
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Nou professor</MudText>
+                    <MudText Typo="Typo.h6">@Loc["Profs_NewProf"]</MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
-                <MudTextField @bind-Value="_email" Label="Correu electrònic" Variant="Variant.Outlined"
+                <MudTextField @bind-Value="_email" Label="@Loc["Label_Email"]" Variant="Variant.Outlined"
                               Class="mb-3" InputType="InputType.Email"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Email" />
                 <MudGrid Spacing="2">
                     <MudItem xs="6">
-                        <MudTextField @bind-Value="_nom" Label="Nom" Variant="Variant.Outlined" />
+                        <MudTextField @bind-Value="_nom" Label="@Loc["Label_Name"]" Variant="Variant.Outlined" />
                     </MudItem>
                     <MudItem xs="6">
-                        <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" />
+                        <MudTextField @bind-Value="_cognoms" Label="@Loc["Label_Surname"]" Variant="Variant.Outlined" />
                     </MudItem>
                 </MudGrid>
-                <MudCheckBox @bind-Value="_isAdmin" Label="Administrador" Color="Color.Warning" Class="mt-2" />
+                <MudCheckBox @bind-Value="_isAdmin" Label="@Loc["Profs_IsAdmin"]" Color="Color.Warning" Class="mt-2" />
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                    La contrasenya es generarà automàticament i s'enviarà per correu.
+                    @Loc["Profs_AutoPassword"]
                 </MudText>
             </MudCardContent>
             <MudCardActions Class="px-4 pb-4">
                 <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true"
                            OnClick="CreateAsync" Disabled="_saving"
                            StartIcon="@Icons.Material.Filled.PersonAdd">
-                    Crear professor
+                    @Loc["Profs_CreateProf"]
                 </MudButton>
             </MudCardActions>
         </MudCard>
@@ -73,7 +74,7 @@
     <MudItem xs="12" md="8">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
             <MudText Typo="Typo.h6" Style="font-weight:600">
-                Professors (@_professors.Count)
+                @Loc["Profs_ListTitle", _professors.Count]
             </MudText>
             <MudSpacer />
             @{
@@ -89,7 +90,7 @@
 
         @if (!_loading && !_professors.Any())
         {
-            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">No hi ha professors.</MudAlert>
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Loc["Profs_NoProfs"]</MudAlert>
         }
 
         <MudStack Spacing="2">
@@ -126,11 +127,11 @@
                                 <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
                                     <MudIconButton Icon="@Icons.Material.Filled.MarkEmailRead"
                                                    Size="Size.Small" Color="Color.Secondary"
-                                                   title="Enviar credencials"
+                                                   title="@Loc["Profs_SendCreds"]"
                                                    OnClick="() => SendCredentialsAsync(p)" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                    Size="Size.Small" Color="Color.Error"
-                                                   title="Eliminar"
+                                                   title="@Loc["Card_Delete"]"
                                                    OnClick="() => DeleteAsync(p)" />
                                 </MudStack>
                             </MudStack>
@@ -171,7 +172,7 @@
         if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_nom)
             || string.IsNullOrWhiteSpace(_cognoms))
         {
-            Snackbar.Add("Correu, Nom i Cognoms són obligatoris.", Severity.Warning); return;
+            Snackbar.Add(Loc["Profs_FieldsRequired"].Value, Severity.Warning); return;
         }
         _saving = true;
         Api.SetToken(UserState.Token!);
@@ -182,9 +183,9 @@
             _professors.Add(p);
             _professors = [.. _professors.OrderBy(x => x.Cognoms)];
             _email = ""; _nom = ""; _cognoms = ""; _isAdmin = false;
-            Snackbar.Add($"Professor «{p.NomComplet}» creat.", Severity.Success);
+            Snackbar.Add(Loc["Profs_Created", p.NomComplet].Value, Severity.Success);
         }
-        else Snackbar.Add("Error en crear el professor. Comprova que el correu no estigui duplicat.", Severity.Error);
+        else Snackbar.Add(Loc["Profs_CreateError"].Value, Severity.Error);
         _saving = false;
     }
 
@@ -192,39 +193,39 @@
     {
         Api.SetToken(UserState.Token!);
         var result = await Api.SendProfessorCredentialsAsync(p.Id);
-        if (result?.Sent == true) Snackbar.Add("Credencials enviades.", Severity.Success);
-        else Snackbar.Add($"No s'ha pogut enviar: {result?.Reason}", Severity.Error);
+        if (result?.Sent == true) Snackbar.Add(Loc["Profs_CredsSent"].Value, Severity.Success);
+        else Snackbar.Add(Loc["Profs_CredsError", result?.Reason ?? ""].Value, Severity.Error);
     }
 
     private async Task SendAllAsync()
     {
-        var confirm = await Dialog.ShowMessageBox("Confirmar",
-            "Enviar credencials a tots els professors?",
-            yesText: "Enviar", cancelText: "Cancel·lar");
+        var confirm = await Dialog.ShowMessageBox(Loc["Profs_SendAllTitle"].Value,
+            Loc["Profs_SendAllMsg"].Value,
+            yesText: Loc["Action_Send"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);
         var result = await Api.SendAllProfessorCredentialsAsync();
         if (result is not null)
-            Snackbar.Add($"Enviats: {result.Sent} · Omesos: {result.Skipped}", Severity.Success);
+            Snackbar.Add(Loc["Profs_SendAllResult", result.Sent, result.Skipped].Value, Severity.Success);
     }
 
     private async Task DeleteAsync(ProfessorDto p)
     {
-        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
-            $"Eliminar el professor «{p.NomComplet}»?",
-            yesText: "Eliminar", cancelText: "Cancel·lar");
+        var confirm = await Dialog.ShowMessageBox(Loc["Profs_DeleteTitle"].Value,
+            Loc["Profs_DeleteMsg", p.NomComplet].Value,
+            yesText: Loc["Action_Delete"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);
         await Api.DeleteProfessorAsync(p.Id);
         _professors.RemoveAll(x => x.Id == p.Id);
-        Snackbar.Add("Professor eliminat.", Severity.Info);
+        Snackbar.Add(Loc["Profs_Deleted"].Value, Severity.Info);
     }
 
     private async Task OnProfessorSaved(ProfessorDto updated)
     {
         var idx = _professors.FindIndex(p => p.Id == updated.Id);
         if (idx >= 0) _professors[idx] = updated;
-        Snackbar.Add($"Professor «{updated.NomComplet}» actualitzat.", Severity.Success);
+        Snackbar.Add(Loc["Profs_Updated", updated.NomComplet].Value, Severity.Success);
         await Task.CompletedTask;
     }
 }

@@ -3,13 +3,14 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Exportant CSV...</PageTitle>
 
 @if (_error is not null)
 {
     <MudAlert Severity="Severity.Error">@_error</MudAlert>
-    <MudButton Href="/professor/dashboard" Class="mt-2">← Tornar</MudButton>
+    <MudButton Href="/professor/dashboard" Class="mt-2">@Loc["ExportCsv_Back"]</MudButton>
 }
 
 @code {
@@ -23,7 +24,7 @@
 
         Api.SetToken(UserState.Token!);
         var result = await Api.ExportCsvAsync(ActivityId);
-        if (result is null) { _error = "No s'ha pogut exportar."; StateHasChanged(); return; }
+        if (result is null) { _error = Loc["ExportCsv_Error"].Value; StateHasChanged(); return; }
 
         var (content, fileName) = result.Value;
         var base64 = Convert.ToBase64String(content);

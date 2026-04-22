@@ -1,25 +1,26 @@
 @inject ApiClient Api
 @inject UserStateService UserState
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudStack Spacing="2" Class="pa-2">
-    <MudTextField @bind-Value="_email" Label="Correu electrònic"
+    <MudTextField @bind-Value="_email" Label="@Loc["Label_Email"]"
                   InputType="InputType.Email" Variant="Variant.Outlined" />
     <MudGrid Spacing="2">
         <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="_nom"     Label="Nom"     Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_nom"     Label="@Loc["Label_Name"]"     Variant="Variant.Outlined" />
         </MudItem>
         <MudItem xs="12" sm="6">
-            <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" />
+            <MudTextField @bind-Value="_cognoms" Label="@Loc["Label_Surname"]" Variant="Variant.Outlined" />
         </MudItem>
     </MudGrid>
     <MudTextField @bind-Value="_newPwd"
-                  Label="Nova contrasenya (deixa buit per no canviar)"
+                  Label="@Loc["EditProf_Password"]"
                   InputType="InputType.Password" Variant="Variant.Outlined"
                   Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
                   OnAdornmentClick="() => _showPwd = !_showPwd" />
-    <MudCheckBox @bind-Value="_isAdmin" Label="Administrador" Color="Color.Primary" />
+    <MudCheckBox @bind-Value="_isAdmin" Label="@Loc["EditProf_IsAdmin"]" Color="Color.Primary" />
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_saving">
-        Desar canvis
+        @Loc["EditProf_Save"]
     </MudButton>
 </MudStack>
 

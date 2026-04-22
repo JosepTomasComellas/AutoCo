@@ -1,13 +1,14 @@
 @inject ApiClient Api
 @inject UserStateService UserState
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.body2" Class="mb-4" Color="Color.Secondary">
-            Es crearà una nova activitat a un altre mòdul/classe, amb els mateixos grups (sense alumnes assignats).
+            @Loc["DupCross_Info"]
         </MudText>
 
-        <MudSelect T="int" Value="_classeId" Label="Classe destí"
+        <MudSelect T="int" Value="_classeId" Label="@Loc["MoveDialog_TargetClass"]"
                    Variant="Variant.Outlined" Class="mb-3"
                    AnchorOrigin="Origin.BottomCenter"
                    ValueChanged="OnClasseChanged">
@@ -25,7 +26,7 @@
         }
         else if (_moduls.Any())
         {
-            <MudSelect T="int" @bind-Value="_modulId" Label="Mòdul destí"
+            <MudSelect T="int" @bind-Value="_modulId" Label="@Loc["DupCross_TargetModule"]"
                        Variant="Variant.Outlined" Class="mb-3"
                        AnchorOrigin="Origin.BottomCenter">
                 @foreach (var m in _moduls)
@@ -37,21 +38,21 @@
         else if (_classeId != 0)
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
-                Aquesta classe no té mòduls.
+                @Loc["DupCross_NoModules"]
             </MudAlert>
         }
 
-        <MudTextField @bind-Value="_nom" Label="Nom de la nova activitat"
+        <MudTextField @bind-Value="_nom" Label="@Loc["DupDialog_NewName"]"
                       Variant="Variant.Outlined" Class="mb-3" Immediate="true" />
-        <MudTextField @bind-Value="_desc" Label="Descripció (opcional)"
+        <MudTextField @bind-Value="_desc" Label="@Loc["DupDialog_Description"]"
                       Variant="Variant.Outlined" Lines="2" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="() => MudDialog.Cancel()">Cancel·lar</MudButton>
+        <MudButton OnClick="() => MudDialog.Cancel()">@Loc["Action_Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Info" OnClick="Confirm"
                    Disabled="@(_modulId == 0 || string.IsNullOrWhiteSpace(_nom))"
                    StartIcon="@Icons.Material.Filled.ContentCopy">
-            Duplicar
+            @Loc["DupDialog_Confirm"]
         </MudButton>
     </DialogActions>
 </MudDialog>

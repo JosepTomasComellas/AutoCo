@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService Dialog
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Còpies de seguretat – AutoCo</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
@@ -12,10 +13,10 @@
 <!-- Capçalera -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
-               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+               Variant="Variant.Text" Color="Color.Default">@Loc["Nav_Dashboard"]</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
     <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Primary" Class="mr-1" />
-    <MudText Typo="Typo.h5" Style="font-weight:700">Còpies de seguretat</MudText>
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["Backup_Title"]</MudText>
 </MudStack>
 
 <MudGrid>
@@ -29,15 +30,15 @@
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Exportar configuració</MudText>
+                    <MudText Typo="Typo.h6">@Loc["Backup_ExportTitle"]</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Descarrega un fitxer JSON amb totes les dades
+                        @Loc["Backup_ExportSubtitle"]
                     </MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
                 <MudText Typo="Typo.body2">
-                    Exporta professors, classes, alumnes, mòduls, activitats, grups i totes les avaluacions a un fitxer JSON que pots guardar localment.
+                    @Loc["Backup_ExportDesc"]
                 </MudText>
             </MudCardContent>
             <MudCardActions Class="px-4 pb-4">
@@ -48,7 +49,7 @@
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    Exportar ara
+                    @Loc["Backup_ExportNow"]
                 </MudButton>
             </MudCardActions>
         </MudCard>
@@ -64,21 +65,21 @@
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6" Color="Color.Error">Importar configuració</MudText>
+                    <MudText Typo="Typo.h6" Color="Color.Error">@Loc["Backup_ImportTitle"]</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Restaura des d'un fitxer JSON local
+                        @Loc["Backup_ImportSubtitle"]
                     </MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
                 <MudAlert Severity="Severity.Error" Class="mb-3">
-                    <strong>Atenció:</strong> Aquesta acció <strong>esborra i substitueix permanentment totes les dades</strong> del sistema (professors, alumnes, activitats i avaluacions).
+                    <strong>@Loc["Backup_Attention"]</strong> @Loc["Backup_ImportWarning"]
                 </MudAlert>
                 <InputFile id="importFile" OnChange="OnFileSelected" accept=".json" style="display:none" />
                 <MudButton Variant="Variant.Outlined" Color="Color.Warning" FullWidth="true"
                            StartIcon="@Icons.Material.Filled.AttachFile"
                            OnClick='() => JS.InvokeVoidAsync("eval", "document.getElementById(\"importFile\").click()")'>
-                    @(_importFile is null ? "Seleccionar fitxer JSON..." : _importFile.Name)
+                    @(_importFile is null ? Loc["Backup_SelectFile"].Value : _importFile.Name)
                 </MudButton>
             </MudCardContent>
             <MudCardActions Class="px-4 pb-4">
@@ -90,7 +91,7 @@
                     {
                         <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                     }
-                    Importar i substituir
+                    @Loc["Backup_ImportBtn"]
                 </MudButton>
             </MudCardActions>
         </MudCard>
@@ -106,9 +107,9 @@
                     </MudAvatar>
                 </CardHeaderAvatar>
                 <CardHeaderContent>
-                    <MudText Typo="Typo.h6">Còpies al servidor</MudText>
+                    <MudText Typo="Typo.h6">@Loc["Backup_ServerCopies"]</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Emmagatzemades al volum de l'API
+                        @Loc["Backup_StoredOn"]
                     </MudText>
                 </CardHeaderContent>
                 <CardHeaderActions>
@@ -119,7 +120,7 @@
                         {
                             <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                         }
-                        Crear còpia ara
+                        @Loc["Backup_CreateNow"]
                     </MudButton>
                 </CardHeaderActions>
             </MudCardHeader>
@@ -131,17 +132,17 @@
                 else if (!_files.Any())
                 {
                     <MudAlert Severity="Severity.Info" Dense="true">
-                        No hi ha còpies guardades al servidor.
+                        @Loc["Backup_NoBackups"]
                     </MudAlert>
                 }
                 else
                 {
                     <MudTable Items="_files" Dense="true" Hover="true" Elevation="0">
                         <HeaderContent>
-                            <MudTh>Nom del fitxer</MudTh>
-                            <MudTh>Data</MudTh>
-                            <MudTh>Mida</MudTh>
-                            <MudTh Style="text-align:right">Accions</MudTh>
+                            <MudTh>@Loc["Backup_ColName"]</MudTh>
+                            <MudTh>@Loc["Backup_ColDate"]</MudTh>
+                            <MudTh>@Loc["Backup_ColSize"]</MudTh>
+                            <MudTh Style="text-align:right">@Loc["Backup_ColActions"]</MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd>
@@ -154,15 +155,15 @@
                             <MudTd Style="text-align:right">
                                 <MudIconButton Icon="@Icons.Material.Filled.FileDownload"
                                                Color="Color.Primary" Size="Size.Small"
-                                               title="Descarregar"
+                                               title="@Loc["Backup_Download"]"
                                                OnClick="() => DownloadServerBackupAsync(context.Name)" />
                                 <MudIconButton Icon="@Icons.Material.Filled.RestorePage"
                                                Color="Color.Warning" Size="Size.Small"
-                                               title="Restaurar (substitueix totes les dades)"
+                                               title="@Loc["Backup_RestoreTooltip"]"
                                                OnClick="() => RestoreServerBackupAsync(context.Name)" />
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                Color="Color.Error" Size="Size.Small"
-                                               title="Eliminar"
+                                               title="@Loc["Card_Delete"]"
                                                OnClick="() => DeleteServerBackupAsync(context.Name)" />
                             </MudTd>
                         </RowTemplate>
@@ -204,11 +205,11 @@
         _exporting = false;
         if (result is null)
         {
-            Snackbar.Add("Error en exportar", Severity.Error);
+            Snackbar.Add(Loc["Backup_ExportError"].Value, Severity.Error);
             return;
         }
         await DownloadBytesAsync(result.Value.Content, result.Value.FileName);
-        Snackbar.Add("Exportació completada", Severity.Success);
+        Snackbar.Add(Loc["Backup_ExportOk"].Value, Severity.Success);
     }
 
     // ── Importar ──────────────────────────────────────────────────────────────
@@ -219,9 +220,9 @@
         if (_importFile is null) return;
 
         var confirmed = await Dialog.ShowMessageBox(
-            "Importar configuració",
-            "Això SUBSTITUIRÀ totes les dades existents (professors, classes, alumnes, activitats, avaluacions). Estàs segur?",
-            yesText: "Sí, importar", cancelText: "Cancel·lar");
+            Loc["Backup_ImportConfirmTitle"].Value,
+            Loc["Backup_ImportConfirmMsg"].Value,
+            yesText: Loc["Backup_ImportConfirmYes"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirmed != true) return;
 
         _importing = true;
@@ -235,7 +236,7 @@
 
             if (backup is null)
             {
-                Snackbar.Add("Format de fitxer invàlid", Severity.Error);
+                Snackbar.Add(Loc["Backup_InvalidFile"].Value, Severity.Error);
                 return;
             }
 
@@ -243,17 +244,17 @@
             if (result?.Success == true)
             {
                 Snackbar.Add(
-                    $"Importació correcta: {result.Professors} professors, {result.Classes} classes, " +
-                    $"{result.Students} alumnes, {result.Activities} activitats, {result.Evaluations} avaluacions",
+                    Loc["Backup_ImportOk", result.Professors, result.Classes, result.Students,
+                        result.Activities, result.Evaluations].Value,
                     Severity.Success);
                 _importFile = null;
             }
             else
-                Snackbar.Add($"Error: {result?.Error ?? "desconegut"}", Severity.Error);
+                Snackbar.Add(Loc["Backup_ImportError", result?.Error ?? "desconegut"].Value, Severity.Error);
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error llegint el fitxer: {ex.Message}", Severity.Error);
+            Snackbar.Add(Loc["Backup_FileError", ex.Message].Value, Severity.Error);
         }
         finally
         {
@@ -268,10 +269,10 @@
         var info = await Api.CreateBackupFileAsync();
         _creating = false;
         if (info is null)
-            Snackbar.Add("Error en crear la còpia", Severity.Error);
+            Snackbar.Add(Loc["Backup_CreateError"].Value, Severity.Error);
         else
         {
-            Snackbar.Add($"Còpia creada: {info.Name}", Severity.Success);
+            Snackbar.Add(Loc["Backup_CreateOk", info.Name].Value, Severity.Success);
             await LoadFilesAsync();
         }
     }
@@ -280,7 +281,7 @@
     {
         var result = await Api.DownloadBackupFileAsync(name);
         if (result is null)
-            Snackbar.Add("Error en descarregar", Severity.Error);
+            Snackbar.Add(Loc["Backup_DownloadError"].Value, Severity.Error);
         else
             await DownloadBytesAsync(result.Value.Content, result.Value.FileName);
     }
@@ -288,37 +289,37 @@
     private async Task RestoreServerBackupAsync(string name)
     {
         var confirmed = await Dialog.ShowMessageBox(
-            "Restaurar còpia",
-            $"Restaurar «{name}» SUBSTITUIRÀ totes les dades actuals. Estàs segur?",
-            yesText: "Sí, restaurar", cancelText: "Cancel·lar");
+            Loc["Backup_RestoreTitle"].Value,
+            Loc["Backup_RestoreMsg", name].Value,
+            yesText: Loc["Backup_RestoreYes"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirmed != true) return;
 
         var result = await Api.RestoreBackupFileAsync(name);
         if (result?.Success == true)
             Snackbar.Add(
-                $"Restauració correcta: {result.Professors} professors, {result.Classes} classes, " +
-                $"{result.Students} alumnes, {result.Activities} activitats, {result.Evaluations} avaluacions",
+                Loc["Backup_RestoreOk", result.Professors, result.Classes, result.Students,
+                    result.Activities, result.Evaluations].Value,
                 Severity.Success);
         else
-            Snackbar.Add($"Error: {result?.Error ?? "desconegut"}", Severity.Error);
+            Snackbar.Add(Loc["Backup_RestoreError", result?.Error ?? "desconegut"].Value, Severity.Error);
     }
 
     private async Task DeleteServerBackupAsync(string name)
     {
         var confirmed = await Dialog.ShowMessageBox(
-            "Eliminar còpia",
-            $"Eliminar «{name}»?",
-            yesText: "Eliminar", cancelText: "Cancel·lar");
+            Loc["Backup_DeleteTitle"].Value,
+            Loc["Backup_DeleteMsg", name].Value,
+            yesText: Loc["Action_Delete"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirmed != true) return;
 
         var ok = await Api.DeleteBackupFileAsync(name);
         if (ok)
         {
-            Snackbar.Add("Còpia eliminada", Severity.Success);
+            Snackbar.Add(Loc["Backup_DeleteOk"].Value, Severity.Success);
             await LoadFilesAsync();
         }
         else
-            Snackbar.Add("Error en eliminar", Severity.Error);
+            Snackbar.Add(Loc["Backup_DeleteError"].Value, Severity.Error);
     }
 
     // ── Utilitats ──────────────────────────────────────────────────────────────

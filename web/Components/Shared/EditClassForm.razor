@@ -1,15 +1,16 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudGrid Spacing="2">
     <MudItem xs="12" sm="6">
-        <MudTextField @bind-Value="_nom" Label="Nom de la classe" Variant="Variant.Outlined"
+        <MudTextField @bind-Value="_nom" Label="@Loc["EditClass_Name"]" Variant="Variant.Outlined"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.Class" />
     </MudItem>
     <MudItem xs="12" sm="6">
-        <MudTextField @bind-Value="_curs" Label="Curs acadèmic" Variant="Variant.Outlined"
+        <MudTextField @bind-Value="_curs" Label="@Loc["EditClass_AcademicYear"]" Variant="Variant.Outlined"
                       Placeholder="2024-2025"
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
@@ -19,7 +20,7 @@
                    StartIcon="@Icons.Material.Filled.Save"
                    OnClick="SaveAsync" Disabled="_saving">
             @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-            Desar canvis
+            @Loc["EditClass_Save"]
         </MudButton>
     </MudItem>
 </MudGrid>
@@ -42,7 +43,7 @@
     {
         if (string.IsNullOrWhiteSpace(_nom))
         {
-            Snackbar.Add("El nom és obligatori.", Severity.Warning); return;
+            Snackbar.Add(Loc["EditClass_NameRequired"].Value, Severity.Warning); return;
         }
         _saving = true;
         Api.SetToken(UserState.Token!);
@@ -52,6 +53,6 @@
         if (updated is not null)
             await OnSaved.InvokeAsync(updated);
         else
-            Snackbar.Add("Error en desar la classe.", Severity.Error);
+            Snackbar.Add(Loc["EditClass_SaveError"].Value, Severity.Error);
     }
 }

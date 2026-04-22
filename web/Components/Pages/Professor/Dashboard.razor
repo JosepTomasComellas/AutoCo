@@ -2,35 +2,36 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Tauler del Professor – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
-    <MudText Typo="Typo.h5">Benvingut/da, @UserState.NomComplet</MudText>
+    <MudText Typo="Typo.h5">@Loc["Dash_Welcome", UserState.NomComplet]</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Add"
                Href="/professor/nova-activitat">
-        Nova activitat
+        @Loc["Dash_NewActivity"]
     </MudButton>
     <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Class"
                Href="/professor/classes">
-        Gestió de classes
+        @Loc["Dash_ManageClasses"]
     </MudButton>
     @if (UserState.IsAdmin)
     {
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                    StartIcon="@Icons.Material.Filled.People"
                    Href="/admin/professors">
-            Professors
+            @Loc["Dash_Teachers"]
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary"
                    StartIcon="@Icons.Material.Filled.CloudDone"
                    Href="/admin/backup">
-            Còpies de seguretat
+            @Loc["Dash_Backups"]
         </MudButton>
     }
 </MudStack>
@@ -42,7 +43,7 @@
 else if (!_activities.Any())
 {
     <MudAlert Severity="Severity.Info">
-        No hi ha activitats creades. Comença creant-ne una.
+        @Loc["Dash_NoActivities"]
     </MudAlert>
 }
 else
@@ -53,42 +54,42 @@ else
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Secondary" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_classesDtos.Count</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Classes</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatClasses"]</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_moduls.Count</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Mòduls</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatModuls"]</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Info" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Info" Style="font-weight:700">@_totalAlumnes</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Alumnes</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatStudents"]</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight:700">@_activities.Count</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Activitats</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatActivities"]</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.LockOpen" Color="Color.Success" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Success" Style="font-weight:700">@_activities.Count(a => a.IsOpen)</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Obertes ara</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_OpenNow"]</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="6" sm="4">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Warning" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Warning" Style="font-weight:700">@_activities.Sum(a => a.NumGroups)</MudText>
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Grups</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatGroups"]</MudText>
             </MudPaper>
         </MudItem>
     </MudGrid>
@@ -96,14 +97,14 @@ else
     <!-- Filtres -->
     <MudGrid Class="mb-4" Spacing="2">
         <MudItem xs="12" sm="6" md="3">
-            <MudTextField @bind-Value="_cerca" Label="Cercar activitat" Variant="Variant.Outlined"
+            <MudTextField @bind-Value="_cerca" Label="@Loc["Dash_SearchActivity"]" Variant="Variant.Outlined"
                           Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
                           Clearable="true" Immediate="true" Margin="Margin.Dense" />
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <MudSelect T="int" @bind-Value="_classeId" Label="Classe" AnchorOrigin="Origin.BottomCenter"
+            <MudSelect T="int" @bind-Value="_classeId" Label="@Loc["Label_Class"]" AnchorOrigin="Origin.BottomCenter"
                        Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                <MudSelectItem T="int" Value="0">Totes les classes</MudSelectItem>
+                <MudSelectItem T="int" Value="0">@Loc["Dash_AllClasses"]</MudSelectItem>
                 @foreach (var c in _classes)
                 {
                     <MudSelectItem T="int" Value="@c.Key">@c.Value</MudSelectItem>
@@ -111,9 +112,9 @@ else
             </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
-            <MudSelect T="int" @bind-Value="_modulId" Label="Mòdul" AnchorOrigin="Origin.BottomCenter"
+            <MudSelect T="int" @bind-Value="_modulId" Label="@Loc["Label_Module"]" AnchorOrigin="Origin.BottomCenter"
                        Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
-                <MudSelectItem T="int" Value="0">Tots els mòduls</MudSelectItem>
+                <MudSelectItem T="int" Value="0">@Loc["Dash_AllModules"]</MudSelectItem>
                 @foreach (var m in _moduls)
                 {
                     <MudSelectItem T="int" Value="@m.Key">@m.Value</MudSelectItem>
@@ -121,9 +122,9 @@ else
             </MudSelect>
         </MudItem>
         <MudItem xs="12" sm="6" md="3" Class="d-flex align-center gap-3">
-            <MudSwitch @bind-Value="_nomesObertes" Color="Color.Success" Label="Només obertes" Size="Size.Small" />
+            <MudSwitch @bind-Value="_nomesObertes" Color="Color.Success" Label="@Loc["Dash_OnlyOpen"]" Size="Size.Small" />
             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                @_filtrades.Count de @_activities.Count
+                @Loc["Dash_CountOf", _filtrades.Count, _activities.Count]
             </MudText>
         </MudItem>
     </MudGrid>
@@ -131,7 +132,7 @@ else
     @if (!_obertes.Any() && !_tancades.Any())
     {
         <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-            Cap activitat coincideix amb el filtre.
+            @Loc["Dash_NoMatch"]
         </MudAlert>
     }
 
@@ -140,7 +141,7 @@ else
         <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:600">
             <MudIcon Icon="@Icons.Material.Filled.LockOpen" Size="Size.Small"
                      Color="Color.Success" Class="mr-1" Style="vertical-align:middle" />
-            Activitats obertes (@_obertes.Count)
+            @Loc["Dash_OpenActivities", _obertes.Count]
         </MudText>
         <MudGrid Class="mb-6">
             @foreach (var act in _obertes)
@@ -158,7 +159,7 @@ else
                  Style="font-weight:600;color:var(--mud-palette-text-secondary)">
             <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small"
                      Color="Color.Default" Class="mr-1" Style="vertical-align:middle" />
-            Activitats tancades (@_tancades.Count)
+            @Loc["Dash_ClosedActivities", _tancades.Count]
         </MudText>
         <MudGrid>
             @foreach (var act in _tancades)

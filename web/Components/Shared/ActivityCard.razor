@@ -5,6 +5,7 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject ParticipationNotificationService ParticipationNotifier
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudCard Elevation="@(Act.IsOpen ? 2 : 1)"
          Class="activity-card"
@@ -18,7 +19,7 @@
                 </MudText>
                 @if (!Act.IsOpen)
                 {
-                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Tancada</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">@Loc["Card_Closed"]</MudChip>
                 }
             </MudStack>
             <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -37,19 +38,19 @@
     <MudCardContent Class="pt-0 pb-0">
         <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                @Act.NumGroups grups
+                @Loc["Card_Groups", Act.NumGroups]
             </MudChip>
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
-                @Act.NumStudents alumnes
+                @Loc["Card_Students", Act.NumStudents]
             </MudChip>
             @if (Act.IsOpen && _participation is not null)
             {
-                <MudTooltip Text="@($"{_participation.Submitted} de {_participation.Total} han avaluat")">
+                <MudTooltip Text="@Loc["Card_EvalTooltip", _participation.Submitted, _participation.Total]">
                     <MudChip T="string" Size="Size.Small"
                              Color="@(_participation.Submitted == _participation.Total && _participation.Total > 0
                                        ? Color.Success : Color.Warning)"
                              Variant="Variant.Filled">
-                        @_participation.Submitted / @_participation.Total avaluat
+                        @Loc["Card_Evaluated", _participation.Submitted, _participation.Total]
                     </MudChip>
                 </MudTooltip>
             }
@@ -68,43 +69,43 @@
     <MudCardActions>
         <MudButton Size="Size.Small" Color="Color.Primary"
                    Href="@($"/professor/resultats/{Act.Id}")">
-            Resultats
+            @Loc["Card_Results"]
         </MudButton>
         <MudButton Size="Size.Small" Color="Color.Secondary"
                    Href="@($"/professor/grups/{Act.Id}")">
-            Grups
+            @Loc["Card_Groups2"]
         </MudButton>
         <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
-                       title="Editar nom i descripció"
+                       title="@Loc["Card_EditActivity"]"
                        OnClick="EditarAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary"
-                       title="Veure gràfica"
+                       title="@Loc["Card_ViewChart"]"
                        OnClick="ShowChartAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Info"
-                       title="Duplicar (mateixa classe)"
+                       title="@Loc["Card_DuplicateSame"]"
                        OnClick="DuplicarAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.CopyAll" Color="Color.Info"
-                       title="Duplicar a una altra classe"
+                       title="@Loc["Card_DuplicateCross"]"
                        OnClick="DuplicarCrossAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.Tune" Color="Color.Default"
-                       title="Gestionar criteris d'avaluació"
+                       title="@Loc["Card_ManageCriteria"]"
                        OnClick="ManageCriteriaAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.BookmarkAdd" Color="Color.Default"
-                       title="Desar com a plantilla"
+                       title="@Loc["Card_SaveAsTemplate"]"
                        OnClick="SaveAsTemplateAsync" />
         @if (Act.IsOpen)
         {
             <MudIconButton Icon="@Icons.Material.Filled.NotificationsActive"
                            Color="Color.Secondary"
-                           title="Enviar recordatori als pendents"
+                           title="@Loc["Card_SendReminders"]"
                            OnClick="SendRemindersAsync" />
         }
         <MudIconButton Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
                        Color="@(Act.IsOpen ? Color.Warning : Color.Success)"
-                       title="@(Act.IsOpen ? "Tancar" : "Obrir")"
+                       title="@(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)"
                        OnClick="ToggleAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                       title="Eliminar"
+                       title="@Loc["Card_Delete"]"
                        OnClick="DeleteAsync" />
     </MudCardActions>
 </MudCard>
@@ -171,7 +172,7 @@
         var updated = await Api.ToggleActivityAsync(Act.Id);
         if (updated is not null)
         {
-            Snackbar.Add(updated.IsOpen ? "Activitat oberta." : "Activitat tancada.", Severity.Success);
+            Snackbar.Add(updated.IsOpen ? Loc["Card_Opened"].Value : Loc["Card_ClosedMsg"].Value, Severity.Success);
             // La desubscripció/subscripció es gestiona a OnParametersSetAsync quan Act canvia
             await OnUpdated.InvokeAsync(updated);
         }
@@ -185,7 +186,7 @@
             { d => d.DescActual, Act.Description }
         };
         var opts   = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await Dialog.ShowAsync<EditarActivitatDialog>("Editar activitat", parameters, opts);
+        var dialog = await Dialog.ShowAsync<EditarActivitatDialog>(Loc["Card_EditDialogTitle"].Value, parameters, opts);
         var result = await dialog.Result;
         if (result is null || result.Canceled) return;
 
@@ -194,10 +195,10 @@
         var updated = await Api.UpdateActivityAsync(Act.Id, new UpdateActivityRequest(nom, desc));
         if (updated is not null)
         {
-            Snackbar.Add("Activitat actualitzada.", Severity.Success);
+            Snackbar.Add(Loc["Card_Updated"].Value, Severity.Success);
             await OnUpdated.InvokeAsync(updated);
         }
-        else Snackbar.Add("Error en desar els canvis.", Severity.Error);
+        else Snackbar.Add(Loc["Card_UpdateError"].Value, Severity.Error);
     }
 
     private async Task ShowChartAsync()
@@ -220,7 +221,7 @@
             { d => d.NomOriginal, Act.Name }
         };
         var opts   = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await Dialog.ShowAsync<DuplicarActivitatDialog>("Duplicar activitat", parameters, opts);
+        var dialog = await Dialog.ShowAsync<DuplicarActivitatDialog>(Loc["Card_DupDialogTitle"].Value, parameters, opts);
         var result = await dialog.Result;
         if (result is null || result.Canceled) return;
 
@@ -229,11 +230,11 @@
         var nova = await Api.DuplicateActivityAsync(Act.Id, new DuplicateActivityRequest(nom, desc));
         if (nova is not null)
         {
-            Snackbar.Add($"Activitat «{nova.Name}» creada.", Severity.Success);
+            Snackbar.Add(Loc["Card_DuplicateCreated", nova.Name].Value, Severity.Success);
             await OnUpdated.InvokeAsync(nova);
             Nav.NavigateTo($"/professor/grups/{nova.Id}");
         }
-        else Snackbar.Add("Error en duplicar l'activitat.", Severity.Error);
+        else Snackbar.Add(Loc["Card_DuplicateError"].Value, Severity.Error);
     }
 
     private async Task DuplicarCrossAsync()
@@ -244,7 +245,7 @@
             { d => d.CurrentClassId, Act.ClassId }
         };
         var opts   = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await Dialog.ShowAsync<DuplicarCrossDialog>("Duplicar a altra classe", parameters, opts);
+        var dialog = await Dialog.ShowAsync<DuplicarCrossDialog>(Loc["Card_DupCrossTitle"].Value, parameters, opts);
         var result = await dialog.Result;
         if (result is null || result.Canceled) return;
 
@@ -253,11 +254,11 @@
         var nova = await Api.DuplicateActivityCrossAsync(Act.Id, req);
         if (nova is not null)
         {
-            Snackbar.Add($"Activitat «{nova.Name}» creada a {nova.ClassName}.", Severity.Success);
+            Snackbar.Add(Loc["Card_DuplicateCrossCreated", nova.Name, nova.ClassName].Value, Severity.Success);
             await OnUpdated.InvokeAsync(nova);
             Nav.NavigateTo($"/professor/grups/{nova.Id}");
         }
-        else Snackbar.Add("Error en duplicar l'activitat.", Severity.Error);
+        else Snackbar.Add(Loc["Card_DuplicateError"].Value, Severity.Error);
     }
 
     private async Task ManageCriteriaAsync()
@@ -267,7 +268,7 @@
             { d => d.ActivityId, Act.Id }
         };
         var opts = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
-        await Dialog.ShowAsync<CriteriaDialog>("Criteris d'avaluació", parameters, opts);
+        await Dialog.ShowAsync<CriteriaDialog>(Loc["Card_ManageCriteria"].Value, parameters, opts);
     }
 
     private async Task SaveAsTemplateAsync()
@@ -279,38 +280,38 @@
         var req      = new CreateTemplateRequest(Act.Name, Act.Description, items);
         var saved    = await Api.CreateTemplateAsync(req);
         if (saved is not null)
-            Snackbar.Add($"Plantilla «{saved.Name}» desada.", Severity.Success);
+            Snackbar.Add(Loc["Card_TemplateSaved", saved.Name].Value, Severity.Success);
         else
-            Snackbar.Add("Error en desar la plantilla.", Severity.Error);
+            Snackbar.Add(Loc["Card_TemplateError"].Value, Severity.Error);
     }
 
     private async Task SendRemindersAsync()
     {
-        var confirm = await Dialog.ShowMessageBox("Enviar recordatoris",
-            "S'enviarà un correu a tots els alumnes que encara no han omplert l'avaluació.",
-            yesText: "Enviar", cancelText: "Cancel·lar");
+        var confirm = await Dialog.ShowMessageBox(Loc["Card_RemindersTitle"].Value,
+            Loc["Card_RemindersInfo"].Value,
+            yesText: Loc["Action_Send"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
 
         Api.SetToken(UserState.Token!);
         var result = await Api.SendRemindersAsync(Act.Id);
-        if (result is null) { Snackbar.Add("Error en enviar recordatoris.", Severity.Error); return; }
+        if (result is null) { Snackbar.Add(Loc["Card_SendReminders"].Value, Severity.Error); return; }
 
         if (result.EmailDisabled)
-            Snackbar.Add("El correu electrònic no està configurat al servidor.", Severity.Warning);
+            Snackbar.Add(Loc["Card_EmailDisabled"].Value, Severity.Warning);
         else if (result.Sent == 0 && result.Skipped == 0)
-            Snackbar.Add("Tots els alumnes ja han avaluat!", Severity.Success);
+            Snackbar.Add(Loc["Card_AllEvaluated"].Value, Severity.Success);
         else
-            Snackbar.Add($"Recordatoris enviats: {result.Sent}" +
-                (result.Skipped > 0 ? $" · Errors: {result.Skipped}" : ""),
+            Snackbar.Add(Loc["Card_RemindersSent", result.Sent].Value +
+                (result.Skipped > 0 ? Loc["Card_RemindersErrors", result.Skipped].Value : ""),
                 result.Skipped > 0 ? Severity.Warning : Severity.Success);
     }
 
     private async Task DeleteAsync()
     {
-        if (!await DeleteWithUndoAsync($"Eliminant «{Act.Name}»...")) return;
+        if (!await DeleteWithUndoAsync(Loc["Card_Deleting", Act.Name].Value)) return;
         Api.SetToken(UserState.Token!);
         await Api.DeleteActivityAsync(Act.Id);
-        Snackbar.Add("Activitat eliminada.", Severity.Success);
+        Snackbar.Add(Loc["Card_Deleted"].Value, Severity.Success);
         await OnDeleted.InvokeAsync(Act);
     }
 
@@ -320,14 +321,14 @@
         var cts = new CancellationTokenSource();
         Snackbar.Add(msg, Severity.Warning, cfg =>
         {
-            cfg.Action               = "Desfer";
+            cfg.Action               = Loc["Card_Undo"].Value;
             cfg.ActionColor          = Color.Warning;
             cfg.ActionVariant        = Variant.Text;
             cfg.OnClick              = _ => { cancelled = true; cts.Cancel(); return Task.CompletedTask; };
             cfg.VisibleStateDuration = 5000;
         });
         try { await Task.Delay(5500, cts.Token); } catch (OperationCanceledException) { }
-        if (cancelled) Snackbar.Add("Eliminació cancel·lada.", Severity.Info);
+        if (cancelled) Snackbar.Add(Loc["Card_UndoDeleted"].Value, Severity.Info);
         return !cancelled;
     }
 }

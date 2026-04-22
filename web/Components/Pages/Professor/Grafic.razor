@@ -3,6 +3,7 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
 @implements IAsyncDisposable
 
 <PageTitle>Gràfic – AutoCo</PageTitle>
@@ -15,7 +16,7 @@
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text"
                Href="@($"/professor/resultats/{ActivityId}")">
-        Resultats
+        @Loc["Nav_Results"]
     </MudButton>
     @if (_data is not null)
     {
@@ -32,11 +33,11 @@
 }
 else if (_data is null)
 {
-    <MudAlert Severity="Severity.Error">No hi ha dades per mostrar.</MudAlert>
+    <MudAlert Severity="Severity.Error">@Loc["Chart_NoData"]</MudAlert>
 }
 else if (!_data.Groups.Any())
 {
-    <MudAlert Severity="Severity.Info">Encara no hi ha avaluacions per generar el gràfic.</MudAlert>
+    <MudAlert Severity="Severity.Info">@Loc["Chart_NoEvals"]</MudAlert>
 }
 else
 {
@@ -45,7 +46,7 @@ else
         <MudItem xs="12" md="7">
             <MudPaper Elevation="2" Class="pa-4">
                 <MudText Typo="Typo.subtitle1" Style="font-weight:700;margin-bottom:1rem">
-                    Autoavaluació vs Coavaluació per grup
+                    @Loc["Chart_AutoVsCo"]
                 </MudText>
                 <canvas id="chart-groups" style="max-height:320px"></canvas>
             </MudPaper>
@@ -55,15 +56,15 @@ else
         <MudItem xs="12" md="5">
             <MudPaper Elevation="2" Class="pa-4">
                 <MudText Typo="Typo.subtitle1" Style="font-weight:700;margin-bottom:1rem">
-                    Participació per grup
+                    @Loc["Chart_Participation"]
                 </MudText>
                 <MudSimpleTable Dense="true" Hover="true">
                     <thead>
                         <tr>
-                            <th>Grup</th>
-                            <th style="text-align:right">Total</th>
-                            <th style="text-align:right">Auto</th>
-                            <th style="text-align:right">Co</th>
+                            <th>@Loc["Chart_ColGroup"]</th>
+                            <th style="text-align:right">@Loc["Chart_ColTotal"]</th>
+                            <th style="text-align:right">@Loc["Chart_ColAuto"]</th>
+                            <th style="text-align:right">@Loc["Chart_ColCo"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -96,13 +97,13 @@ else
                         @if (g.AvgAutoEval.HasValue)
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
-                                Auto: @g.AvgAutoEval.Value.ToString("F1")
+                                @($"{Loc["Chart_ColAuto"].Value}: {g.AvgAutoEval.Value:F1}")
                             </MudChip>
                         }
                         @if (g.AvgCoEval.HasValue)
                         {
                             <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Outlined">
-                                Co: @g.AvgCoEval.Value.ToString("F1")
+                                @($"{Loc["Chart_ColCo"].Value}: {g.AvgCoEval.Value:F1}")
                             </MudChip>
                         }
                     </MudStack>
@@ -116,7 +117,7 @@ else
             <MudItem xs="12">
                 <MudPaper Elevation="2" Class="pa-4">
                     <MudText Typo="Typo.subtitle1" Style="font-weight:700;margin-bottom:1rem">
-                        Detall per criteri i grup
+                        @Loc["Chart_CriteriaDetail"]
                     </MudText>
                     <canvas id="chart-criteria" style="max-height:360px"></canvas>
                 </MudPaper>
@@ -157,8 +158,8 @@ else
             await JS.InvokeVoidAsync("autocoCharts.renderBar", "chart-groups",
                 groupLabels,
                 new[] {
-                    new { label = "Autoavaluació", data = autoData, color = "#CC0000" },
-                    new { label = "Coavaluació",   data = coData,   color = "#1e293b" }
+                    new { label = Loc["Chart_AutoEvalLabel"].Value, data = autoData, color = "#CC0000" },
+                    new { label = Loc["Chart_CoEvalLabel"].Value,   data = coData,   color = "#1e293b" }
                 });
 
             // Gràfic per criteri
@@ -169,7 +170,7 @@ else
 
                 var autoSeries = groups.Select((g, gi) => new
                 {
-                    label = $"{g} (Auto)",
+                    label = $"{g} ({Loc["Chart_ColAuto"].Value})",
                     data  = _data.CriteriaDetail.Select(c =>
                         c.Groups.FirstOrDefault(cg => cg.GroupName == g)?.AvgAuto).ToArray(),
                     color = $"hsl({gi * 60}, 65%, 45%)"
@@ -177,7 +178,7 @@ else
 
                 var coSeries = groups.Select((g, gi) => new
                 {
-                    label = $"{g} (Co)",
+                    label = $"{g} ({Loc["Chart_ColCo"].Value})",
                     data  = _data.CriteriaDetail.Select(c =>
                         c.Groups.FirstOrDefault(cg => cg.GroupName == g)?.AvgCo).ToArray(),
                     color = $"hsl({gi * 60}, 40%, 68%)"

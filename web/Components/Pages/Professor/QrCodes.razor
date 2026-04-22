@@ -4,26 +4,26 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Codis QR – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/classes"
-               Variant="Variant.Text">Classes</MudButton>
+               Variant="Variant.Text">@Loc["Nav_Classes"]</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
     <MudIcon Icon="@Icons.Material.Filled.QrCode" Color="Color.Primary" Class="mr-1" />
-    <MudText Typo="Typo.h5" Style="font-weight:700">Codis QR d'accés per a alumnes</MudText>
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["QR_Title"]</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Outlined" Color="Color.Default" StartIcon="@Icons.Material.Filled.Print"
                OnClick='async () => await JS.InvokeVoidAsync("window.print")'>
-        Imprimir tots
+        @Loc["QR_PrintAll"]
     </MudButton>
 </MudStack>
 
 <MudAlert Severity="Severity.Info" Class="mb-4" Dense="true">
-    Cada codi QR redirigeix l'alumne directament a la pàgina d'inici de sessió de la seva classe.
-    Imprimiu i enganxeu-los a la classe o compartiu-los digitalment.
+    @Loc["QR_Info"]
 </MudAlert>
 
 @if (_loading)
@@ -32,7 +32,7 @@
 }
 else if (!_classes.Any())
 {
-    <MudAlert Severity="Severity.Info">No hi ha classes disponibles.</MudAlert>
+    <MudAlert Severity="Severity.Info">@Loc["QR_NoClasses"]</MudAlert>
 }
 else
 {
@@ -54,7 +54,7 @@ else
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@c.AcademicYear</MudText>
                     }
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                        @c.NumStudents alumnes
+                        @Loc["QR_NumStudents", c.NumStudents]
                     </MudText>
                     <MudDivider Class="my-2" />
                     <MudText Typo="Typo.caption" Style="word-break:break-all;color:var(--mud-palette-text-disabled);font-size:.65rem">

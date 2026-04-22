@@ -3,6 +3,7 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Avaluació – AutoCo</PageTitle>
 @if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
@@ -13,19 +14,19 @@
 }
 else if (_form is null)
 {
-    <MudAlert Severity="Severity.Error" Class="mb-3">Activitat no disponible o ja tancada.</MudAlert>
-    <MudButton Href="/alumne/dashboard">← Tornar al tauler</MudButton>
+    <MudAlert Severity="Severity.Error" Class="mb-3">@Loc["Eval_NotAvailable"]</MudAlert>
+    <MudButton Href="/alumne/dashboard">@Loc["Eval_BackToBoard"]</MudButton>
 }
 else
 {
     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
         <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/alumne/dashboard"
                    Variant="Variant.Text">
-            Tornar
+            @Loc["Eval_Back"]
         </MudButton>
         <MudStack Spacing="0" Style="flex:1;min-width:0">
             <MudText Typo="Typo.h6" Style="font-weight:700">@_form.Activity.Name</MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary">Grup: @_form.Group.Name</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Eval_Group", _form.Group.Name]</MudText>
         </MudStack>
     </MudStack>
 
@@ -42,7 +43,7 @@ else
                                Rounded="true" Style="flex:1;height:8px" />
             <MudText Typo="Typo.caption" Color="@(_totProg ? Color.Success : Color.Secondary)"
                      Style="white-space:nowrap">
-                @_completats / @_totalCriteris criteris puntuats
+                @Loc["Eval_CriteriaProgress", _completats, _totalCriteris]
             </MudText>
         </MudStack>
     </div>
@@ -65,7 +66,7 @@ else
                 </MudText>
                 <MudChip T="string" Size="Size.Small"
                          Color="@(isSelf ? Color.Primary : Color.Secondary)">
-                    @(isSelf ? "Autoavaluació" : "Coavaluació")
+                    @(isSelf ? Loc["Eval_SelfEval"].Value : Loc["Eval_CoEval"].Value)
                 </MudChip>
             </MudStack>
 
@@ -118,7 +119,7 @@ else
 
             <!-- Comentari -->
             <MudTextField @bind-Value="_comments[entry.StudentId]"
-                          Label="Comentari (opcional)" Variant="Variant.Outlined"
+                          Label="@Loc["Eval_Comment"]" Variant="Variant.Outlined"
                           Lines="2" MaxLength="500" />
         </MudPaper>
     }
@@ -131,7 +132,7 @@ else
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
             }
-            Guardar avaluació
+            @Loc["Eval_Save"]
         </MudButton>
     </MudStack>
 
@@ -252,7 +253,7 @@ else
         if (missing.Any())
         {
             Snackbar.Add(
-                $"Falta puntuar: {string.Join(", ", missing.Take(3))}{(missing.Count > 3 ? "..." : "")}",
+                Loc["Eval_Missing", $"{string.Join(", ", missing.Take(3))}{(missing.Count > 3 ? "..." : "")}"].Value,
                 Severity.Warning);
             return;
         }
@@ -273,11 +274,10 @@ else
 
         if (ok)
         {
-            Snackbar.Add("Avaluació guardada correctament.", Severity.Success);
+            Snackbar.Add(Loc["Eval_Saved"].Value, Severity.Success);
             Nav.NavigateTo("/alumne/dashboard");
         }
         else
-            Snackbar.Add("No s'ha pogut guardar. Comprova que l'activitat estigui oberta.",
-                Severity.Error);
+            Snackbar.Add(Loc["Eval_SaveError"].Value, Severity.Error);
     }
 }

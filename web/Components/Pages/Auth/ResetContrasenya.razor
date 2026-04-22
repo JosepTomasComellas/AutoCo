@@ -2,6 +2,7 @@
 @inject ApiClient Api
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Restablir contrasenya – AutoCo</PageTitle>
 
@@ -14,10 +15,10 @@
                          Style="color:rgba(255,255,255,.9);font-size:2rem;flex-shrink:0" />
                 <MudStack Spacing="0">
                     <MudText Typo="Typo.h6" Style="color:white;font-weight:700;line-height:1.2">
-                        Restablir contrasenya
+                        @Loc["Reset_Title"]
                     </MudText>
                     <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.55)">
-                        AutoCo · Avaluació entre iguals
+                        @Loc["Login_Subtitle"]
                     </MudText>
                 </MudStack>
             </div>
@@ -27,7 +28,7 @@
                 {
                     <!-- Pas 1: introduir correu -->
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                        Introdueix el teu correu electrònic. Rebràs un codi de 6 dígits vàlid 15 minuts.
+                        @Loc["Reset_Step1_Info"]
                     </MudText>
 
                     @if (_error is not null)
@@ -35,7 +36,7 @@
                         <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
                     }
 
-                    <MudTextField @bind-Value="_email" Label="Correu electrònic"
+                    <MudTextField @bind-Value="_email" Label="@Loc["Label_Email"]"
                                   Variant="Variant.Outlined" Class="mb-4"
                                   InputType="InputType.Email" Immediate="true"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
@@ -44,14 +45,14 @@
                                FullWidth="true" Size="Size.Large"
                                OnClick="RequestResetAsync" Disabled="_loading">
                         @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                        Enviar codi
+                        @Loc["Reset_SendCode"]
                     </MudButton>
                 }
                 else
                 {
                     <!-- Pas 2: codi + nova contrasenya -->
                     <MudAlert Severity="Severity.Success" Class="mb-4">
-                        Si el correu existeix al sistema, rebràs el codi en breu.
+                        @Loc["Reset_CodeSent"]
                     </MudAlert>
 
                     @if (_error is not null)
@@ -59,16 +60,16 @@
                         <MudAlert Severity="Severity.Error" Class="mb-3">@_error</MudAlert>
                     }
 
-                    <MudTextField @bind-Value="_code" Label="Codi de verificació (6 dígits)"
+                    <MudTextField @bind-Value="_code" Label="@Loc["Reset_VerificationCode"]"
                                   Variant="Variant.Outlined" Class="mb-3"
                                   Immediate="true" MaxLength="6"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Pin" />
-                    <MudTextField @bind-Value="_newPassword" Label="Nova contrasenya"
+                    <MudTextField @bind-Value="_newPassword" Label="@Loc["Reset_NewPassword"]"
                                   Variant="Variant.Outlined" Class="mb-3"
                                   InputType="InputType.Password" Immediate="true"
-                                  HelperText="Mínim 8 caràcters."
+                                  HelperText="@Loc["Reset_PasswordHint"]"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" />
-                    <MudTextField @bind-Value="_confirmPassword" Label="Confirmar nova contrasenya"
+                    <MudTextField @bind-Value="_confirmPassword" Label="@Loc["Reset_ConfirmPassword"]"
                                   Variant="Variant.Outlined" Class="mb-4"
                                   InputType="InputType.Password" Immediate="true" />
 
@@ -76,17 +77,17 @@
                                FullWidth="true" Size="Size.Large"
                                OnClick="ConfirmResetAsync" Disabled="_loading">
                         @if (_loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                        Canviar contrasenya
+                        @Loc["Reset_ChangePassword"]
                     </MudButton>
 
                     <MudButton Variant="Variant.Text" FullWidth="true" Class="mt-2"
                                OnClick="() => { _step = 1; _error = null; }">
-                        ← Tornar a introduir el correu
+                        @Loc["Reset_BackToEmail"]
                     </MudButton>
                 }
 
                 <MudLink Href="/auth/login-professor" Class="d-block text-center mt-4" Color="Color.Secondary">
-                    ← Tornar al login
+                    @Loc["Reset_BackToLogin"]
                 </MudLink>
             </div>
 
@@ -107,7 +108,7 @@
     {
         _error = null;
         if (string.IsNullOrWhiteSpace(_email))
-        { _error = "Introdueix el correu electrònic."; return; }
+        { _error = Loc["Reset_Error_EmptyEmail"]; return; }
 
         _loading = true;
         await Api.RequestPasswordResetAsync(_email.Trim());
@@ -119,11 +120,11 @@
     {
         _error = null;
         if (string.IsNullOrWhiteSpace(_code) || _code.Length != 6)
-        { _error = "El codi ha de tenir 6 dígits."; return; }
+        { _error = Loc["Reset_Error_InvalidCode"]; return; }
         if (string.IsNullOrWhiteSpace(_newPassword) || _newPassword.Length < 8)
-        { _error = "La contrasenya ha de tenir almenys 8 caràcters."; return; }
+        { _error = Loc["Reset_Error_PwdTooShort"]; return; }
         if (_newPassword != _confirmPassword)
-        { _error = "Les contrasenyes no coincideixen."; return; }
+        { _error = Loc["Reset_Error_PwdMismatch"]; return; }
 
         _loading = true;
         var (ok, err) = await Api.ConfirmPasswordResetAsync(_email.Trim(), _code.Trim(), _newPassword);
@@ -131,7 +132,7 @@
 
         if (ok)
         {
-            Snackbar.Add("Contrasenya canviada correctament. Ja pots iniciar sessió.", Severity.Success);
+            Snackbar.Add(Loc["Reset_Success"], Severity.Success);
             Nav.NavigateTo("/auth/login-professor");
         }
         else

@@ -5,13 +5,14 @@
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Grups – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard" Variant="Variant.Text">
-        Tauler
+        @Loc["Nav_Dashboard"]
     </MudButton>
     <MudText Typo="Typo.h5">@(_activity?.Name ?? "Grups")</MudText>
     @if (_activity is not null)
@@ -24,17 +25,17 @@
         <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Tune"
                    OnClick="() => _showCriteria = !_showCriteria">
-            Criteris
+            @Loc["Groups_Criteria"]
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Download"
                    OnClick="ExportGroupsAsync">
-            Exportar grups
+            @Loc["Groups_ExportGroups"]
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Upload"
                    OnClick="() => _showImport = !_showImport">
-            Importar grups
+            @Loc["Groups_ImportGroups"]
         </MudButton>
     }
 </MudStack>
@@ -42,9 +43,9 @@
 @if (_showCriteria)
 {
     <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>Criteris d'avaluació</strong></MudText>
+        <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>@Loc["Groups_CriteriaTitle"]</strong></MudText>
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
-            Personalitza els criteris d'aquesta activitat. Si no n'hi ha, s'usen els globals per defecte.
+            @Loc["Groups_CriteriaInfo"]
         </MudText>
         @foreach (var (item, idx) in _criteriaItems.Select((x, i) => (x, i)))
         {
@@ -52,7 +53,7 @@
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
                 <MudTextField Value="item.Label"
                               ValueChanged='(string v) => _criteriaItems[capturedIdx] = new CriterionItem(_criteriaItems[capturedIdx].Key, v)'
-                              Label="@($"Criteri {capturedIdx + 1}")"
+                              Label="@Loc["Groups_CriterionN", capturedIdx + 1]"
                               Variant="Variant.Outlined" Margin="Margin.Dense"
                               Style="flex:1" Immediate="true" />
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
@@ -71,17 +72,17 @@
             <MudButton Variant="Variant.Outlined" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Add"
                        OnClick='() => _criteriaItems.Add(new CriterionItem("criteri" + (_criteriaItems.Count+1), "Nou criteri"))'>
-                Afegir criteri
+                @Loc["Groups_AddCriterion"]
             </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                        StartIcon="@Icons.Material.Filled.Save"
                        OnClick="SaveCriteriaAsync" Disabled="_savingCriteria">
                 @if (_savingCriteria) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                Desar criteris
+                @Loc["Groups_SaveCriteria"]
             </MudButton>
             <MudButton Variant="Variant.Text" Size="Size.Small"
                        OnClick="ResetCriteriaToDefaultAsync">
-                Restablir globals
+                @Loc["Groups_ResetGlobals"]
             </MudButton>
         </MudStack>
     </MudPaper>
@@ -90,15 +91,14 @@
 @if (_showImport)
 {
     <MudPaper Elevation="2" Class="pa-4 mb-4">
-        <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>Importar assignació de grups</strong></MudText>
+        <MudText Typo="Typo.subtitle1" Class="mb-1"><strong>@Loc["Groups_ImportTitle"]</strong></MudText>
         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-3">
-            Format CSV: capçalera <code>Grup;Correu</code>, una fila per alumne.
-            Els alumnes s'identifiquen pel correu electrònic dins la classe d'aquesta activitat.
+            @Loc["Groups_ImportInfo"]
         </MudText>
         <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".csv,.txt" Class="mb-3">
             <ActivatorContent>
                 <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.AttachFile">
-                    @(_importFileName ?? "Seleccionar fitxer CSV")
+                    @(_importFileName ?? Loc["Groups_SelectCSV"].Value)
                 </MudButton>
             </ActivatorContent>
         </MudFileUpload>
@@ -110,7 +110,7 @@
                     @if (_importing) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
                     Importar
                 </MudButton>
-                <MudButton OnClick="() => { _importContent = null; _importFileName = null; }">Netejar</MudButton>
+                <MudButton OnClick="() => { _importContent = null; _importFileName = null; }">@Loc["Groups_Clear"]</MudButton>
             </MudStack>
         }
     </MudPaper>
@@ -120,16 +120,16 @@
 
 <!-- Nou grup -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2" Wrap="Wrap.Wrap">
-    <MudTextField @bind-Value="_nomGrup" Label="Nom del nou grup" Variant="Variant.Outlined"
+    <MudTextField @bind-Value="_nomGrup" Label="@Loc["Groups_NewGroupLabel"]" Variant="Variant.Outlined"
                   Margin="Margin.Dense" Style="max-width:240px" Immediate="true"
                   OnKeyDown="OnNomGrupKeyDown" />
     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                StartIcon="@Icons.Material.Filled.Add"
                OnClick="CreateGroupAsync" Disabled="_saving || string.IsNullOrWhiteSpace(_nomGrup)">
-        Crear grup
+        @Loc["Groups_CreateGroup"]
     </MudButton>
     <MudText Typo="Typo.caption" Color="Color.Secondary">
-        Arrossega els alumnes per assignar-los a un grup.
+        @Loc["Groups_DragInstruction"]
     </MudText>
 </MudStack>
 
@@ -146,13 +146,13 @@
             <MudText Typo="Typo.subtitle2" Class="mb-2" Style="font-weight:700">
                 <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Small"
                          Style="vertical-align:middle;margin-right:4px" />
-                Sense grup (@_unassigned.Count)
+                @Loc["Groups_Unassigned", _unassigned.Count]
             </MudText>
 
             @if (!_unassigned.Any() && _draggingStudentId == null)
             {
                 <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    Tots els alumnes estan assignats.
+                    @Loc["Groups_AllAssigned"]
                 </MudText>
             }
 
@@ -177,7 +177,7 @@
     <MudItem xs="12" md="9">
         @if (!_groups.Any())
         {
-            <MudAlert Severity="Severity.Info">No hi ha grups. Crea'n un primer.</MudAlert>
+            <MudAlert Severity="Severity.Info">@Loc["Groups_NoGroups"]</MudAlert>
         }
         <MudGrid Spacing="3">
         @foreach (var g in _groups)
@@ -224,7 +224,7 @@
                             <span style="flex:1">@m.NumLlista. @m.Cognoms, @m.Nom</span>
                             <MudIconButton Icon="@Icons.Material.Filled.Close"
                                            Size="Size.Small" Color="Color.Warning"
-                                           title="Treure del grup"
+                                           title="@Loc["Groups_RemoveMember"]"
                                            OnClick="() => RemoveMemberAsync(gid, mid)"
                                            Style="margin:-4px -4px -4px 0;width:24px;height:24px" />
                         </div>
@@ -233,7 +233,7 @@
                     @if (!g.Members.Any())
                     {
                         <div class="dnd-empty-hint">
-                            Arrossega aquí
+                            @Loc["Groups_DragHere"]
                         </div>
                     }
                 </div>
@@ -321,7 +321,7 @@
     private async Task SaveCriteriaAsync()
     {
         var valid = _criteriaItems.Where(c => !string.IsNullOrWhiteSpace(c.Label)).ToList();
-        if (!valid.Any()) { Snackbar.Add("Cal almenys un criteri.", Severity.Warning); return; }
+        if (!valid.Any()) { Snackbar.Add(Loc["Groups_MinOneCriterion"], Severity.Warning); return; }
 
         _savingCriteria = true;
         Api.SetToken(UserState.Token!);
@@ -338,9 +338,9 @@
         if (saved is not null)
         {
             _criteriaItems = saved.Select(c => new CriterionItem(c.Key, c.Label)).ToList();
-            Snackbar.Add("Criteris desats.", Severity.Success);
+            Snackbar.Add(Loc["Groups_CriteriaSaved"], Severity.Success);
         }
-        else Snackbar.Add("Error en desar criteris.", Severity.Error);
+        else Snackbar.Add(Loc["Groups_CriteriaSaveErr"], Severity.Error);
     }
 
     private async Task ResetCriteriaToDefaultAsync()
@@ -354,7 +354,7 @@
         if (saved is not null)
         {
             _criteriaItems = saved.Select(c => new CriterionItem(c.Key, c.Label)).ToList();
-            Snackbar.Add("Criteris globals restaurats.", Severity.Success);
+            Snackbar.Add(Loc["Groups_GlobalsReset"], Severity.Success);
         }
     }
 
@@ -378,7 +378,7 @@
         _nomGrup = "";
         await LoadAsync();
         _saving = false;
-        Snackbar.Add("Grup creat.", Severity.Success);
+        Snackbar.Add(Loc["Groups_GroupCreated"], Severity.Success);
     }
 
     private async Task OnNomGrupKeyDown(KeyboardEventArgs e)
@@ -391,14 +391,14 @@
         var membresText = g.Members.Count > 0
             ? $" Els {g.Members.Count} membres quedaran sense grup assignat."
             : "";
-        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
-            $"Eliminar el grup «{g.Name}»?{membresText}",
-            yesText: "Eliminar", cancelText: "Cancel·lar");
+        var confirm = await Dialog.ShowMessageBox(Loc["Groups_DeleteGroupTitle"],
+            Loc["Groups_DeleteGroupMsg", g.Name, membresText].Value,
+            yesText: Loc["Action_Delete"], cancelText: Loc["Action_Cancel"]);
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);
         await Api.DeleteGroupAsync(ActivityId, g.Id);
         await LoadAsync();
-        Snackbar.Add("Grup eliminat.", Severity.Info);
+        Snackbar.Add(Loc["Groups_GroupDeleted"], Severity.Info);
     }
 
     // ── Drag & Drop ──────────────────────────────────────────────────────────
@@ -467,8 +467,8 @@
     private async Task RemoveMemberAsync(int groupId, int studentId)
     {
         var confirm = await Dialog.ShowMessageBox(
-            "Treure alumne", "Segur que vols treure aquest alumne del grup?",
-            yesText: "Treure", cancelText: "Cancel·lar");
+            Loc["Groups_RemoveMemberTitle"], Loc["Groups_RemoveMemberMsg"].Value,
+            yesText: Loc["Groups_RemoveMemberYes"], cancelText: Loc["Action_Cancel"]);
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);
         await Api.RemoveMemberAsync(ActivityId, groupId, studentId);
@@ -481,7 +481,7 @@
     {
         Api.SetToken(UserState.Token!);
         var result = await Api.ExportGroupsAsync(ActivityId);
-        if (result is null) { Snackbar.Add("Error en exportar.", Severity.Error); return; }
+        if (result is null) { Snackbar.Add(Loc["Groups_ExportError"], Severity.Error); return; }
         var (bytes, fileName) = result.Value;
         var base64 = Convert.ToBase64String(bytes);
         await JS.InvokeVoidAsync("downloadBase64File", base64, fileName, "text/csv");
@@ -502,9 +502,9 @@
         var result = await Api.ImportGroupsAsync(ActivityId, _importContent);
         _importing = false;
 
-        if (result is null) { Snackbar.Add("Error en importar.", Severity.Error); return; }
+        if (result is null) { Snackbar.Add(Loc["Groups_ImportError"], Severity.Error); return; }
 
-        Snackbar.Add($"Importat: {result.Assigned} assignats, {result.Skipped} omesos.",
+        Snackbar.Add(Loc["Groups_ImportSuccess", result.Assigned, result.Skipped],
             result.Skipped > 0 ? Severity.Warning : Severity.Success);
 
         if (result.Errors.Any())

@@ -1,20 +1,21 @@
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.body2" Class="mb-4" Color="Color.Secondary">
-            Es crearà una nova activitat amb els mateixos grups i membres que «@NomOriginal».
+            @Loc["DupDialog_Info", NomOriginal]
         </MudText>
-        <MudTextField @bind-Value="_nom" Label="Nom de la nova activitat" Variant="Variant.Outlined"
+        <MudTextField @bind-Value="_nom" Label="@Loc["DupDialog_NewName"]" Variant="Variant.Outlined"
                       Class="mb-3" Immediate="true" />
-        <MudTextField @bind-Value="_desc" Label="Descripció (opcional)" Variant="Variant.Outlined"
+        <MudTextField @bind-Value="_desc" Label="@Loc["DupDialog_Description"]" Variant="Variant.Outlined"
                       Lines="2" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel·lar</MudButton>
+        <MudButton OnClick="Cancel">@Loc["Action_Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Confirm"
                    Disabled="@string.IsNullOrWhiteSpace(_nom)">
-            Duplicar
+            @Loc["DupDialog_Confirm"]
         </MudButton>
     </DialogActions>
 </MudDialog>

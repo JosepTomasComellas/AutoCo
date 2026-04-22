@@ -4,24 +4,25 @@
 @inject NavigationManager Nav
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Mòduls – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 @if (_classe is null && !_loading)
 {
-    <MudAlert Severity="Severity.Error">Classe no trobada.</MudAlert>
-    <MudButton Href="/professor/classes" Class="mt-2">← Tornar</MudButton>
+    <MudAlert Severity="Severity.Error">@Loc["Moduls_ClassNotFound"]</MudAlert>
+    <MudButton Href="/professor/classes" Class="mt-2">@Loc["Action_Back"]</MudButton>
     return;
 }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/classes"
-               Variant="Variant.Text" Color="Color.Default">Classes</MudButton>
+               Variant="Variant.Text" Color="Color.Default">@Loc["Classes_Title"]</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
     <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Class="mr-1" />
     <MudStack Spacing="0">
-        <MudText Typo="Typo.h5" Style="font-weight:700">Mòduls – @_classe?.Name</MudText>
+        <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["Moduls_TitlePage", _classe?.Name ?? ""]</MudText>
         @if (_classe?.AcademicYear is not null)
         {
             <MudText Typo="Typo.caption" Color="Color.Secondary">@_classe.AcademicYear</MudText>
@@ -37,16 +38,16 @@
             <MudCardHeader>
                 <CardHeaderContent>
                     <MudText Typo="Typo.subtitle1" Style="font-weight:600">
-                        @(_editId == 0 ? "Nou mòdul" : "Editar mòdul")
+                        @(_editId == 0 ? Loc["Moduls_NewModule"].Value : Loc["Moduls_EditModule"].Value)
                     </MudText>
                 </CardHeaderContent>
             </MudCardHeader>
             <MudCardContent>
-                <MudTextField @bind-Value="_code" Label="Codi (4 car.)" Variant="Variant.Outlined"
+                <MudTextField @bind-Value="_code" Label="@Loc["Moduls_CodeLabel"]" Variant="Variant.Outlined"
                               Class="mb-3" MaxLength="4" Immediate="true"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.Tag" />
-                <MudTextField @bind-Value="_name" Label="Nom del mòdul" Variant="Variant.Outlined"
+                <MudTextField @bind-Value="_name" Label="@Loc["Moduls_NameLabel"]" Variant="Variant.Outlined"
                               Immediate="true"
                               Adornment="Adornment.Start"
                               AdornmentIcon="@Icons.Material.Filled.MenuBook" />
@@ -56,11 +57,11 @@
                            OnClick="SaveAsync" Disabled="_saving"
                            StartIcon="@Icons.Material.Filled.Save">
                     @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                    @(_editId == 0 ? "Afegir" : "Guardar")
+                    @(_editId == 0 ? Loc["Moduls_AddBtn"].Value : Loc["Moduls_SaveBtn"].Value)
                 </MudButton>
                 @if (_editId != 0)
                 {
-                    <MudButton Variant="Variant.Text" OnClick="CancelEdit">Cancel·lar</MudButton>
+                    <MudButton Variant="Variant.Text" OnClick="CancelEdit">@Loc["Action_Cancel"]</MudButton>
                 }
             </MudCardActions>
         </MudCard>
@@ -70,7 +71,7 @@
         @if (!_loading && _moduls.Count == 0)
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                Encara no hi ha mòduls. Afegeix-ne un per començar.
+                @Loc["Moduls_NoModules"]
             </MudAlert>
         }
         <MudStack Spacing="2">
@@ -95,24 +96,24 @@
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                                    StartIcon="@Icons.Material.Filled.Add"
                                    Href="@($"/professor/nova-activitat?moduleId={m.Id}")">
-                            Nova activitat
+                            @Loc["Moduls_NewActivity"]
                         </MudButton>
                         <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small"
                                    StartIcon="@Icons.Material.Filled.PersonOff"
                                    OnClick="() => ToggleExclusionPanel(m.Id, m.ClassId)">
-                            Exclusions
+                            @Loc["Moduls_Exclusions"]
                         </MudButton>
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                                       Color="Color.Default" title="Editar"
+                                       Color="Color.Default" title="@Loc["Action_Edit"]"
                                        OnClick="() => StartEdit(m)" />
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                       Color="Color.Error" title="Eliminar"
+                                       Color="Color.Error" title="@Loc["Action_Delete"]"
                                        OnClick="() => DeleteAsync(m)" />
                     </MudStack>
                     @if (_showExclusions.Contains(m.Id))
                     {
                         <MudDivider Class="my-2" />
-                        <MudText Typo="Typo.subtitle2" Class="mb-2">Alumnes exclosos del mòdul</MudText>
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">@Loc["Moduls_ExcludedStudents"]</MudText>
                         @if (!_classeStudents.ContainsKey(m.ClassId))
                         {
                             <MudProgressLinear Indeterminate="true" Color="Color.Warning" />
@@ -135,7 +136,7 @@
                                 }
                             </MudStack>
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                Fes clic en un alumne per excloure'l o incloure'l al mòdul.
+                                @Loc["Moduls_ClickToExclude"]
                             </MudText>
                         }
                     }

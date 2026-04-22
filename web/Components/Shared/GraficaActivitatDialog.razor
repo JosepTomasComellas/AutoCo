@@ -1,5 +1,6 @@
 @inject ApiClient Api
 @inject UserStateService UserState
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudDialog Style="min-width:600px">
     <TitleContent>
@@ -20,19 +21,19 @@
         }
         else if (_chart is null)
         {
-            <MudAlert Severity="Severity.Warning">No hi ha dades d'avaluació.</MudAlert>
+            <MudAlert Severity="Severity.Warning">@Loc["ChartDialog_NoData"]</MudAlert>
         }
         else if (!_chart.Groups.Any(g => g.AvgAutoEval.HasValue || g.AvgCoEval.HasValue))
         {
             <MudAlert Severity="Severity.Info">
-                Encara no hi ha avaluacions enviades per a aquesta activitat.
+                @Loc["ChartDialog_NoEvals"]
             </MudAlert>
         }
         else
         {
             <!-- Resum global: Auto vs Co per grup -->
             <MudText Typo="Typo.subtitle2" Class="mb-2">
-                Nota mitjana Auto-eval i Co-eval per grup
+                @Loc["ChartDialog_GlobalTitle"]
             </MudText>
             <MudChart ChartType="ChartType.Bar"
                       ChartSeries="@_globalSeries"
@@ -43,17 +44,17 @@
             <MudStack Row="true" Justify="Justify.Center" Spacing="3" Class="mb-4">
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                     <div style="width:12px;height:12px;border-radius:2px;background:#1976d2"></div>
-                    <MudText Typo="Typo.caption">Auto-eval</MudText>
+                    <MudText Typo="Typo.caption">@Loc["ChartDialog_AutoLabel"]</MudText>
                 </MudStack>
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                     <div style="width:12px;height:12px;border-radius:2px;background:#ef6c00"></div>
-                    <MudText Typo="Typo.caption">Co-eval</MudText>
+                    <MudText Typo="Typo.caption">@Loc["ChartDialog_CoLabel"]</MudText>
                 </MudStack>
             </MudStack>
 
             <!-- Detall per criteri amb tab per cada un -->
             <MudDivider Class="mb-3" />
-            <MudText Typo="Typo.subtitle2" Class="mb-2">Detall per criteri</MudText>
+            <MudText Typo="Typo.subtitle2" Class="mb-2">@Loc["ChartDialog_CriteriaDetail"]</MudText>
             <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-3">
                 @foreach (var c in _chart.CriteriaDetail)
                 {
@@ -75,11 +76,11 @@
             <MudSimpleTable Dense="true" Hover="true">
                 <thead>
                     <tr>
-                        <th>Grup</th>
-                        <th style="text-align:center">Alumnes</th>
-                        <th style="text-align:center">Auto-eval</th>
-                        <th style="text-align:center">Co-eval</th>
-                        <th style="text-align:center">Diferència</th>
+                        <th>@Loc["ChartDialog_ColGroup"]</th>
+                        <th style="text-align:center">@Loc["ChartDialog_ColStudents"]</th>
+                        <th style="text-align:center">@Loc["ChartDialog_ColAuto"]</th>
+                        <th style="text-align:center">@Loc["ChartDialog_ColCo"]</th>
+                        <th style="text-align:center">@Loc["ChartDialog_ColDiff"]</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -97,7 +98,7 @@
                                 @g.NumStudentsTotal
                                 @if (g.NumStudentsWithAuto < g.NumStudentsTotal)
                                 {
-                                    <MudTooltip Text="@($"{g.NumStudentsWithAuto}/{g.NumStudentsTotal} han completat l'autoavaluació")">
+                                    <MudTooltip Text="@Loc["ChartDialog_AutoWarning", g.NumStudentsWithAuto, g.NumStudentsTotal].Value">
                                         <MudIcon Icon="@Icons.Material.Filled.Warning"
                                                  Size="Size.Small" Color="Color.Warning" />
                                     </MudTooltip>
@@ -119,7 +120,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="() => MudDialog.Close()">Tancar</MudButton>
+        <MudButton OnClick="() => MudDialog.Close()">@Loc["Action_Close"]</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -161,12 +162,12 @@
         [
             new ChartSeries
             {
-                Name = "Auto-eval",
+                Name = Loc["ChartDialog_AutoLabel"].Value,
                 Data = _chart.Groups.Select(g => g.AvgAutoEval ?? 0d).ToArray()
             },
             new ChartSeries
             {
-                Name = "Co-eval",
+                Name = Loc["ChartDialog_CoLabel"].Value,
                 Data = _chart.Groups.Select(g => g.AvgCoEval ?? 0d).ToArray()
             }
         ];
@@ -176,12 +177,12 @@
     [
         new ChartSeries
         {
-            Name = "Auto-eval",
+            Name = Loc["ChartDialog_AutoLabel"].Value,
             Data = c.Groups.Select(g => g.AvgAuto ?? 0d).ToArray()
         },
         new ChartSeries
         {
-            Name = "Co-eval",
+            Name = Loc["ChartDialog_CoLabel"].Value,
             Data = c.Groups.Select(g => g.AvgCo ?? 0d).ToArray()
         }
     ];

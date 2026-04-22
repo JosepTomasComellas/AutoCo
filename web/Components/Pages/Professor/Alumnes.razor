@@ -5,20 +5,21 @@
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Alumnes – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 @if (_classe is null && !_loading)
 {
-    <MudAlert Severity="Severity.Error">Classe no trobada.</MudAlert>
-    <MudButton Href="/professor/classes" Class="mt-2">← Tornar</MudButton>
+    <MudAlert Severity="Severity.Error">@Loc["ClassStudents_ClassNotFound"]</MudAlert>
+    <MudButton Href="/professor/classes" Class="mt-2">@Loc["ClassStudents_Back"]</MudButton>
     return;
 }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/classes"
-               Variant="Variant.Text" Color="Color.Default">Classes</MudButton>
+               Variant="Variant.Text" Color="Color.Default">@Loc["Classes_Title"]</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
     <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" Class="mr-1" />
     <MudStack Spacing="0">
@@ -34,13 +35,13 @@
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Email"
                    OnClick="SendAllAsync">
-            Enviar contrasenya a tots
+            @Loc["ClassStudents_SendAll"]
         </MudButton>
     }
     <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
                StartIcon="@Icons.Material.Filled.Download"
                OnClick="ExportCsvAsync">
-        Exportar llista
+        @Loc["ClassStudents_ExportList"]
     </MudButton>
 </MudStack>
 
@@ -59,21 +60,21 @@
                         </MudAvatar>
                     </CardHeaderAvatar>
                     <CardHeaderContent>
-                        <MudText Typo="Typo.h6">@(_editStudentId == 0 ? "Nou alumne" : "Editar alumne")</MudText>
+                        <MudText Typo="Typo.h6">@(_editStudentId == 0 ? Loc["ClassStudents_NewStudent"].Value : Loc["ClassStudents_EditStudent"].Value)</MudText>
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
                     <MudGrid Spacing="2">
                         <MudItem xs="6">
-                            <MudTextField @bind-Value="_nom" Label="Nom" Variant="Variant.Outlined" Immediate="true" />
+                            <MudTextField @bind-Value="_nom" Label="@Loc["Label_Name"]" Variant="Variant.Outlined" Immediate="true" />
                         </MudItem>
                         <MudItem xs="6">
-                            <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined" Immediate="true" />
+                            <MudTextField @bind-Value="_cognoms" Label="@Loc["Label_Surname"]" Variant="Variant.Outlined" Immediate="true" />
                         </MudItem>
                     </MudGrid>
-                    <MudNumericField T="int" @bind-Value="_numLlista" Label="Núm. llista"
+                    <MudNumericField T="int" @bind-Value="_numLlista" Label="@Loc["ClassStudents_NumLlista"]"
                                      Variant="Variant.Outlined" Min="1" Max="99" Class="mt-3" />
-                    <MudTextField @bind-Value="_correu" Label="Correu electrònic"
+                    <MudTextField @bind-Value="_correu" Label="@Loc["Label_Email"]"
                                   Variant="Variant.Outlined" InputType="InputType.Email"
                                   Class="mt-3" Immediate="true" />
                 </MudCardContent>
@@ -83,7 +84,7 @@
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                                    OnClick="AddAsync" Disabled="_saving"
                                    StartIcon="@Icons.Material.Filled.PersonAdd">
-                            Afegir alumne
+                            @Loc["ClassStudents_AddBtn"]
                         </MudButton>
                     }
                     else
@@ -91,16 +92,16 @@
                         <MudButton Variant="Variant.Filled" Color="Color.Warning" FullWidth="true"
                                    OnClick="SaveEditAsync" Disabled="_saving"
                                    StartIcon="@Icons.Material.Filled.Save">
-                            Desar canvis
+                            @Loc["ClassStudents_SaveBtn"]
                         </MudButton>
-                        <MudButton Variant="Variant.Text" OnClick="CancelEdit">Cancel·lar</MudButton>
+                        <MudButton Variant="Variant.Text" OnClick="CancelEdit">@Loc["Action_Cancel"]</MudButton>
                     }
                 </MudCardActions>
             </MudCard>
 
             <MudCard Elevation="2">
                 <MudCardHeader>
-                    <CardHeaderContent><MudText Typo="Typo.h6">Importar llista d'alumnes</MudText></CardHeaderContent>
+                    <CardHeaderContent><MudText Typo="Typo.h6">@Loc["ClassStudents_ImportTitle"]</MudText></CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
@@ -113,7 +114,7 @@
                         <ActivatorContent>
                             <MudButton Variant="Variant.Outlined" FullWidth="true"
                                        StartIcon="@Icons.Material.Filled.AttachFile">
-                                @(_importFile is null ? "Seleccionar fitxer" : _importFile.Name)
+                                @(_importFile is null ? Loc["ClassStudents_SelectFile"].Value : _importFile.Name)
                             </MudButton>
                         </ActivatorContent>
                     </MudFileUpload>
@@ -122,12 +123,12 @@
                     <MudButton Variant="Variant.Filled" Color="Color.Secondary"
                                OnClick="ImportAsync" Disabled="_importFile is null || _saving"
                                StartIcon="@Icons.Material.Filled.Upload">
-                        Importar
+                        @Loc["ClassStudents_ImportBtn"]
                     </MudButton>
                     <MudButton Variant="Variant.Text" Color="Color.Default" Size="Size.Small"
                                Href="/templates/alumnes-plantilla.csv" download="alumnes-plantilla.csv"
                                StartIcon="@Icons.Material.Filled.Download">
-                        Plantilla CSV
+                        @Loc["ClassStudents_CsvTemplate"]
                     </MudButton>
                 </MudCardActions>
             </MudCard>
@@ -160,13 +161,13 @@
 
     <MudItem xs="12" md="@(UserState.IsAdmin ? 8 : 12)">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2" Wrap="Wrap.Wrap">
-            <MudText Typo="Typo.h6" Style="font-weight:600">Alumnes (@_students.Count)</MudText>
+            <MudText Typo="Typo.h6" Style="font-weight:600">@Loc["ClassStudents_ListTitle", _students.Count]</MudText>
             <MudSpacer />
             @if (UserState.IsAdmin && _students.Any())
             {
                 <MudCheckBox T="bool" Value="_allSelected" ValueChanged="ToggleSelectAll"
                              Color="Color.Primary" Size="Size.Small"
-                             Label="@(_selected.Count == 0 ? "Seleccionar tots" : $"{_selected.Count} seleccionats")"
+                             Label="@(_selected.Count == 0 ? Loc["ClassStudents_SelectAll"].Value : Loc["ClassStudents_SelectedCount", _selected.Count].Value)"
                              Style="margin:0" />
             }
         </MudStack>
@@ -184,25 +185,25 @@
                            Style="background:rgba(255,255,255,.2);color:white"
                            StartIcon="@Icons.Material.Filled.Email"
                            OnClick="BulkSendPasswordsAsync">
-                    Enviar contrasenya
+                    @Loc["ClassStudents_SendPwd"]
                 </MudButton>
                 <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
                            Style="background:rgba(255,255,255,.2);color:white"
                            StartIcon="@Icons.Material.Filled.Key"
                            OnClick="BulkResetPasswordsAsync">
-                    Nova contrasenya
+                    @Loc["ClassStudents_ResetPwd"]
                 </MudButton>
                 <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
                            Style="background:rgba(255,255,255,.2);color:white"
                            StartIcon="@Icons.Material.Filled.DriveFileMove"
                            OnClick="BulkMoveAsync">
-                    Moure a...
+                    @Loc["ClassStudents_MoveBtn"]
                 </MudButton>
                 <MudButton Variant="Variant.Filled" Size="Size.Small" Disabled="_saving"
                            Style="background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.5)"
                            StartIcon="@Icons.Material.Filled.Delete"
                            OnClick="BulkDeleteAsync">
-                    Eliminar
+                    @Loc["Action_Delete"]
                 </MudButton>
                 <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
                                Style="color:white" title="Desseleccionar tots"
@@ -239,7 +240,7 @@
                     </HeaderTemplate>
                     <CellTemplate>@context.Item.NumLlista</CellTemplate>
                 </TemplateColumn>
-                <TemplateColumn Title="Alumne">
+                <TemplateColumn Title="@Loc["ClassStudents_ColStudent"]">
                     <CellTemplate>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                             <MudAvatar Style="@GetAvatarStyle(context.Item)" Size="Size.Small">
@@ -249,7 +250,7 @@
                         </MudStack>
                     </CellTemplate>
                 </TemplateColumn>
-                <PropertyColumn Property="s => s.Email" Title="Correu" />
+                <PropertyColumn Property="s => s.Email" Title="@Loc["ClassStudents_ColEmail"]" />
                 @if (UserState.IsAdmin)
                 {
                     <TemplateColumn Title="" CellStyle="white-space:nowrap">
@@ -315,9 +316,9 @@
     {
         if (!_selected.Any()) return;
         var ids = _selected.ToList();
-        var confirm = await Dialog.ShowMessageBox("Enviar contrasenyes",
+        var confirm = await Dialog.ShowMessageBox(Loc["ClassStudents_SendPwd"].Value,
             $"S'enviarà la contrasenya per correu a {ids.Count} alumne{(ids.Count != 1 ? "s" : "")}.",
-            yesText: "Enviar", cancelText: "Cancel·lar");
+            yesText: Loc["Action_Send"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
 
         _saving = true;
@@ -338,9 +339,9 @@
     {
         if (!_selected.Any()) return;
         var ids = _selected.ToList();
-        var confirm = await Dialog.ShowMessageBox("Generar noves contrasenyes",
+        var confirm = await Dialog.ShowMessageBox(Loc["ClassStudents_ResetPwd"].Value,
             $"Es generarà una nova contrasenya per a {ids.Count} alumne{(ids.Count != 1 ? "s" : "")}. Les contrasenyes anteriors quedaran invàlides.",
-            yesText: "Confirmar", cancelText: "Cancel·lar");
+            yesText: Loc["Action_Confirm"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
 
         _saving = true;
@@ -361,9 +362,9 @@
     {
         if (!_selected.Any()) return;
         var ids = _selected.ToList();
-        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
+        var confirm = await Dialog.ShowMessageBox(Loc["ClassStudents_DeleteTitle"].Value,
             $"S'eliminaran {ids.Count} alumne{(ids.Count != 1 ? "s" : "")} i totes les seves avaluacions. Aquesta acció no es pot desfer.",
-            yesText: "Eliminar", cancelText: "Cancel·lar");
+            yesText: Loc["Action_Delete"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
 
         _saving = true;
@@ -393,10 +394,10 @@
         var moved = await Api.MoveStudentAsync(ClassId, s.Id, targetClassId.Value);
         if (moved is not null)
         {
-            Snackbar.Add($"«{s.NomComplet}» mogut/da correctament.", Severity.Success);
+            Snackbar.Add(Loc["ClassStudents_MoveOk", s.NomComplet].Value, Severity.Success);
             await LoadAsync();
         }
-        else Snackbar.Add("Error en moure l'alumne.", Severity.Error);
+        else Snackbar.Add(Loc["ClassStudents_MoveError"].Value, Severity.Error);
         _saving = false;
     }
 
@@ -427,11 +428,11 @@
         Api.SetToken(UserState.Token!);
         var classes = await Api.GetClassesAsync() ?? [];
         var others  = classes.Where(c => c.Id != ClassId).ToList();
-        if (!others.Any()) { Snackbar.Add("No hi ha altres classes disponibles.", Severity.Info); return null; }
+        if (!others.Any()) { Snackbar.Add(Loc["ClassStudents_NoOtherClasses"].Value, Severity.Info); return null; }
 
         var opts   = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
         var param  = new DialogParameters<MoureAlumneDialog> { { d => d.Classes, others } };
-        var dialog = await Dialog.ShowAsync<MoureAlumneDialog>("Moure a classe", param, opts);
+        var dialog = await Dialog.ShowAsync<MoureAlumneDialog>(Loc["ClassStudents_MoveTitle"].Value, param, opts);
         var result = await dialog.Result;
         if (result is null || result.Canceled) return null;
         return (int)result.Data!;
@@ -456,7 +457,7 @@
         if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms) ||
             string.IsNullOrWhiteSpace(_correu))
         {
-            Snackbar.Add("Nom, Cognoms i Correu són obligatoris.", Severity.Warning); return;
+            Snackbar.Add(Loc["ClassStudents_FieldsRequired2"].Value, Severity.Warning); return;
         }
         _saving = true;
         Api.SetToken(UserState.Token!);
@@ -467,9 +468,9 @@
             _students.Add(s);
             _students = [.. _students.OrderBy(x => x.NumLlista)];
             _nom = ""; _cognoms = ""; _correu = ""; _numLlista++;
-            Snackbar.Add($"Alumne «{s.NomComplet}» afegit.", Severity.Success);
+            Snackbar.Add(Loc["ClassStudents_AddOk", s.NomComplet].Value, Severity.Success);
         }
-        else Snackbar.Add("Error en afegir l'alumne. Comprova que el correu no estigui duplicat.", Severity.Error);
+        else Snackbar.Add(Loc["ClassStudents_AddError"].Value, Severity.Error);
         _saving = false;
     }
 
@@ -493,7 +494,7 @@
         if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms) ||
             string.IsNullOrWhiteSpace(_correu))
         {
-            Snackbar.Add("Nom, Cognoms i Correu són obligatoris.", Severity.Warning); return;
+            Snackbar.Add(Loc["ClassStudents_FieldsRequired2"].Value, Severity.Warning); return;
         }
         _saving = true;
         Api.SetToken(UserState.Token!);
@@ -505,9 +506,9 @@
             if (idx >= 0) _students[idx] = updated;
             _students = [.. _students.OrderBy(x => x.NumLlista)];
             CancelEdit();
-            Snackbar.Add($"Alumne «{updated.NomComplet}» actualitzat.", Severity.Success);
+            Snackbar.Add(Loc["ClassStudents_UpdateOk", updated.NomComplet].Value, Severity.Success);
         }
-        else Snackbar.Add("Error en actualitzar. Comprova que el correu no estigui duplicat.", Severity.Error);
+        else Snackbar.Add(Loc["ClassStudents_UpdateError"].Value, Severity.Error);
         _saving = false;
     }
 
@@ -539,8 +540,8 @@
         if (students.Count == 0)
         {
             _importSummary = parseErrors.Any()
-                ? "El fitxer conté errors i no s'ha importat cap alumne."
-                : "Fitxer buit o sense dades vàlides.";
+                ? Loc["ClassStudents_FileErrors"].Value
+                : Loc["ClassStudents_FileEmpty"].Value;
             _saving = false;
             return;
         }
@@ -558,7 +559,7 @@
             if (result.Created > 0)
                 Snackbar.Add(_importSummary, Severity.Success);
             else
-                Snackbar.Add("No s'ha creat cap alumne nou.", Severity.Warning);
+                Snackbar.Add(Loc["ClassStudents_NoCreated"].Value, Severity.Warning);
         }
         _importFile = null;
         await LoadAsync();

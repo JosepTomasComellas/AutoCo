@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>Classes – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
@@ -11,20 +12,20 @@
 <!-- Capçalera de pàgina -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
-               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+               Variant="Variant.Text" Color="Color.Default">@Loc["Nav_Dashboard"]</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
     <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Primary" Class="mr-1" />
-    <MudText Typo="Typo.h5" Style="font-weight:700">Gestió de classes</MudText>
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["Classes_Title"]</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Outlined" Color="Color.Default"
                StartIcon="@Icons.Material.Filled.QrCode"
                Href="/professor/qr">
-        Codis QR
+        @Loc["Classes_QRCodes"]
     </MudButton>
     <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Download"
                Href="/professor/export-students">
-        Exportar alumnes
+        @Loc["Classes_ExportStudents"]
     </MudButton>
 </MudStack>
 
@@ -41,15 +42,15 @@
                         </MudAvatar>
                     </CardHeaderAvatar>
                     <CardHeaderContent>
-                        <MudText Typo="Typo.h6">Nova classe</MudText>
+                        <MudText Typo="Typo.h6">@Loc["Classes_NewClass"]</MudText>
                     </CardHeaderContent>
                 </MudCardHeader>
                 <MudCardContent>
-                    <MudTextField @bind-Value="_nom" Label="Nom de la classe" Variant="Variant.Outlined"
+                    <MudTextField @bind-Value="_nom" Label="@Loc["Classes_ClassName"]" Variant="Variant.Outlined"
                                   Class="mb-3" Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Class" />
-                    <MudTextField @bind-Value="_curs" Label="Curs acadèmic (opcional)"
-                                  Placeholder="2024-2025" Variant="Variant.Outlined"
+                    <MudTextField @bind-Value="_curs" Label="@Loc["Classes_AcademicYear"]"
+                                  Placeholder="@Loc["Classes_AcademicYearPh"]" Variant="Variant.Outlined"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
                 </MudCardContent>
@@ -57,7 +58,7 @@
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
                                OnClick="CreateAsync" Disabled="_saving"
                                StartIcon="@Icons.Material.Filled.AddCircle">
-                        Crear classe
+                        @Loc["Classes_CreateClass"]
                     </MudButton>
                 </MudCardActions>
             </MudCard>
@@ -68,7 +69,7 @@
     <MudItem xs="12" md="@(UserState.IsAdmin ? 8 : 12)">
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
             <MudText Typo="Typo.h6" Style="font-weight:600">
-                Classes (@_classes.Count)
+                @Loc["Classes_ListTitle", _classes.Count]
             </MudText>
         </MudStack>
 
@@ -79,7 +80,7 @@
         else if (!_classes.Any())
         {
             <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">
-                Encara no hi ha cap classe. Crea'n una a l'esquerra.
+                @Loc["Classes_NoClasses"]
             </MudAlert>
         }
         else
@@ -105,24 +106,24 @@
                                             }
                                             <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small"
                                                      Style="font-size:14px;color:var(--mud-palette-text-secondary)" />
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@c.NumStudents alumnes</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Classes_StudentsCount", c.NumStudents]</MudText>
                                         </MudStack>
                                     </MudStack>
                                     <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
                                         <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Secondary"
                                                    StartIcon="@Icons.Material.Filled.MenuBook"
                                                    Href="@($"/professor/moduls/{c.Id}")" Class="mr-1">
-                                            Mòduls
+                                            @Loc["Classes_Modules"]
                                         </MudButton>
                                         <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
                                                    StartIcon="@Icons.Material.Filled.People"
                                                    Href="@($"/professor/alumnes/{c.Id}")" Class="mr-1">
-                                            Alumnes
+                                            @Loc["Classes_Students"]
                                         </MudButton>
                                         @if (UserState.IsAdmin)
                                         {
                                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                                                           Size="Size.Small" title="Eliminar classe"
+                                                           Size="Size.Small" title="@Loc["Classes_DeleteTooltip"]"
                                                            OnClick="() => DeleteAsync(c)" />
                                         }
                                     </MudStack>
@@ -140,7 +141,7 @@
                                         else
                                         {
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                Creada: @c.CreatedAt.ToString("dd/MM/yyyy")
+                                                @Loc["Classes_Created", c.CreatedAt.ToString("dd/MM/yyyy")]
                                             </MudText>
                                         }
                                     </MudItem>
@@ -148,7 +149,7 @@
                                     @* Llista de mòduls amb alumnes i exclusions *@
                                     <MudItem xs="12" md="@(UserState.IsAdmin ? 7 : 12)">
                                         <MudText Typo="Typo.subtitle2" Style="font-weight:600;margin-bottom:8px">
-                                            Mòduls
+                                            @Loc["Classes_Modules"]
                                         </MudText>
                                         @{
                                             var mods = _modulesCache.GetValueOrDefault(c.Id);
@@ -160,7 +161,7 @@
                                         else if (!mods.Any())
                                         {
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                Aquesta classe no té mòduls.
+                                                @Loc["Classes_NoModules"]
                                             </MudText>
                                         }
                                         else
@@ -168,10 +169,10 @@
                                             <MudSimpleTable Dense="true" Hover="true" Style="background:transparent">
                                                 <thead>
                                                     <tr>
-                                                        <th style="width:56px">Codi</th>
-                                                        <th>Mòdul</th>
-                                                        <th style="width:80px;text-align:right">Alumnes</th>
-                                                        <th style="width:80px;text-align:right">Exclosos</th>
+                                                        <th style="width:56px">@Loc["Classes_ColCode"]</th>
+                                                        <th>@Loc["Classes_ColModule"]</th>
+                                                        <th style="width:80px;text-align:right">@Loc["Classes_ColStudents"]</th>
+                                                        <th style="width:80px;text-align:right">@Loc["Classes_ColExcluded"]</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -239,7 +240,7 @@
 
     private async Task CreateAsync()
     {
-        if (string.IsNullOrWhiteSpace(_nom)) { Snackbar.Add("El nom és obligatori.", Severity.Warning); return; }
+        if (string.IsNullOrWhiteSpace(_nom)) { Snackbar.Add(Loc["Classes_NameRequired"], Severity.Warning); return; }
         _saving = true;
         Api.SetToken(UserState.Token!);
         var c = await Api.CreateClassAsync(new CreateClassRequest(_nom.Trim(), string.IsNullOrWhiteSpace(_curs) ? null : _curs.Trim()));
@@ -247,28 +248,28 @@
         {
             _classes.Add(c);
             _nom = ""; _curs = "";
-            Snackbar.Add($"Classe «{c.Name}» creada.", Severity.Success);
+            Snackbar.Add(Loc["Classes_CreatedMsg", c.Name], Severity.Success);
         }
         _saving = false;
     }
 
     private async Task DeleteAsync(ClassDto c)
     {
-        var confirm = await Dialog.ShowMessageBox("Confirmar eliminació",
-            $"Eliminar la classe «{c.Name}» i tots els seus alumnes?",
-            yesText: "Eliminar", cancelText: "Cancel·lar");
+        var confirm = await Dialog.ShowMessageBox(Loc["Classes_DeleteTitle"],
+            Loc["Classes_DeleteConfirm", c.Name].Value,
+            yesText: Loc["Classes_DeleteYes"], cancelText: Loc["Action_Cancel"]);
         if (confirm != true) return;
         Api.SetToken(UserState.Token!);
         await Api.DeleteClassAsync(c.Id);
         _classes.RemoveAll(x => x.Id == c.Id);
-        Snackbar.Add("Classe eliminada.", Severity.Info);
+        Snackbar.Add(Loc["Classes_Deleted"], Severity.Info);
     }
 
     private async Task OnClassSaved(ClassDto updated)
     {
         var idx = _classes.FindIndex(c => c.Id == updated.Id);
         if (idx >= 0) _classes[idx] = updated;
-        Snackbar.Add($"Classe «{updated.Name}» actualitzada.", Severity.Success);
+        Snackbar.Add(Loc["Classes_UpdatedMsg", updated.Name], Severity.Success);
         await Task.CompletedTask;
     }
 }

@@ -4,16 +4,17 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject ProtectedLocalStorage LocalStorage
+@inject IStringLocalizer<SharedResources> Loc
 
 <PageTitle>El meu perfil – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
-               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+               Variant="Variant.Text" Color="Color.Default">@Loc["Nav_Dashboard"]</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
     <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Class="mr-1" />
-    <MudText Typo="Typo.h5" Style="font-weight:700">El meu perfil</MudText>
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["Profile_Title"]</MudText>
 </MudStack>
 
 <MudContainer MaxWidth="MaxWidth.Small">
@@ -28,17 +29,17 @@
                 <!-- Info general -->
                 <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:700">
                     <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
-                    Dades personals
+                    @Loc["Profile_PersonalData"]
                 </MudText>
 
-                <MudTextField @bind-Value="_nom" Label="Nom" Variant="Variant.Outlined"
+                <MudTextField @bind-Value="_nom" Label="@Loc["Label_Name"]" Variant="Variant.Outlined"
                               Class="mb-3" Immediate="true"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" />
-                <MudTextField @bind-Value="_cognoms" Label="Cognoms" Variant="Variant.Outlined"
+                <MudTextField @bind-Value="_cognoms" Label="@Loc["Label_Surname"]" Variant="Variant.Outlined"
                               Class="mb-3" Immediate="true"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Badge" />
-                <MudTextField Value="@_email" Label="Correu electrònic" Variant="Variant.Outlined"
-                              Class="mb-5" ReadOnly="true" HelperText="El correu no és modificable."
+                <MudTextField Value="@_email" Label="@Loc["Label_Email"]" Variant="Variant.Outlined"
+                              Class="mb-5" ReadOnly="true" HelperText="@Loc["Profile_EmailReadonly"]"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" />
 
                 <MudDivider Class="mb-4" />
@@ -46,22 +47,22 @@
                 <!-- Canvi de contrasenya -->
                 <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:700">
                     <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-1" />
-                    Canvi de contrasenya (opcional)
+                    @Loc["Profile_ChangePassword"]
                 </MudText>
 
-                <MudTextField @bind-Value="_currentPassword" Label="Contrasenya actual"
+                <MudTextField @bind-Value="_currentPassword" Label="@Loc["Profile_CurrentPassword"]"
                               Variant="Variant.Outlined" Class="mb-3"
                               InputType="@_pwdTypeActual" Immediate="true"
                               Adornment="Adornment.End" AdornmentIcon="@_pwdIconActual"
                               OnAdornmentClick="() => _showActual = !_showActual"
-                              HelperText="Necessari per canviar la contrasenya." />
-                <MudTextField @bind-Value="_newPassword" Label="Nova contrasenya"
+                              HelperText="@Loc["Profile_CurrentPwdHint"]" />
+                <MudTextField @bind-Value="_newPassword" Label="@Loc["Profile_NewPassword"]"
                               Variant="Variant.Outlined" Class="mb-3"
                               InputType="@_pwdTypeNova" Immediate="true"
                               Adornment="Adornment.End" AdornmentIcon="@_pwdIconNova"
                               OnAdornmentClick="() => _showNova = !_showNova"
-                              HelperText="Mínim 8 caràcters." />
-                <MudTextField @bind-Value="_confirmPassword" Label="Confirmar nova contrasenya"
+                              HelperText="@Loc["Profile_PwdHint"]" />
+                <MudTextField @bind-Value="_confirmPassword" Label="@Loc["Profile_ConfirmPassword"]"
                               Variant="Variant.Outlined" Class="mb-4"
                               InputType="InputType.Password" Immediate="true" />
 
@@ -75,7 +76,7 @@
                            Size="Size.Large" OnClick="SaveAsync" Disabled="_saving"
                            StartIcon="@Icons.Material.Filled.Save">
                     @if (_saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                    Desar canvis
+                    @Loc["EditProf_Save"]
                 </MudButton>
             </MudCardActions>
         </MudCard>
@@ -120,17 +121,17 @@
         if (!string.IsNullOrWhiteSpace(_newPassword) || !string.IsNullOrWhiteSpace(_currentPassword))
         {
             if (string.IsNullOrWhiteSpace(_currentPassword))
-            { _error = "Has d'introduir la contrasenya actual per canviar-la."; return; }
+            { _error = Loc["Profile_NeedCurrentPwd"].Value; return; }
             if (string.IsNullOrWhiteSpace(_newPassword))
-            { _error = "Introdueix la nova contrasenya."; return; }
+            { _error = Loc["Profile_EmptyNewPwd"].Value; return; }
             if (_newPassword.Length < 8)
-            { _error = "La nova contrasenya ha de tenir almenys 8 caràcters."; return; }
+            { _error = Loc["Profile_PwdTooShort"].Value; return; }
             if (_newPassword != _confirmPassword)
-            { _error = "Les contrasenyes no coincideixen."; return; }
+            { _error = Loc["Profile_PwdMismatch"].Value; return; }
         }
 
         if (string.IsNullOrWhiteSpace(_nom) || string.IsNullOrWhiteSpace(_cognoms))
-        { _error = "Nom i cognoms són obligatoris."; return; }
+        { _error = Loc["Profile_NameRequired"].Value; return; }
 
         _saving = true;
         Api.SetToken(UserState.Token!);
@@ -144,7 +145,7 @@
 
         if (result is null)
         {
-            _error = "Error en desar. Comprova la contrasenya actual.";
+            _error = Loc["Profile_SaveError"].Value;
         }
         else
         {
@@ -159,7 +160,7 @@
             _currentPassword = "";
             _newPassword     = "";
             _confirmPassword = "";
-            Snackbar.Add("Perfil actualitzat correctament.", Severity.Success);
+            Snackbar.Add(Loc["Profile_Updated"].Value, Severity.Success);
         }
     }
 }

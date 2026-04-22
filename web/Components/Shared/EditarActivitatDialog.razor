@@ -1,17 +1,18 @@
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudDialog>
     <DialogContent>
-        <MudTextField @bind-Value="_nom" Label="Nom de l'activitat" Variant="Variant.Outlined"
+        <MudTextField @bind-Value="_nom" Label="@Loc["DupDialog_ActivityName"]" Variant="Variant.Outlined"
                       Class="mb-3" Immediate="true" />
-        <MudTextField @bind-Value="_desc" Label="Descripció (opcional)" Variant="Variant.Outlined"
+        <MudTextField @bind-Value="_desc" Label="@Loc["DupDialog_Description"]" Variant="Variant.Outlined"
                       Lines="3" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel·lar</MudButton>
+        <MudButton OnClick="Cancel">@Loc["Action_Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Confirm"
                    Disabled="@string.IsNullOrWhiteSpace(_nom)">
-            Desar
+            @Loc["Action_Save"]
         </MudButton>
     </DialogActions>
 </MudDialog>

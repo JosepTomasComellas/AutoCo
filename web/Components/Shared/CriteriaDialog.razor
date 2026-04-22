@@ -1,12 +1,12 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
 
 <MudDialog>
     <DialogContent>
         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-            Defineix els criteris d'avaluació per a aquesta activitat.
-            Cada criteri ha de tenir una clau única (sense espais) i una etiqueta visible.
+            @Loc["Criteria_Info"]
         </MudText>
 
         @if (_loading)
@@ -19,11 +19,11 @@
             {
                 var idx = i;
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
-                    <MudTextField @bind-Value="_items[idx].Key" Label="Clau"
+                    <MudTextField @bind-Value="_items[idx].Key" Label="@Loc["Criteria_KeyLabel"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Style="max-width:130px" Disabled="@(_items[idx].IsGlobal)"
-                                  HelperText="@(_items[idx].IsGlobal ? "Global" : "")" />
-                    <MudTextField @bind-Value="_items[idx].Label" Label="Etiqueta"
+                                  HelperText="@(_items[idx].IsGlobal ? Loc["Criteria_GlobalHint"].Value : "")" />
+                    <MudTextField @bind-Value="_items[idx].Label" Label="@Loc["Criteria_EtiquetaLabel"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1" />
                     <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
                                    Disabled="@(idx == 0)"
@@ -38,16 +38,16 @@
             }
             <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
                        OnClick="AddItem" Class="mt-2">
-                Afegir criteri
+                @Loc["Criteria_AddBtn"]
             </MudButton>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="() => MudDialog.Cancel()">Cancel·lar</MudButton>
+        <MudButton OnClick="() => MudDialog.Cancel()">@Loc["Action_Cancel"]</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync"
                    Disabled="_loading || _saving || !_items.Any()"
                    StartIcon="@Icons.Material.Filled.Save">
-            Desar
+            @Loc["Criteria_SaveBtn"]
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -81,7 +81,7 @@
     }
 
     private void AddItem() =>
-        _items.Add(new CriterionEntry { Key = $"criteri{_items.Count + 1}", Label = "Nou criteri" });
+        _items.Add(new CriterionEntry { Key = $"criteri{_items.Count + 1}", Label = Loc["Criteria_NewCriterion"].Value });
 
     private void Remove(int i) { if (_items.Count > 1) _items.RemoveAt(i); }
 
@@ -102,10 +102,10 @@
         // Validació bàsica
         var invalid = _items.Where(x => string.IsNullOrWhiteSpace(x.Key) ||
                                         string.IsNullOrWhiteSpace(x.Label)).ToList();
-        if (invalid.Any()) { Snackbar.Add("Tots els criteris han de tenir clau i etiqueta.", Severity.Warning); return; }
+        if (invalid.Any()) { Snackbar.Add(Loc["Criteria_ValidationError"].Value, Severity.Warning); return; }
 
         var keys = _items.Select(x => x.Key.Trim().ToLowerInvariant()).ToList();
-        if (keys.Distinct().Count() != keys.Count) { Snackbar.Add("Les claus han de ser úniques.", Severity.Warning); return; }
+        if (keys.Distinct().Count() != keys.Count) { Snackbar.Add(Loc["Criteria_UniqueKeys"].Value, Severity.Warning); return; }
 
         _saving = true;
         Api.SetToken(UserState.Token!);
@@ -116,9 +116,9 @@
 
         if (result is not null)
         {
-            Snackbar.Add("Criteris desats correctament.", Severity.Success);
+            Snackbar.Add(Loc["Criteria_Saved"].Value, Severity.Success);
             MudDialog.Close(DialogResult.Ok(true));
         }
-        else Snackbar.Add("Error en desar els criteris.", Severity.Error);
+        else Snackbar.Add(Loc["Criteria_SaveError"].Value, Severity.Error);
     }
 }
