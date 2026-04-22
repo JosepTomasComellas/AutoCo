@@ -27,7 +27,7 @@ public class ParticipationRedisSubscriber(
                 if (message.IsNullOrEmpty) return;
                 try
                 {
-                    var dto = JsonSerializer.Deserialize<ParticipationDto>(message!,
+                    var dto = JsonSerializer.Deserialize<ParticipationDto>((string)message!,
                         new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                     if (dto is not null)
                         await notifier.NotifyAsync(dto.ActivityId, dto);
