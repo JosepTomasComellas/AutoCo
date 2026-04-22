@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.5
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.8
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -45,8 +45,8 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 **Multi-idioma (i18n)**
 - **Selector d'idioma** a la barra de navegació: català (per defecte) i castellà
-- Infraestructura `IStringLocalizer` amb fitxers `.resx` — extensible a qualsevol cultura
-- Pàgines de login i navegació principal ja localitzades; resta de pàgines extensibles amb el mateix patró
+- **Tota la UI localitzada**: tots els textos de totes les pàgines i diàlegs passen per `IStringLocalizer`
+- Infraestructura basada en `DictionaryLocalizer` (diccionaris en codi, sense fitxers .resx) — extensible a qualsevol cultura afegint un nou diccionari
 
 **Administració**
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
@@ -114,6 +114,7 @@ AutoCo/
 │   │   │            #   Grafic, QrCodes, InformeAlumne...), Admin/, Auth/
 │   │   ├── Shared/  # ActivityCard, diàlegs reutilitzables
 │   │   └── Layout/  # MainLayout (tema de color, mode fosc)
+│   ├── Resources/   # DictionaryLocalizer (ca/es), SharedResources
 │   ├── Services/    # ApiClient, UserStateService
 │   ├── wwwroot/
 │   │   ├── css/site.css   # Estils globals, DnD, dark mode, print, informe PDF
@@ -121,10 +122,17 @@ AutoCo/
 │   └── Dockerfile
 ├── shared/       # DTOs + AppVersion compartits entre api i web
 ├── nginx/        # Proxy invers amb SSL automàtic
-├── deploy/       # Scripts de desplegament (update.ps1, push-update.ps1)
+├── deploy/       # Scripts de desplegament (server-update.sh)
 ├── AutoCo.Tests/ # Tests unitaris xUnit (ResultsService, EF Core InMemory)
 └── docker-compose.yml
 ```
+
+### Branques
+
+| Branca | Descripció |
+|--------|------------|
+| `main` | Producció — ASP.NET Core 9 / .NET 9 |
+| `dotnet10` | Experimental — migració a .NET 10 (OpenAPI natiu, paquets 10.0.*) |
 
 ### Serveis Docker
 
@@ -163,7 +171,7 @@ ActivityTemplate (per professor, criteris JSON)
 - **Seguretat:** BCrypt (work factor 12) · JWT secret mínim 32 caràcters
 - **Email:** MailKit + SMTP configurable (credencials, recordatoris, notificació de compleció)
 - **PWA:** `manifest.json` + Service Worker (cache-first assets, pàgina offline)
-- **i18n:** `IStringLocalizer` + fitxers `.resx` (català per defecte, castellà)
+- **i18n:** `IStringLocalizer` + `DictionaryLocalizer` (diccionaris ca/es en codi, tota la UI localitzada)
 - **Tests:** xUnit + EF Core InMemory (15 tests unitaris de `ResultsService`)
 - **Desplegament:** Docker Compose · nginx (SSL/TLS auto-signat o certificat propi)
 
@@ -194,46 +202,30 @@ docker compose up --build
 
 Accedeix a **https://localhost** (accepta l'avís del certificat auto-signat).
 
-### Opció B — Actualització directa des del servidor (recomanada)
+### Opció B — Servidor (recomanada)
 
 **Configuració inicial (una sola vegada):**
 ```bash
 cd /docker
-git clone https://github.com/JosepTomasComellas/AutoCo.git AutoCo-git
-cp AutoCo/.env AutoCo-git/.env
-cp -r AutoCo/nginx/ssl AutoCo-git/nginx/ssl
-rm -rf AutoCo && mv AutoCo-git AutoCo
+git clone https://github.com/JosepTomasComellas/AutoCo.git
+cd AutoCo
+cp .env.example .env        # edita les variables de producció
 ```
 
-**A partir d'ara, per aplicar qualsevol actualització:**
+**Per aplicar qualsevol actualització:**
 ```bash
 bash /docker/AutoCo/deploy/server-update.sh
 ```
 
-El script fa `git pull`, reconstrueix les imatges i mostra la versió desplegada.
-
-### Opció C — Actualització del servidor des de Windows
-
-```powershell
-# Genera el paquet de fitxers i copia al servidor
-.\deploy\update.ps1
-scp -r "deploy\autoco-update-YYYYMMDD" root@servidor:/docker/AutoCo-new
-```
-
-```bash
-# Al servidor
-rsync -a --exclude='.env' --exclude='nginx/ssl' /docker/AutoCo-new/ /docker/AutoCo/
-bash /docker/AutoCo/update.sh
-```
+El script fa `git pull` de la branca activa, reconstrueix les imatges i mostra la versió desplegada.
 
 ### Comandes útils al servidor
 
 ```bash
 bash /docker/AutoCo/deploy/server-update.sh  # Actualitzar des de GitHub
-docker compose logs -f           # Logs en temps real
-docker compose down              # Aturar (dades preservades)
-docker compose down -v           # Aturar i esborrar totes les dades
-bash /docker/AutoCo/backup.sh    # Backup manual de la BD
+docker compose logs -f                        # Logs en temps real
+docker compose down                           # Aturar (dades preservades)
+docker compose down -v                        # Aturar i esborrar totes les dades
 ```
 
 ---
@@ -329,72 +321,57 @@ GET  /api/criteria                                    # Llista de criteris globa
 
 ## Changelog
 
-### v1.6.5
-- **Bugfix i18n**: selector d'idioma no feia res en fer clic — `InvokeVoidAsync` al `OnClick` de `MudMenuItem` retornava `ValueTask` sense ser awaited i l'excepció era silenciosa; canviat a `async () => await JS.InvokeVoidAsync(...)`
-- **Bugfix i18n**: recursos de localització no trobats — registre explícit de `IStringLocalizer<SharedResources>` via `factory.Create("AutoCo.Web.Resources.SharedResources", "AutoCo.Web")` que apunta directament al recurs embedded correcte; afegit using `Microsoft.Extensions.Localization`
+### v1.6.8
+- **i18n completa**: tots els textos hardcoded de la UI (28 components Razor) substituïts per `IStringLocalizer` — català i castellà cobreixen tota l'aplicació sense excepció
+- **Bugfix UI**: botons de `ActivityCard` sobrepassaven la targeta per la dreta en activitats obertes (11 accions) — afegit `flex-wrap` a `MudCardActions`
 
-### v1.6.4
-- **Bugfix i18n crític**: les claus de traducció es mostraven literalment (p.ex. `Lang_Catalan`) perquè `ResourceManagerStringLocalizerFactory` no podia calcular el nom del recurs embedded sense `[RootNamespace]`; afegit `[assembly: RootNamespaceAttribute("AutoCo.Web")]` a `Program.cs`
-- **Bugfix i18n Blazor Server**: `RequestLocalizationMiddleware` fixava la cultura al thread HTTP però els threads del circuit Blazor no l'heretaven; `App.razor` ara llegeix la cultura del `HttpContext` via `IRequestCultureFeature` i la propaga via `CultureInfo.DefaultThreadCurrentCulture/UICulture`
-- **Redis**: el warning `Memory overcommit must be enabled` és una advertència del host Linux — veure les instruccions de configuració al servidor
+### v1.6.7
+- **Bugfix DB**: error `Invalid object name 'ActivityCriteria'` (i `ActivityLogs`, `ProfessorNotes`, `ActivityTemplates`) en entorns sense migracions formals — `Program.cs` ara crea les taules amb `IF NOT EXISTS` a l'arrencada, de manera idempotent
+
+### v1.6.5 – v1.6.6
+- **Bugfix i18n**: selector d'idioma no feia res en fer clic — `InvokeVoidAsync` al `OnClick` de `MudMenuItem` retornava `ValueTask` sense ser awaited; canviat a `async () => await JS.InvokeVoidAsync(...)`
+- **Bugfix i18n**: recursos de localització no trobats — registre explícit de `IStringLocalizer<SharedResources>` apuntant al recurs embedded correcte
+- **Bugfix i18n crític**: les claus de traducció es mostraven literalment (p.ex. `Lang_Catalan`) perquè `ResourceManagerStringLocalizerFactory` no podia calcular el nom del recurs; afegit `[assembly: RootNamespaceAttribute("AutoCo.Web")]`
+- **Bugfix i18n Blazor Server**: `RequestLocalizationMiddleware` fixava la cultura al thread HTTP però els threads del circuit Blazor no l'heretaven; `App.razor` ara propaga la cultura via `CultureInfo.DefaultThreadCurrentCulture/UICulture`
 
 ### v1.6.3
-- **Rendiment crític**: `BackupService.ImportAsync` passava de N+1 `SaveChangesAsync` (centenars de crides per backup gran) a exactament 10 crides independentment del volum de dades
-- **Seguretat**: codi OTP de restabliment de contrasenya usat `new Random()` (predictible) — substituït per `RandomNumberGenerator.GetInt32()` (criptogràficament segur)
-- **Robustesa**: `ModuleService.CreateAsync` usava l'operador `!` null-forgiving sense validació — ara llança `InvalidOperationException` si el professor no existeix
-- **Logging**: `catch {}` al log de toggle d'activitat substituït per `logger.LogWarning` amb context
-- **Robustesa**: `GetUserId` usava `int.Parse` (pot llançar `FormatException`) — substituït per `int.TryParse` amb fallback segur
+- **Rendiment crític**: `BackupService.ImportAsync` passava de N+1 `SaveChangesAsync` (centenars de crides) a exactament 10 crides independentment del volum de dades
+- **Seguretat**: codi OTP de restabliment de contrasenya usava `new Random()` (predictible) — substituït per `RandomNumberGenerator.GetInt32()`
+- **Robustesa**: `GetUserId` usava `int.Parse` — substituït per `int.TryParse` amb fallback segur
 
 ### v1.6.2
-- **Seguretat crítica**: IDOR a `CreateGroupAsync`, `DeleteGroupAsync`, `AddMemberAsync`, `RemoveMemberAsync` — qualsevol professor podia gestionar grups i membres d'activitats alienes; tots ara validen propietat de l'activitat
-- **Robustesa**: `ReorderGroupsAsync` usa `Dictionary.TryGetValue` en lloc de `.First()` per evitar `InvalidOperationException` en condicions de carrera
-- **Rendiment**: refactorització de `ImportGroupsAsync` en 3 fases (parse → crear grups → crear membres) eliminant tots els `SaveChangesAsync` dins del loop; es garanteix coherència i s'eviten duplicats en importacions simultànies
-- **Logging**: `EvaluationService` ara registra warns detallats en lloc de `catch { }` silent als `Task.Run` (notificació Redis, log d'activitat, notificació de compleció)
-- **Rendiment**: `ProfessorService.SendAllCredentialsAsync` N+1 corregit (un sol `SaveChangesAsync` per a tots els professors)
-- **Seguretat**: `/api/health` ara requereix autenticació per evitar information disclosure
-- **DoS**: `PUT /api/activities/{id}/criteria` limitat a 50 criteris màxim per activitat
-- **Seguretat**: `BackupService.ImportAsync` retorna missatge genèric en errors (sense detalls interns)
+- **Seguretat crítica**: IDOR a `CreateGroupAsync`, `DeleteGroupAsync`, `AddMemberAsync`, `RemoveMemberAsync` — qualsevol professor podia gestionar grups d'activitats alienes; tots ara validen propietat
+- **Rendiment**: `ImportGroupsAsync` refactoritzat en 3 fases eliminant tots els `SaveChangesAsync` dins del loop
+- **Seguretat**: `/api/health` ara requereix autenticació · límit de 50 criteris per activitat · `BackupService` retorna errors genèrics
 
 ### v1.6.1
-- **Seguretat**: IDOR a `GetGroupsAsync` i `ReorderGroupsAsync` — qualsevol professor autenticat podia llegir/modificar grups d'activitats alienes; afegida validació de propietat
-- **Seguretat**: `ReorderGroupsAsync` ara ignora IDs de grups que no pertanyen a l'activitat
-- **Rendiment**: `SendAllPasswordsAsync` tenia N+1 `SaveChangesAsync` dins el bucle — ara desa tots els hashes d'un cop
-- **Robustesa**: `ImportGroupsAsync` afegit límit de 5 MB i 5.000 línies per prevenir DoS
+- **Seguretat**: IDOR a `GetGroupsAsync` i `ReorderGroupsAsync` — afegida validació de propietat
+- **Rendiment**: `SendAllPasswordsAsync` N+1 corregit
 
 ### v1.6.0
 - **PWA**: `manifest.json`, service worker (cache-first d'assets, pàgina offline)
 - **Temps real**: Redis pub/sub substitueix el polling de 30 s a l'indicador de participació
 - **Validació CSV**: regex email, NumLlista duplicat, llista d'errors inline completa
 - **Tests unitaris**: 15 casos xUnit per a `ResultsService` (EF Core InMemory)
-- **i18n**: `IStringLocalizer` + fitxers `.resx` (ca/es), selector d'idioma a la navbar
-- **Bugfix**: caché de resultats no s'invalidava en canviar criteris, obrir/tancar o editar activitats
-- **Bugfix**: `ActivityCard` no es subscrivia a temps real si l'activitat s'obria post-render
+- **i18n**: `IStringLocalizer` + `DictionaryLocalizer` (ca/es), selector d'idioma a la navbar
 
 ### v1.5.0
 - Perfil professor (nom, cognoms, contrasenya) des de la barra de navegació
 - Restabliment de contrasenya per email (OTP 6 dígits, Redis, 15 min)
 - Exportació Excel (.xlsx) amb color per rang de nota
 - Criteris d'avaluació editables inline a la pàgina de grups
-- Ordre de grups persistent (▲▼)
-- Paginació de la taula de resultats (25 files)
-- Seguretat: comprovació de propietat en endpoints de notes i log
+- Ordre de grups persistent (▲▼) · Paginació de resultats (25 files)
 
 ### v1.4.0
-- Notes del professor per alumne (editables inline)
-- Plantilles d'activitat (desa i reutilitza configuració + criteris)
-- Gràfiques comparatives Auto vs. Co per grup i per criteri (Chart.js)
-- Codis QR per classe (SVG, imprimibles)
-- Informe PDF individual per alumne
-- Duplicació creuada d'activitats entre classes
-- Registre d'activitat (qui ha obert, tancat, avaluat i quan)
+- Notes del professor per alumne · Plantilles d'activitat
+- Gràfiques comparatives Auto vs. Co (Chart.js) · Codis QR per classe
+- Informe PDF individual · Duplicació creuada · Registre d'activitat
 
 ### v1.3.0 i anteriors
 - Gestió de classes, alumnes, mòduls i activitats
 - Grups per drag & drop, importació/exportació CSV
 - Autoavaluació i coavaluació per escala d'estrelles
-- Resultats amb filtres, exportació CSV
-- Mode fosc, selector de tema de color
-- Còpies de seguretat JSON
+- Resultats amb filtres, exportació CSV · Mode fosc · Còpies de seguretat JSON
 
 ---
 
