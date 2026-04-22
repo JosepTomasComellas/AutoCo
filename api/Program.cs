@@ -74,8 +74,7 @@ builder.Services.AddRateLimiter(opt =>
     opt.RejectionStatusCode = 429;
 });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -170,8 +169,7 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi(); // disponible a /openapi/v1.json
 }
 
 app.UseRateLimiter();
