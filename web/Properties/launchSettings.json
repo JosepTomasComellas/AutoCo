@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "AutoCo.Web": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:65427;http://localhost:65429"
+    }
+  }
+}
