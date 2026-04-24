@@ -949,7 +949,7 @@ app.MapGet("/api/admin/stats", async (AppDbContext db, ClaimsPrincipal user) =>
 
         var parts = myIds
             .Where(id => memberCounts.ContainsKey(id) && memberCounts[id] > 0)
-            .Select(id => (double)submittedCounts.GetValueOrDefault(id) / memberCounts[id] * 100)
+            .Select(id => Math.Min(100.0, (double)submittedCounts.GetValueOrDefault(id) / memberCounts[id] * 100))
             .ToList();
 
         return new ProfessorStatsDto(
