@@ -963,6 +963,13 @@ app.MapGet("/api/admin/stats", async (AppDbContext db, ClaimsPrincipal user) =>
     return Results.Ok(new AdminStatsDto(stats, monthlyLogins, monthlyActivities));
 }).RequireAuthorization();
 
+app.MapDelete("/api/admin/stats/logins", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    await db.ProfessorLogins.ExecuteDeleteAsync();
+    return Results.NoContent();
+}).RequireAuthorization();
+
 // ════════════════════════════════════════════════════════════════════════════
 // BACKUP / RESTORE (admin only)
 // ════════════════════════════════════════════════════════════════════════════

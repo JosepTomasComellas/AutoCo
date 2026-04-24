@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.2.1
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.2.2
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -331,6 +331,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.2.2
+- **Estadístiques: reiniciar registre d'accessos** — botó (icona paperera) a la capçalera de la pàgina d'estadístiques; demana confirmació i esborra tots els registres de `ProfessorLogins`; nou endpoint `DELETE /api/admin/stats/logins`
 
 ### v2.2.1
 - **Fix**: migració formal `AddProfessorLogins` per resoldre `PendingModelChangesWarning` d'EF Core 10

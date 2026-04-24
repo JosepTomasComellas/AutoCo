@@ -313,6 +313,9 @@ public class ApiClient
     public Task<AdminStatsDto?> GetAdminStatsAsync() =>
         GetAsync<AdminStatsDto>("/api/admin/stats");
 
+    public Task<bool> DeleteAdminLoginsAsync() =>
+        DeleteAsync("/api/admin/stats/logins");
+
     // ── Backup / Restore (admin) ──────────────────────────────────────────────
 
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()

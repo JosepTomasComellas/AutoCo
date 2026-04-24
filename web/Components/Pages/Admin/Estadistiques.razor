@@ -3,6 +3,8 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject IDialogService Dialog
 @implements IAsyncDisposable
 
 <PageTitle>Estadístiques d'ús – AutoCo</PageTitle>
@@ -18,6 +20,8 @@
     <MudSpacer />
     <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary"
                    OnClick="LoadAsync" title="Actualitzar" />
+    <MudIconButton Icon="@Icons.Material.Filled.DeleteSweep" Color="Color.Error"
+                   OnClick="ResetLoginsAsync" title="Reiniciar registre d'accessos" />
 </MudStack>
 
 @if (_loading)
@@ -133,6 +137,26 @@ else
         .Sum(m => m.Count) ?? 0;
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task ResetLoginsAsync()
+    {
+        var confirm = await Dialog.ShowMessageBox(
+            "Reiniciar registre d'accessos",
+            "S'esborraran tots els accessos registrats. Les estadístiques de professors, activitats i participació no es veuen afectades. Continuar?",
+            yesText: "Esborrar", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+
+        var ok = await Api.DeleteAdminLoginsAsync();
+        if (ok)
+        {
+            Snackbar.Add("Registre d'accessos esborrat.", Severity.Success);
+            await LoadAsync();
+        }
+        else
+        {
+            Snackbar.Add("Error en esborrar el registre.", Severity.Error);
+        }
+    }
 
     private async Task LoadAsync()
     {
