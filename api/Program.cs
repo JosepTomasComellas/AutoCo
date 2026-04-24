@@ -161,7 +161,9 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var dbName = db.Database.GetDbConnection().Database;
+#pragma warning disable EF1002 // dbName prové de la cadena de connexió, no de l'usuari
         await db.Database.ExecuteSqlRawAsync($"ALTER DATABASE [{dbName}] SET AUTO_CLOSE OFF");
+#pragma warning restore EF1002
     }
     catch { /* ignora si no té permisos o si ja està desactivat */ }
     await SeedData.InitializeAsync(db, config);

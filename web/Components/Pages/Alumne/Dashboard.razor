@@ -8,7 +8,7 @@
 @if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
-    <MudText Typo="Typo.h5">@Loc["Student_Welcome", UserState.NomComplet]</MudText>
+    <MudText Typo="Typo.h5">@Loc["Student_Welcome", UserState.NomComplet ?? ""]</MudText>
     <MudSpacer />
     <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@Loc["Student_Activities"]</MudText>
 </MudStack>
