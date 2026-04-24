@@ -9,7 +9,7 @@
 
 <!-- Capçalera -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
-    <MudText Typo="Typo.h5">@Loc["Dash_Welcome", UserState.NomComplet]</MudText>
+    <MudText Typo="Typo.h5">@Loc["Dash_Welcome", UserState.NomComplet ?? ""]</MudText>
     <MudSpacer />
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Add"

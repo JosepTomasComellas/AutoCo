@@ -66,7 +66,7 @@
                                Rounded="true" Size="Size.Small" Class="mt-2" />
         }
     </MudCardContent>
-    <MudCardActions Style="flex-wrap:wrap">
+    <MudCardActions Style="flex-wrap:nowrap;align-items:center">
         <MudButton Size="Size.Small" Color="Color.Primary"
                    Href="@($"/professor/resultats/{Act.Id}")">
             @Loc["Card_Results"]
@@ -81,32 +81,45 @@
         <MudIconButton Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary"
                        title="@Loc["Card_ViewChart"]"
                        OnClick="ShowChartAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Info"
-                       title="@Loc["Card_DuplicateSame"]"
-                       OnClick="DuplicarAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.CopyAll" Color="Color.Info"
-                       title="@Loc["Card_DuplicateCross"]"
-                       OnClick="DuplicarCrossAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.Tune" Color="Color.Default"
-                       title="@Loc["Card_ManageCriteria"]"
-                       OnClick="ManageCriteriaAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.BookmarkAdd" Color="Color.Default"
-                       title="@Loc["Card_SaveAsTemplate"]"
-                       OnClick="SaveAsTemplateAsync" />
-        @if (Act.IsOpen)
-        {
-            <MudIconButton Icon="@Icons.Material.Filled.NotificationsActive"
-                           Color="Color.Secondary"
-                           title="@Loc["Card_SendReminders"]"
-                           OnClick="SendRemindersAsync" />
-        }
-        <MudIconButton Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
-                       Color="@(Act.IsOpen ? Color.Warning : Color.Success)"
-                       title="@(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)"
-                       OnClick="ToggleAsync" />
-        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
-                       title="@Loc["Card_Delete"]"
-                       OnClick="DeleteAsync" />
+        <MudSpacer />
+        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Default"
+                 title="@Loc["Card_MoreActions"]"
+                 AnchorOrigin="Origin.BottomRight"
+                 Dense="true">
+            <MudMenuItem Icon="@Icons.Material.Filled.ContentCopy"
+                         OnClick="DuplicarAsync">
+                @Loc["Card_DuplicateSame"]
+            </MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.CopyAll"
+                         OnClick="DuplicarCrossAsync">
+                @Loc["Card_DuplicateCross"]
+            </MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.Tune"
+                         OnClick="ManageCriteriaAsync">
+                @Loc["Card_ManageCriteria"]
+            </MudMenuItem>
+            <MudMenuItem Icon="@Icons.Material.Filled.BookmarkAdd"
+                         OnClick="SaveAsTemplateAsync">
+                @Loc["Card_SaveAsTemplate"]
+            </MudMenuItem>
+            @if (Act.IsOpen)
+            {
+                <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive"
+                             OnClick="SendRemindersAsync">
+                    @Loc["Card_SendReminders"]
+                </MudMenuItem>
+            }
+            <MudMenuItem Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+                         IconColor="@(Act.IsOpen ? Color.Warning : Color.Success)"
+                         OnClick="ToggleAsync">
+                @(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)
+            </MudMenuItem>
+            <MudDivider />
+            <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                         OnClick="DeleteAsync">
+                <MudText Color="Color.Error">@Loc["Card_Delete"]</MudText>
+            </MudMenuItem>
+        </MudMenu>
     </MudCardActions>
 </MudCard>
 

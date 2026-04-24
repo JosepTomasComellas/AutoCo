@@ -74,8 +74,7 @@ builder.Services.AddRateLimiter(opt =>
     opt.RejectionStatusCode = 429;
 });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
@@ -162,7 +161,9 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var dbName = db.Database.GetDbConnection().Database;
+#pragma warning disable EF1002 // dbName prové de la cadena de connexió, no de l'usuari
         await db.Database.ExecuteSqlRawAsync($"ALTER DATABASE [{dbName}] SET AUTO_CLOSE OFF");
+#pragma warning restore EF1002
     }
     catch { /* ignora si no té permisos o si ja està desactivat */ }
     await SeedData.InitializeAsync(db, config);
@@ -170,8 +171,7 @@ using (var scope = app.Services.CreateScope())
 
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.MapOpenApi(); // disponible a /openapi/v1.json
 }
 
 app.UseRateLimiter();
