@@ -921,21 +921,25 @@ app.MapGet("/api/admin/stats", async (AppDbContext db, ClaimsPrincipal user) =>
         .Select(g => new { ActivityId = g.Key, Count = g.Count() })
         .ToDictionaryAsync(x => x.ActivityId, x => x.Count);
 
-    // Accessos per mes (últims 6 mesos)
-    var monthlyLogins = await db.ProfessorLogins
+    // Accessos per mes (últims 6 mesos) — tipus anònim per evitar problemes de traducció SQL
+    var monthlyLogins = (await db.ProfessorLogins
         .Where(l => l.CreatedAt >= since6mo)
         .GroupBy(l => new { l.CreatedAt.Year, l.CreatedAt.Month })
-        .Select(g => new MonthlyStatDto(g.Key.Year, g.Key.Month, g.Count()))
+        .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
         .OrderBy(m => m.Year).ThenBy(m => m.Month)
-        .ToListAsync();
+        .ToListAsync())
+        .Select(m => new MonthlyStatDto(m.Year, m.Month, m.Count))
+        .ToList();
 
     // Activitats creades per mes (últims 6 mesos)
-    var monthlyActivities = await db.Activities
+    var monthlyActivities = (await db.Activities
         .Where(a => a.CreatedAt >= since6mo)
         .GroupBy(a => new { a.CreatedAt.Year, a.CreatedAt.Month })
-        .Select(g => new MonthlyStatDto(g.Key.Year, g.Key.Month, g.Count()))
+        .Select(g => new { g.Key.Year, g.Key.Month, Count = g.Count() })
         .OrderBy(m => m.Year).ThenBy(m => m.Month)
-        .ToListAsync();
+        .ToListAsync())
+        .Select(m => new MonthlyStatDto(m.Year, m.Month, m.Count))
+        .ToList();
 
     var stats = professors.Select(p =>
     {
