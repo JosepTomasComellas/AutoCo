@@ -30,10 +30,10 @@ public class ApiClient
     // ── Auth ──────────────────────────────────────────────────────────────────
 
     public Task<LoginResponse?> LoginProfessorAsync(string email, string password) =>
-        PostAsync<LoginResponse>("/api/auth/professor", new ProfessorLoginRequest(email, password));
+        PostLoginAsync<LoginResponse>("/api/auth/professor", new ProfessorLoginRequest(email, password));
 
     public Task<LoginResponse?> LoginStudentAsync(string email, string password) =>
-        PostAsync<LoginResponse>("/api/auth/student", new StudentLoginRequest(email, password));
+        PostLoginAsync<LoginResponse>("/api/auth/student", new StudentLoginRequest(email, password));
 
     // ── Classes ───────────────────────────────────────────────────────────────
 
@@ -350,6 +350,14 @@ public class ApiClient
     {
         if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             _userState.SessionExpired();
+    }
+
+    // Login no ha de disparar SessionExpired en cas de 401 (credencials incorrectes, no sessió caducada)
+    private async Task<T?> PostLoginAsync<T>(string url, object? body)
+    {
+        var resp = await _http.PostAsync(url, Json(body));
+        if (!resp.IsSuccessStatusCode) return default;
+        return await resp.Content.ReadFromJsonAsync<T>(_json);
     }
 
     private async Task<T?> GetAsync<T>(string url)
