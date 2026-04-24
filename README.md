@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.7.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.0.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -329,11 +329,12 @@ GET  /api/criteria                                    # Llista de criteris globa
 
 ## Changelog
 
-### v1.7.0
+### v2.0.0
 - **Migració a .NET 10**: tots els projectes (`api`, `web`, `shared`, `AutoCo.Tests`) actualitzats a `net10.0`; imatges Docker `aspnet:10.0` / `sdk:10.0`; paquets Microsoft `10.0.*`
 - **UI alumne**: llegenda de puntuació eliminada del formulari d'avaluació — la correspondència estreles ↔ lletra ja es mostra inline a cada criteri
 - **UI professor**: botons de les targetes d'activitat agrupats en un desplegable — les quatre primeres accions (Resultats, Grups, Editar, Gràfica) resten visibles directament
 - **PWA**: `theme_color` del manifest i meta tag corregit (`#1976d2` → `#1e293b`); colors de la pàgina offline alineats amb el tema de l'aplicació
+- **Qualitat**: 0 warnings de compilació — CS8604 (`NomComplet` nullable) i EF1002 (pragma) resolts
 
 ### v1.6.8
 - **i18n completa**: tota la UI traduïda al català i castellà; `DictionaryLocalizer` cobreix totes les cadenes de professors, alumnes i administrador
