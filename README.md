@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.1.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.1.3
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -331,6 +331,17 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.1.3
+- **Peu de pàgina simplificat** — «AutoCo Avaluació © any» → «AutoCo © any» arreu (footer, informes PDF) per evitar salt de línia en mòbil
+
+### v2.1.2
+- **Correcció login: missatge d'error** — les credencials incorrectes ja mostren el missatge d'error en comptes de retornar silenciosament a la selecció de rol; nou `PostLoginAsync` separa la lògica de 401-credencials de 401-sessió expirada
+- **Barra de progrés sticky** — `height: 100vh; overflow: hidden` al `.mud-layout` i `overflow-y: auto; min-height: 0` al `.mud-main-content` perquè `position: sticky` funcioni dins del contenidor de scroll de MudBlazor
+- **`server-update.sh`: mostra versions** — el script de desplegament ara mostra la versió actual desplegada, la versió nova al repositori i la llista de commits nous abans d'actualitzar
+
+### v2.1.1
+- **Correcció login: canvi de rol** — `OnInitialized` de les pàgines de login ja no redirigeix qualsevol usuari autenticat, sinó únicament l'usuari del rol corresponent; permet canviar de rol per fer proves sense quedar-se atrapat
 
 ### v2.1.0
 - **Grups: edició inline del nom** — botó llapis a la capçalera de cada grup, camp inline amb confirm/cancel; nou endpoint `PUT /api/activities/{id}/groups/{gid}`
