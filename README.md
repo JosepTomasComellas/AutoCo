@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.0.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.1.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -21,6 +21,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Criteris personalitzats** per activitat (afegir, reordenar, eliminar) o usar els globals
 - **Plantilles d'activitat**: desa configuració (nom, descripció, criteris) i reutilitza-la en noves activitats
 - Configuració de **grups** per **arrossegar i deixar anar** (drag & drop)
+- **Edició del nom del grup inline** (botó llapis directament a la capçalera del grup)
 - Importació/exportació de grups per CSV
 - **Duplicació d'activitats** reutilitzant la configuració de grups
 - **Duplicació creuada** d'activitats a una altra classe i mòdul
@@ -33,7 +34,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 **Resultats i informes**
 - Taula de **resultats** amb capçalera fixa, paginació (25 files), puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell)
-- **Filtres avançats**: per grup i per rang de nota (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense coavaluació)
+- **Filtres avançats**: per **alumne** (cerca per nom/cognoms), per grup i per rang de nota (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense coavaluació)
 - **Notes del professor** per alumne: camp editable inline a la taula de resultats
 - **Gràfiques comparatives** per grup (Auto vs. Co, desglossament per criteri) amb Chart.js
 - **Informe PDF individual per alumne**: pàgina optimitzada per a impressió/PDF amb dades, notes globals, detall per criteri i comentaris
@@ -68,6 +69,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - Accés amb correu electrònic i contrasenya (o via codi QR de la classe)
 - Avaluació de tots els membres del grup (inclosa autoavaluació) per criteri
 - Puntuació amb **escala de 5 estrelles** mostrada com a lletra (E / D / C / B / A)
+- **Desar parcialment**: l'alumne pot guardar l'avanç sense haver completat tots els criteris
 - **Barra de progrés** d'avaluació completada en temps real (X/Y criteris puntuats)
 
 ---
@@ -296,6 +298,7 @@ PUT  /api/activities/{id}/criteria                    # Desar criteris personali
 GET  /api/activities/{id}/groups/export               # Exportar grups (CSV)
 POST /api/activities/{id}/groups/import               # Importar grups (CSV)
 GET/POST/DELETE /api/activities/{id}/groups           # Gestió grups
+PUT /api/activities/{id}/groups/{gid}                 # Renomenar grup
 POST/DELETE /api/activities/{id}/groups/{gid}/members # Membres de grup
 GET  /api/activities/{id}/log                         # Registre d'activitat
 
@@ -328,6 +331,17 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.1.0
+- **Grups: edició inline del nom** — botó llapis a la capçalera de cada grup, camp inline amb confirm/cancel; nou endpoint `PUT /api/activities/{id}/groups/{gid}`
+- **Valoració parcial** — l'alumne pot desar l'avaluació sense tenir tots els criteris omplerts; es mostra un avís però no es bloqueja
+- **Resultats: filtre per alumne** — camp de cerca per nom/cognoms a la secció de filtres avançats
+- **Correcció gràfics** — Chart.js carregat des d'`App.razor` (no `<HeadContent>`) per garantir que la llibreria estigui disponible en qualsevol navegació
+- **Correcció indicador de participació** — `GetParticipationAsync` ara filtra per `IsSelf = true`, consistent amb el senyal en temps real de Redis; ja no compta avaluacions parcials com a completes
+- **Barra de progrés sticky** — `overflow-y: auto` al `.mud-main-content` perquè `position: sticky` funcioni correctament dins del contenidor de scroll de MudBlazor
+- **Scroll a la llista de grups** — la columna d'alumnes sense assignar té `max-height: 400px` i scroll intern; el botó de llançar-hi és sempre visible
+- **Activitats tancades** — fons vermell clarament visible en mode clar (`#fecaca`) i fosc (`#450a0a`) via classe CSS
+- **Footer** — «Departament» abreujat a «Dept.» arreu (footer, informes PDF)
 
 ### v2.0.0
 - **Migració a .NET 10**: tots els projectes (`api`, `web`, `shared`, `AutoCo.Tests`) actualitzats a `net10.0`; imatges Docker `aspnet:10.0` / `sdk:10.0`; paquets Microsoft `10.0.*`

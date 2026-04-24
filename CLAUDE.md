@@ -149,6 +149,7 @@ POST /api/activities/{id}/remind                          # Recordatoris per cor
 GET  /api/activities/{id}/criteria                        # Criteris de l'activitat
 PUT  /api/activities/{id}/criteria                        # Desar criteris personalitzats
 GET/POST/DELETE /api/activities/{id}/groups               # Gestió grups
+PUT  /api/activities/{id}/groups/{gid}                    # Renomenar grup
 POST/DELETE /api/activities/{id}/groups/{gid}/members     # Membres de grup
 GET  /api/activities/{id}/log                             # Registre d'activitat
 
