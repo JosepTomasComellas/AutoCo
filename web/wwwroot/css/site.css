@@ -121,7 +121,8 @@ html, body {
 /* Layout transparent; contingut principal blanc i que ompli tota l'alçada disponible */
 .mud-layout {
     background: transparent !important;
-    min-height: 100vh;
+    height: 100vh;       /* altura fixa = viewport */
+    overflow: hidden;    /* evita scroll del body */
     display: flex;
     flex-direction: column;
 }
@@ -130,10 +131,9 @@ html, body {
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
     flex: 1;
-    /* Evita que el footer fix solapi el contingut inferior */
+    min-height: 0;       /* permet que el flex child s'encongeixi */
+    overflow-y: auto;    /* scroll intern → position:sticky funciona */
     padding-bottom: 56px !important;
-    /* overflow-y: auto permet que position:sticky funcioni dins del contenidor */
-    overflow-y: auto;
 }
 
 /* ── Mode fosc ───────────────────────────────────────────────────────────── */
@@ -194,6 +194,9 @@ html, body {
     .mud-button, .mud-icon-button, .mud-chip, footer, .mud-snackbar-location {
         display: none !important;
     }
+    /* Allibera el layout fixat perquè la impressió pugui paginar */
+    .mud-layout { height: auto !important; overflow: visible !important; }
+    .mud-main-content { overflow: visible !important; height: auto !important; }
     /* Fons blanc, text negre */
     body, html, .mud-main-content, .mud-layout {
         background: white !important;
