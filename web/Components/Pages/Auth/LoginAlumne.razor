@@ -68,8 +68,8 @@
 
     protected override void OnInitialized()
     {
-        if (UserState.IsLoggedIn)
-            Nav.NavigateTo(UserState.IsStudent ? "/alumne/dashboard" : "/professor/dashboard");
+        if (UserState.IsStudent)
+            Nav.NavigateTo("/alumne/dashboard");
     }
 
     private void TogglePassword() => _showPwd = !_showPwd;
