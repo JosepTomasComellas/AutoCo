@@ -579,7 +579,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Informe_PeerDetail"]      = "Detall per avaluador",
         ["Informe_ColEvaluator"]    = "Avaluador/a",
         ["Informe_ColComment"]      = "Comentari",
-        ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo Avaluació v{0}",
+        ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo v{0}",
 
         // ── Diàlegs compartits ────────────────────────────────────────────────
         ["Dlg_ActivityName"]     = "Nom de l'activitat",
@@ -1250,7 +1250,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Informe_PeerDetail"]      = "Detalle por evaluador",
         ["Informe_ColEvaluator"]    = "Evaluador/a",
         ["Informe_ColComment"]      = "Comentario",
-        ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo Avaluació v{0}",
+        ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo v{0}",
 
         // ── Diàlegs compartits ────────────────────────────────────────────────
         ["Dlg_ActivityName"]     = "Nombre de la actividad",
