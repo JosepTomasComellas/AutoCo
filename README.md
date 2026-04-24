@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v1.6.5
+# AutoCo — Sistema d'Avaluació entre Iguals · v1.7.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -100,7 +100,7 @@ Cada activitat pot sobreescriure aquests criteris amb la seva pròpia llista per
 
 ```
 AutoCo/
-├── api/          # API REST — ASP.NET Core 9 Minimal API
+├── api/          # API REST — ASP.NET Core 10 Minimal API
 │   ├── Data/     # EF Core DbContext, models i seed
 │   │   └── Models/   # Professor, Class, Student, Module, Activity,
 │   │                 # Group, Evaluation, ProfessorNote,
@@ -132,8 +132,8 @@ AutoCo/
 |--------|--------|------|------------|
 | `db` | SQL Server 2022 Express | intern | Base de dades principal |
 | `redis` | Redis 7 Alpine | intern | Caché de resultats + backplane SignalR |
-| `api` | ASP.NET Core 9 | intern | API REST + JWT |
-| `web` | ASP.NET Core 9 | intern | Blazor Server + MudBlazor |
+| `api` | ASP.NET Core 10 | intern | API REST + JWT |
+| `web` | ASP.NET Core 10 | intern | Blazor Server + MudBlazor |
 | `nginx` | nginx Alpine | 80 / 443 | Proxy SSL, WebSocket per Blazor |
 
 ### Model de dades
@@ -154,7 +154,7 @@ ActivityTemplate (per professor, criteris JSON)
 
 ## Tecnologies
 
-- **Backend:** C# / ASP.NET Core 9 · Entity Framework Core 9 · SQL Server 2022
+- **Backend:** C# / ASP.NET Core 10 · Entity Framework Core 10 · SQL Server 2022
 - **Frontend:** Blazor Server · [MudBlazor 8.6](https://mudblazor.com/) · Chart.js 4
 - **QR:** [Net.Codecrete.QrCodeGenerator](https://github.com/manuelbl/QrCodeGenerator) (SVG pur, sense deps)
 - **Autenticació:** JWT (professors) · email + contrasenya (alumnes) · `ProtectedLocalStorage`
@@ -328,6 +328,20 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v1.7.0
+- **Migració a .NET 10**: tots els projectes (`api`, `web`, `shared`, `AutoCo.Tests`) actualitzats a `net10.0`; imatges Docker `aspnet:10.0` / `sdk:10.0`; paquets Microsoft `10.0.*`
+- **UI alumne**: llegenda de puntuació eliminada del formulari d'avaluació — la correspondència estreles ↔ lletra ja es mostra inline a cada criteri
+- **UI professor**: botons de les targetes d'activitat agrupats en un desplegable — les quatre primeres accions (Resultats, Grups, Editar, Gràfica) resten visibles directament
+- **PWA**: `theme_color` del manifest i meta tag corregit (`#1976d2` → `#1e293b`); colors de la pàgina offline alineats amb el tema de l'aplicació
+
+### v1.6.8
+- **i18n completa**: tota la UI traduïda al català i castellà; `DictionaryLocalizer` cobreix totes les cadenes de professors, alumnes i administrador
+- **Bugfix**: taules `ActivityCriteria`, `ActivityLogs`, `ProfessorNotes`, `ActivityTemplates` no es creaven en alguns entorns — afegida migració explícita
+- **Bugfix**: botons d'`ActivityCard` feien wrap en pantalles petites — afegit `flex-wrap:wrap`
+
+### v1.6.6
+- **DictionaryLocalizer estàtic**: bypass del `ResourceManager` per evitar problemes de resolució de recursos embeguts a Docker; totes les traduccions ara en diccionaris C# compilats
 
 ### v1.6.5
 - **Bugfix i18n**: selector d'idioma no feia res en fer clic — `InvokeVoidAsync` al `OnClick` de `MudMenuItem` retornava `ValueTask` sense ser awaited i l'excepció era silenciosa; canviat a `async () => await JS.InvokeVoidAsync(...)`

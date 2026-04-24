@@ -136,17 +136,6 @@ else
         </MudButton>
     </MudStack>
 
-    <!-- Llegenda de puntuació -->
-    <MudStack Row="true" Spacing="1" Class="mt-3 mb-6" Wrap="Wrap.Wrap"
-              Style="justify-content:center">
-        @foreach (var (s, label) in new[] { (1,"E"), (2,"D"), (3,"C"), (4,"B"), (5,"A") })
-        {
-            <MudChip T="string" Size="Size.Small" Color="Color.Default"
-                     Variant="Variant.Outlined" Style="font-size:.72rem">
-                @(new string('★', s))@(new string('☆', 5 - s)) @label
-            </MudChip>
-        }
-    </MudStack>
 }
 
 @code {
