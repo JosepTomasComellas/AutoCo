@@ -308,6 +308,11 @@ public class ApiClient
         return (bytes, fileName.Trim('"'));
     }
 
+    // ── Estadístiques (admin) ─────────────────────────────────────────────────
+
+    public Task<AdminStatsDto?> GetAdminStatsAsync() =>
+        GetAsync<AdminStatsDto>("/api/admin/stats");
+
     // ── Backup / Restore (admin) ──────────────────────────────────────────────
 
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()

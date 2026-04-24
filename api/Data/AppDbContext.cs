@@ -19,6 +19,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ProfessorNote>       ProfessorNotes       => Set<ProfessorNote>();
     public DbSet<ActivityTemplate>    ActivityTemplates    => Set<ActivityTemplate>();
     public DbSet<ActivityLog>         ActivityLogs         => Set<ActivityLog>();
+    public DbSet<ProfessorLogin>      ProfessorLogins      => Set<ProfessorLogin>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -153,6 +154,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(l => l.Action).HasMaxLength(50);
             e.Property(l => l.ActivityName).HasMaxLength(300);
             e.Property(l => l.ActorName).HasMaxLength(300);
+        });
+
+        b.Entity<ProfessorLogin>(e => {
+            e.HasOne<Professor>()
+             .WithMany()
+             .HasForeignKey(l => l.ProfessorId)
+             .OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(l => l.ProfessorId);
+            e.HasIndex(l => l.CreatedAt);
         });
     }
 }

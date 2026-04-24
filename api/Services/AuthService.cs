@@ -23,6 +23,9 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
         if (professor is null || !PasswordHelper.Verify(req.Password, professor.PasswordHash))
             return null;
 
+        db.ProfessorLogins.Add(new AutoCo.Api.Data.Models.ProfessorLogin { ProfessorId = professor.Id });
+        await db.SaveChangesAsync();
+
         var role  = professor.IsAdmin ? "Admin" : "Professor";
         var token = GenerateToken(professor.Id.ToString(), professor.NomComplet, role);
         return new LoginResponse(token, professor.NomComplet, role, professor.Id);

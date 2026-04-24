@@ -154,6 +154,22 @@ using (var scope = app.Services.CreateScope())
             CREATE INDEX [IX_ActivityLogs_ActivityId]
                 ON [ActivityLogs] ([ActivityId]);
         END
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorLogins')
+        BEGIN
+            CREATE TABLE [ProfessorLogins] (
+                [Id]          INT       NOT NULL IDENTITY(1,1),
+                [ProfessorId] INT       NOT NULL,
+                [CreatedAt]   DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                CONSTRAINT [PK_ProfessorLogins] PRIMARY KEY ([Id]),
+                CONSTRAINT [FK_ProfessorLogins_Professors_ProfessorId]
+                    FOREIGN KEY ([ProfessorId]) REFERENCES [Professors]([Id]) ON DELETE CASCADE
+            );
+            CREATE INDEX [IX_ProfessorLogins_ProfessorId]
+                ON [ProfessorLogins] ([ProfessorId]);
+            CREATE INDEX [IX_ProfessorLogins_CreatedAt]
+                ON [ProfessorLogins] ([CreatedAt]);
+        END
         """);
 
     // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
@@ -858,6 +874,89 @@ app.MapGet("/api/health", async (AppDbContext db, StackExchange.Redis.IConnectio
     try { redisOk = redis.IsConnected; }                      catch { }
     var status = dbOk && redisOk ? "ok" : "degraded";
     return Results.Ok(new { status, db = dbOk ? "ok" : "error", redis = redisOk ? "ok" : "error" });
+}).RequireAuthorization();
+
+// ════════════════════════════════════════════════════════════════════════════
+// ESTADÍSTIQUES D'ÚS (admin only)
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/admin/stats", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+
+    var since30  = DateTime.UtcNow.AddDays(-30);
+    var since6mo = DateTime.UtcNow.AddMonths(-6);
+
+    var professors = await db.Professors
+        .OrderBy(p => p.Cognoms).ThenBy(p => p.Nom)
+        .ToListAsync();
+
+    var loginStats = await db.ProfessorLogins
+        .GroupBy(l => l.ProfessorId)
+        .Select(g => new {
+            ProfessorId = g.Key,
+            Last30      = g.Count(l => l.CreatedAt >= since30),
+            LastAccess  = (DateTime?)g.Max(l => l.CreatedAt)
+        })
+        .ToListAsync();
+
+    // Totes les activitats amb el professor propietari (via mòdul)
+    var profActivities = await db.Activities
+        .Join(db.Modules, a => a.ModuleId, m => m.Id,
+              (a, m) => new { ActivityId = a.Id, m.ProfessorId })
+        .ToListAsync();
+
+    // Membres per activitat (per calcular participació)
+    var memberCounts = await db.GroupMembers
+        .GroupBy(gm => gm.Group.ActivityId)
+        .Select(g => new { ActivityId = g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.ActivityId, x => x.Count);
+
+    // Alumnes que han enviat autoavaluació (IsSelf) per activitat
+    var submittedCounts = await db.Evaluations
+        .Where(e => e.IsSelf)
+        .Select(e => new { e.ActivityId, e.EvaluatorId })
+        .Distinct()
+        .GroupBy(e => e.ActivityId)
+        .Select(g => new { ActivityId = g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.ActivityId, x => x.Count);
+
+    // Accessos per mes (últims 6 mesos)
+    var monthlyLogins = await db.ProfessorLogins
+        .Where(l => l.CreatedAt >= since6mo)
+        .GroupBy(l => new { l.CreatedAt.Year, l.CreatedAt.Month })
+        .Select(g => new MonthlyStatDto(g.Key.Year, g.Key.Month, g.Count()))
+        .OrderBy(m => m.Year).ThenBy(m => m.Month)
+        .ToListAsync();
+
+    // Activitats creades per mes (últims 6 mesos)
+    var monthlyActivities = await db.Activities
+        .Where(a => a.CreatedAt >= since6mo)
+        .GroupBy(a => new { a.CreatedAt.Year, a.CreatedAt.Month })
+        .Select(g => new MonthlyStatDto(g.Key.Year, g.Key.Month, g.Count()))
+        .OrderBy(m => m.Year).ThenBy(m => m.Month)
+        .ToListAsync();
+
+    var stats = professors.Select(p =>
+    {
+        var myIds = profActivities
+            .Where(x => x.ProfessorId == p.Id).Select(x => x.ActivityId).ToList();
+        var login = loginStats.FirstOrDefault(l => l.ProfessorId == p.Id);
+
+        var parts = myIds
+            .Where(id => memberCounts.ContainsKey(id) && memberCounts[id] > 0)
+            .Select(id => (double)submittedCounts.GetValueOrDefault(id) / memberCounts[id] * 100)
+            .ToList();
+
+        return new ProfessorStatsDto(
+            p.Id, p.NomComplet, p.Email, p.IsAdmin,
+            login?.Last30 ?? 0,
+            myIds.Count,
+            Math.Round(parts.Count > 0 ? parts.Average() : 0, 1),
+            login?.LastAccess);
+    }).ToList();
+
+    return Results.Ok(new AdminStatsDto(stats, monthlyLogins, monthlyActivities));
 }).RequireAuthorization();
 
 // ════════════════════════════════════════════════════════════════════════════

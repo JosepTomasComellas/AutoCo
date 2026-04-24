@@ -193,6 +193,20 @@ public record CreateTemplateRequest(string Name, string? Description, List<Crite
 // ─── Registre d'activitat ─────────────────────────────────────────────────────
 public record ActivityLogDto(int Id, string Action, string? ActorName, string? Details, DateTime CreatedAt);
 
+// ─── Estadístiques d'administrador ───────────────────────────────────────────
+public record AdminStatsDto(
+    List<ProfessorStatsDto> Professors,
+    List<MonthlyStatDto>    MonthlyLogins,
+    List<MonthlyStatDto>    MonthlyActivities);
+
+public record ProfessorStatsDto(
+    int Id, string NomComplet, string Email, bool IsAdmin,
+    int LoginsLast30, int TotalActivities,
+    double AvgParticipation,
+    DateTime? LastAccess);
+
+public record MonthlyStatDto(int Year, int Month, int Count);
+
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 public record StudentDashboardDto(List<StudentActivityDto> Activities);
 

@@ -1,0 +1,218 @@
+@page "/admin/estadistiques"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Estadístiques d'ús – AutoCo</PageTitle>
+@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+
+<!-- Capçalera -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">Estadístiques d'ús</MudText>
+    <MudSpacer />
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary"
+                   OnClick="LoadAsync" title="Actualitzar" />
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_stats is null)
+{
+    <MudAlert Severity="Severity.Error">Error carregant les estadístiques.</MudAlert>
+}
+else
+{
+    <!-- KPI ràpids -->
+    <MudGrid Spacing="2" Class="mb-6">
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="2" Class="pa-4 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Login" Color="Color.Primary" Size="Size.Medium" />
+                <MudText Typo="Typo.h4" Style="font-weight:700;margin-top:.25rem">@_totalLogins30</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Accessos últims 30 dies</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="2" Class="pa-4 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Success" Size="Size.Medium" />
+                <MudText Typo="Typo.h4" Style="font-weight:700;margin-top:.25rem">@_activeProfessors</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Professors actius (≥1 accés / 30d)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="2" Class="pa-4 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Info" Size="Size.Medium" />
+                <MudText Typo="Typo.h4" Style="font-weight:700;margin-top:.25rem">@_totalActivities30</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Activitats creades últims 30 dies</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Taula per professor -->
+    <MudPaper Elevation="2" Class="pa-4 mb-6">
+        <MudText Typo="Typo.subtitle1" Style="font-weight:700;margin-bottom:1rem">
+            Detall per professor
+        </MudText>
+        <MudTable Items="_stats.Professors" Hover="true" Dense="true" SortLabel="Sort"
+                  Striped="true" Breakpoint="Breakpoint.Sm">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<ProfessorStatsDto,object>(x=>x.NomComplet)">Professor</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align:center"><MudTableSortLabel SortBy="new Func<ProfessorStatsDto,object>(x=>x.LoginsLast30)">Accessos (30d)</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align:center"><MudTableSortLabel SortBy="new Func<ProfessorStatsDto,object>(x=>x.TotalActivities)">Activitats</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align:center"><MudTableSortLabel SortBy="new Func<ProfessorStatsDto,object>(x=>x.AvgParticipation)">Part. mitjana</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align:center"><MudTableSortLabel SortBy="new Func<ProfessorStatsDto,object>(x=>x.LastAccess ?? DateTime.MinValue)">Darrer accés</MudTableSortLabel></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                        @if (context.IsAdmin)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                     Variant="Variant.Outlined">Admin</MudChip>
+                        }
+                        <span>@context.NomComplet</span>
+                    </MudStack>
+                </MudTd>
+                <MudTd Style="text-align:center">
+                    <span class="@LoginClass(context.LoginsLast30)">@context.LoginsLast30</span>
+                </MudTd>
+                <MudTd Style="text-align:center">@context.TotalActivities</MudTd>
+                <MudTd Style="text-align:center">
+                    @if (context.TotalActivities == 0)
+                    {
+                        <span style="color:var(--mud-palette-text-secondary)">—</span>
+                    }
+                    else
+                    {
+                        <span class="@ParticipationClass(context.AvgParticipation)">
+                            @context.AvgParticipation.ToString("F1")%
+                        </span>
+                    }
+                </MudTd>
+                <MudTd Style="text-align:center">
+                    @if (context.LastAccess is null)
+                    {
+                        <span class="grade-low">Mai</span>
+                    }
+                    else
+                    {
+                        <span class="@LastAccessClass(context.LastAccess.Value)" title="@context.LastAccess.Value.ToLocalTime().ToString("dd/MM/yyyy HH:mm")">
+                            @RelativeTime(context.LastAccess.Value)
+                        </span>
+                    }
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+
+    <!-- Gràfic mensual -->
+    <MudPaper Elevation="2" Class="pa-4">
+        <MudText Typo="Typo.subtitle1" Style="font-weight:700;margin-bottom:1rem">
+            Tendència mensual (últims 6 mesos)
+        </MudText>
+        <canvas id="chart-monthly" style="max-height:280px"></canvas>
+    </MudPaper>
+}
+
+@code {
+    private AdminStatsDto? _stats;
+    private bool           _loading     = true;
+    private bool           _chartDrawn  = false;
+
+    private int _totalLogins30    => _stats?.Professors.Sum(p => p.LoginsLast30) ?? 0;
+    private int _activeProfessors => _stats?.Professors.Count(p => p.LoginsLast30 > 0) ?? 0;
+    private int _totalActivities30 => _stats?.MonthlyActivities
+        .Where(m => new DateTime(m.Year, m.Month, 1) >= DateTime.UtcNow.AddDays(-30))
+        .Sum(m => m.Count) ?? 0;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading    = true;
+        _chartDrawn = false;
+        Api.SetToken(UserState.Token!);
+        _stats   = await Api.GetAdminStatsAsync();
+        _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_stats is null || _chartDrawn) return;
+
+        try
+        {
+            // Genera labels dels últims 6 mesos
+            var months = Enumerable.Range(0, 6)
+                .Select(i => DateTime.UtcNow.AddMonths(-5 + i))
+                .ToList();
+
+            var labels = months
+                .Select(m => m.ToString("MMM yyyy",
+                    new System.Globalization.CultureInfo("ca-ES")))
+                .ToArray();
+
+            var loginData = months
+                .Select(m => (double?)(_stats.MonthlyLogins
+                    .FirstOrDefault(l => l.Year == m.Year && l.Month == m.Month)?.Count ?? 0))
+                .ToArray();
+
+            var activityData = months
+                .Select(m => (double?)(_stats.MonthlyActivities
+                    .FirstOrDefault(a => a.Year == m.Year && a.Month == m.Month)?.Count ?? 0))
+                .ToArray();
+
+            await JS.InvokeVoidAsync("autocoCharts.renderBar", "chart-monthly", labels,
+                new[]
+                {
+                    new { label = "Accessos professors", data = loginData,    color = "#1d4ed8" },
+                    new { label = "Activitats creades",  data = activityData, color = "#CC0000" }
+                });
+
+            _chartDrawn = true;
+        }
+        catch { }
+    }
+
+    private static string LoginClass(int count) => count switch
+    {
+        0   => "grade-low",
+        < 5 => "grade-mid",
+        _   => "grade-high"
+    };
+
+    private static string ParticipationClass(double pct) => pct switch
+    {
+        >= 80 => "grade-high",
+        >= 50 => "grade-mid",
+        _     => "grade-low"
+    };
+
+    private static string LastAccessClass(DateTime dt)
+    {
+        var days = (DateTime.UtcNow - dt).TotalDays;
+        return days < 7 ? "grade-high" : days < 30 ? "grade-mid" : "grade-low";
+    }
+
+    private static string RelativeTime(DateTime dt)
+    {
+        var diff = DateTime.UtcNow - dt;
+        if (diff.TotalMinutes < 60)  return $"fa {(int)diff.TotalMinutes} min";
+        if (diff.TotalHours   < 24)  return $"fa {(int)diff.TotalHours} h";
+        if (diff.TotalDays    < 30)  return $"fa {(int)diff.TotalDays} dies";
+        if (diff.TotalDays    < 365) return $"fa {(int)(diff.TotalDays / 30)} mesos";
+        return $"fa {(int)(diff.TotalDays / 365)} anys";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try { await JS.InvokeVoidAsync("autocoCharts.destroy", "chart-monthly"); } catch { }
+    }
+}
