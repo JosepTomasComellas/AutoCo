@@ -32,9 +32,39 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
+# ── Versions: actual i nova ───────────────────────────────────────────────────
+extract_version() {
+    grep 'Current' "$1" 2>/dev/null | sed 's/.*"\(.*\)".*/\1/' | tr -d '[:space:]'
+}
+
+VERSIO_ACTUAL=$(extract_version "shared/AppVersion.cs")
+
 echo ""
 echo "[1/4] Descarregant canvis de GitHub..."
+git fetch --tags origin
+
+VERSIO_NOVA=$(git show origin/main:shared/AppVersion.cs 2>/dev/null \
+    | grep 'Current' | sed 's/.*"\(.*\)".*/\1/' | tr -d '[:space:]')
+
+echo ""
+echo "  Versió actual desplegada : ${VERSIO_ACTUAL:-desconeguda}"
+echo "  Versió al repositori     : ${VERSIO_NOVA:-desconeguda}"
+
+# Mostra els commits nous si n'hi ha
+COMMITS_NOUS=$(git log HEAD..origin/main --oneline 2>/dev/null)
+if [ -n "$COMMITS_NOUS" ]; then
+    echo ""
+    echo "  Commits nous:"
+    git log HEAD..origin/main --oneline | sed 's/^/    /'
+else
+    echo ""
+    echo "  Ja és la versió més recent. Continuant igualment..."
+fi
+
+echo ""
 git pull --ff-only
+
+VERSIO_DESPLEGADA=$(extract_version "shared/AppVersion.cs")
 
 echo ""
 echo "[2/4] Aturant contenidors..."
@@ -58,12 +88,13 @@ echo ""
 
 echo ""
 echo "========================================================"
-echo "  Actualització completada!"
+if [ "$VERSIO_ACTUAL" != "$VERSIO_DESPLEGADA" ]; then
+    echo "  Actualització completada: v$VERSIO_ACTUAL → v$VERSIO_DESPLEGADA"
+else
+    echo "  Actualització completada: v$VERSIO_DESPLEGADA (sense canvi de versió)"
+fi
 echo ""
 docker compose ps
-echo ""
-echo "  Versió desplegada:"
-grep 'Current' shared/AppVersion.cs | tr -d ' '
 echo ""
 echo "  Logs en temps real: docker compose logs -f"
 echo "========================================================"
