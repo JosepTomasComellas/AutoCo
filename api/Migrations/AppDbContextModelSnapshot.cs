@@ -93,6 +93,30 @@ namespace AutoCo.Api.Migrations
                     b.ToTable("ActivityTemplates");
                 });
 
+            modelBuilder.Entity("AutoCo.Api.Data.Models.ProfessorLogin", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ProfessorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_ProfessorLogins_CreatedAt");
+
+                    b.HasIndex("ProfessorId");
+
+                    b.ToTable("ProfessorLogins");
+                });
+
             modelBuilder.Entity("AutoCo.Api.Data.Models.ProfessorNote", b =>
                 {
                     b.Property<int>("Id")
@@ -651,6 +675,15 @@ namespace AutoCo.Api.Migrations
                     b.Navigation("Exclusions");
 
                     b.Navigation("GroupMemberships");
+                });
+
+            modelBuilder.Entity("AutoCo.Api.Data.Models.ProfessorLogin", b =>
+                {
+                    b.HasOne("AutoCo.Api.Data.Models.Professor")
+                        .WithMany()
+                        .HasForeignKey("ProfessorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AutoCo.Api.Data.Models.ProfessorNote", b =>
