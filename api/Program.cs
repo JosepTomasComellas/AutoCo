@@ -719,6 +719,16 @@ app.MapPost("/api/activities/{actId:int}/groups", async (int actId,
                      : Results.Created($"/api/activities/{actId}/groups/{g.Id}", g);
 }).RequireAuthorization();
 
+app.MapPut("/api/activities/{actId:int}/groups/{groupId:int}", async (
+    int actId, int groupId, RenameGroupRequest req,
+    IActivityService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    if (string.IsNullOrWhiteSpace(req.Name)) return Results.BadRequest();
+    var ok = await svc.RenameGroupAsync(actId, groupId, req.Name, GetUserId(user), IsAdmin(user));
+    return ok ? Results.NoContent() : Results.NotFound();
+}).RequireAuthorization();
+
 app.MapDelete("/api/activities/{actId:int}/groups/{groupId:int}", async (
     int actId, int groupId, IActivityService svc, ClaimsPrincipal user) =>
 {

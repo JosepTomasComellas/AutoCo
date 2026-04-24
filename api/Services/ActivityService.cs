@@ -25,6 +25,7 @@ public interface IActivityService
 
     Task<List<GroupDto>?>  GetGroupsAsync(int activityId, int professorId, bool isAdmin);
     Task<GroupDto?>        CreateGroupAsync(int activityId, CreateGroupRequest req, int professorId, bool isAdmin);
+    Task<bool>             RenameGroupAsync(int activityId, int groupId, string name, int professorId, bool isAdmin);
     Task<bool>             DeleteGroupAsync(int activityId, int groupId, int professorId, bool isAdmin);
     Task<bool>             AddMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin);
     Task<bool>             RemoveMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin);
@@ -234,7 +235,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
             .CountAsync();
 
         var submitted = await db.Evaluations
-            .Where(e => e.ActivityId == activityId)
+            .Where(e => e.ActivityId == activityId && e.IsSelf)
             .Select(e => e.EvaluatorId)
             .Distinct()
             .CountAsync();
@@ -440,6 +441,18 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
             if (!groupById.TryGetValue(orderedGroupIds[i], out var g)) continue;
             g.OrderIndex = i;
         }
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> RenameGroupAsync(int activityId, int groupId, string name, int professorId, bool isAdmin)
+    {
+        var group = await db.Groups
+            .Include(g => g.Activity).ThenInclude(a => a.Module)
+            .FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId
+                && (isAdmin || g.Activity.Module.ProfessorId == professorId));
+        if (group is null) return false;
+        group.Name = name.Trim();
         await db.SaveChangesAsync();
         return true;
     }

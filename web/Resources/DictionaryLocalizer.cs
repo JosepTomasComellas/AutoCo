@@ -50,7 +50,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Home_Autoevaluation"] = "Autoavaluació",
         ["Home_Coevaluation"]   = "Coavaluació",
         ["Home_Results"]        = "Resultats",
-        ["Home_Footer"]         = "Salesians de Sarrià · Departament d'Informàtica",
+        ["Home_Footer"]         = "Salesians de Sarrià · Dept. d'Informàtica",
 
         // ── Navegació i barra superior ─────────────────────────────────────────
         ["Nav_Dashboard"]   = "Tauler",
@@ -235,6 +235,10 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Groups_CriteriaSaveErr"] = "Error en desar criteris.",
         ["Groups_GlobalsReset"]    = "Criteris globals restaurats.",
         ["Groups_GroupCreated"]    = "Grup creat.",
+        ["Groups_RenameGroup"]     = "Canviar nom del grup",
+        ["Groups_RenameConfirm"]   = "Confirmar canvi de nom",
+        ["Groups_GroupRenamed"]    = "Nom del grup actualitzat.",
+        ["Groups_GroupRenameErr"]  = "No s'ha pogut canviar el nom del grup.",
         ["Groups_DeleteGroupTitle"] = "Confirmar eliminació",
         ["Groups_DeleteGroupMsg"]  = "Eliminar el grup «{0}»?{1}",
         ["Groups_GroupDeleted"]    = "Grup eliminat.",
@@ -249,6 +253,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Results_NotFound"]        = "Activitat no trobada o sense permisos.",
         ["Results_NoEvals"]         = "Encara no hi ha avaluacions.",
         ["Results_AdvancedFilters"] = "Filtres avançats",
+        ["Results_FilterStudent"]   = "Cerca alumne",
         ["Results_AllGroups"]       = "Tots els grups",
         ["Results_GradeRange"]      = "Rang de nota (coaval.)",
         ["Results_AllRanges"]       = "Tots els rangs",
@@ -574,7 +579,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Informe_PeerDetail"]      = "Detall per avaluador",
         ["Informe_ColEvaluator"]    = "Avaluador/a",
         ["Informe_ColComment"]      = "Comentari",
-        ["Informe_Footer"]          = "Salesians de Sarrià · Departament d'Informàtica · AutoCo Avaluació v{0}",
+        ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo Avaluació v{0}",
 
         // ── Diàlegs compartits ────────────────────────────────────────────────
         ["Dlg_ActivityName"]     = "Nom de l'activitat",
@@ -716,7 +721,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Home_Autoevaluation"] = "Autoevaluación",
         ["Home_Coevaluation"]   = "Coevaluación",
         ["Home_Results"]        = "Resultados",
-        ["Home_Footer"]         = "Salesians de Sarrià · Departament d'Informàtica",
+        ["Home_Footer"]         = "Salesians de Sarrià · Dept. d'Informàtica",
 
         // ── Navegació i barra superior ─────────────────────────────────────────
         ["Nav_Dashboard"]   = "Panel",
@@ -901,6 +906,10 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Groups_CriteriaSaveErr"] = "Error al guardar criterios.",
         ["Groups_GlobalsReset"]    = "Criterios globales restaurados.",
         ["Groups_GroupCreated"]    = "Grupo creado.",
+        ["Groups_RenameGroup"]     = "Cambiar nombre del grupo",
+        ["Groups_RenameConfirm"]   = "Confirmar cambio de nombre",
+        ["Groups_GroupRenamed"]    = "Nombre del grupo actualizado.",
+        ["Groups_GroupRenameErr"]  = "No se ha podido cambiar el nombre del grupo.",
         ["Groups_DeleteGroupTitle"] = "Confirmar eliminación",
         ["Groups_DeleteGroupMsg"]  = "¿Eliminar el grupo «{0}»?{1}",
         ["Groups_GroupDeleted"]    = "Grupo eliminado.",
@@ -915,6 +924,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Results_NotFound"]        = "Actividad no encontrada o sin permisos.",
         ["Results_NoEvals"]         = "Todavía no hay evaluaciones.",
         ["Results_AdvancedFilters"] = "Filtros avanzados",
+        ["Results_FilterStudent"]   = "Buscar alumno",
         ["Results_AllGroups"]       = "Todos los grupos",
         ["Results_GradeRange"]      = "Rango de nota (coeval.)",
         ["Results_AllRanges"]       = "Todos los rangos",
@@ -1240,7 +1250,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Informe_PeerDetail"]      = "Detalle por evaluador",
         ["Informe_ColEvaluator"]    = "Evaluador/a",
         ["Informe_ColComment"]      = "Comentario",
-        ["Informe_Footer"]          = "Salesians de Sarrià · Departament d'Informàtica · AutoCo Avaluació v{0}",
+        ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo Avaluació v{0}",
 
         // ── Diàlegs compartits ────────────────────────────────────────────────
         ["Dlg_ActivityName"]     = "Nombre de la actividad",

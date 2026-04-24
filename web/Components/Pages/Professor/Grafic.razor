@@ -9,10 +9,6 @@
 <PageTitle>Gràfic – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
-<HeadContent>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-</HeadContent>
-
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text"
                Href="@($"/professor/resultats/{ActivityId}")">

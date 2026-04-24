@@ -172,6 +172,9 @@ public class ApiClient
     public Task<GroupDto?> CreateGroupAsync(int activityId, string name) =>
         PostAsync<GroupDto>($"/api/activities/{activityId}/groups", new CreateGroupRequest(name));
 
+    public Task<bool> RenameGroupAsync(int activityId, int groupId, string name) =>
+        PutNoContentAsync($"/api/activities/{activityId}/groups/{groupId}", new RenameGroupRequest(name));
+
     public Task<bool> DeleteGroupAsync(int activityId, int groupId) =>
         DeleteAsync($"/api/activities/{activityId}/groups/{groupId}");
 

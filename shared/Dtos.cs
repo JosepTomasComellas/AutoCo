@@ -82,6 +82,7 @@ public record ReminderResult(int Sent, int Skipped, bool EmailDisabled);
 public record GroupDto(int Id, int ActivityId, string Name, List<StudentDto> Members, int OrderIndex = 0);
 public record ReorderGroupsRequest(List<int> OrderedGroupIds);
 public record CreateGroupRequest(string Name);
+public record RenameGroupRequest(string Name);
 public record AddMemberRequest(int StudentId);
 
 // ─── Avaluacions ─────────────────────────────────────────────────────────────

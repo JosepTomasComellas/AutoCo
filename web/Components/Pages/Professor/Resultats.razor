@@ -79,6 +79,13 @@ else
         <MudExpansionPanel Text="@Loc["Results_AdvancedFilters"]" Icon="@Icons.Material.Filled.FilterList">
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="6" md="3">
+                    <MudTextField @bind-Value="_filterStudent" Label="@Loc["Results_FilterStudent"]"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                                  Clearable="true" Immediate="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string" @bind-Value="_filterGroup" Label="@Loc["Results_ColGroup"]" Variant="Variant.Outlined"
                                Margin="Margin.Dense" Clearable="true">
                         <MudSelectItem T="string" Value='""'>@Loc["Results_AllGroups"]</MudSelectItem>
@@ -102,7 +109,7 @@ else
                     <MudSwitch @bind-Value="_showNotes" Color="Color.Primary"
                                Label="@Loc["Results_ShowNotes"]" Size="Size.Small" />
                 </MudItem>
-                <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                <MudItem xs="12" Class="d-flex align-center">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                         @Loc["Results_CountOf", _filteredStudents.Count, totalAlumnes]
                     </MudText>
@@ -324,9 +331,10 @@ else
     private Dictionary<int, string>  _notes   = [];
 
     // Filtres
-    private string _filterGroup = "";
-    private string _filterGrade = "";
-    private bool   _showNotes   = false;
+    private string _filterGroup   = "";
+    private string _filterGrade   = "";
+    private string _filterStudent = "";
+    private bool   _showNotes     = false;
 
     // Edició de notes
     private int    _editingNote  = -1;
@@ -335,6 +343,9 @@ else
     private List<StudentResultDto> _filteredStudents => _results?.Students
         .Where(s =>
             (string.IsNullOrEmpty(_filterGroup) || s.GroupName == _filterGroup) &&
+            (string.IsNullOrEmpty(_filterStudent) ||
+                $"{s.Cognoms} {s.Nom}".Contains(_filterStudent, StringComparison.OrdinalIgnoreCase) ||
+                $"{s.Nom} {s.Cognoms}".Contains(_filterStudent, StringComparison.OrdinalIgnoreCase)) &&
             (_filterGrade switch
             {
                 "high" => s.AvgGlobal >= 8,

@@ -244,7 +244,6 @@ else
             Snackbar.Add(
                 Loc["Eval_Missing", $"{string.Join(", ", missing.Take(3))}{(missing.Count > 3 ? "..." : "")}"].Value,
                 Severity.Warning);
-            return;
         }
 
         _saving = true;

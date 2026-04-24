@@ -8,8 +8,7 @@
 @inject IStringLocalizer<SharedResources> Loc
 
 <MudCard Elevation="@(Act.IsOpen ? 2 : 1)"
-         Class="activity-card"
-         Style="@(Act.IsOpen ? "" : "background:#fff5f5;border:1px solid #f5c6c6")">
+         Class="@($"activity-card{(Act.IsOpen ? "" : " activity-card--closed")}")">
     <MudCardHeader>
         <CardHeaderContent>
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">

@@ -156,7 +156,7 @@
                 </MudText>
             }
 
-            <div class="dnd-members">
+            <div class="dnd-members" style="max-height:400px;overflow-y:auto">
                 @foreach (var s in _unassigned)
                 {
                     var sid = s.Id;
@@ -193,22 +193,41 @@
                      @ondrop:preventDefault
                      @ondrop="() => OnDropToGroup(gid)">
 
+                    @{ var gidx = _groups.IndexOf(g); }
                     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-                        <MudText Typo="Typo.subtitle2" Style="font-weight:700;flex:1">@g.Name</MudText>
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
-                                 Style="height:20px;font-size:.7rem">
-                            @g.Members.Count
-                        </MudChip>
-                        @{ var gidx = _groups.IndexOf(g); }
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
-                                       Disabled="gidx <= 0" title="Pujar grup"
-                                       OnClick="() => MoveGroupAsync(gidx, -1)" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
-                                       Disabled="gidx >= _groups.Count - 1" title="Baixar grup"
-                                       OnClick="() => MoveGroupAsync(gidx, 1)" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                       Color="Color.Error" title="Eliminar grup"
-                                       OnClick="() => DeleteGroupAsync(g)" />
+                        @if (_editingGroupId == gid)
+                        {
+                            <MudTextField @bind-Value="_editingGroupName"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          Style="flex:1;min-width:0" Immediate="true"
+                                          @onkeydown="OnRenameKeyDown" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Check" Size="Size.Small"
+                                           Color="Color.Success" title="@Loc["Groups_RenameConfirm"]"
+                                           OnClick="() => RenameGroupAsync(gid)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                                           Color="Color.Default" title="@Loc["Action_Cancel"]"
+                                           OnClick="CancelRename" />
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.subtitle2" Style="font-weight:700;flex:1">@g.Name</MudText>
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                                     Style="height:20px;font-size:.7rem">
+                                @g.Members.Count
+                            </MudChip>
+                            <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Small"
+                                           title="@Loc["Groups_RenameGroup"]"
+                                           OnClick="() => StartRename(gid, g.Name)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                                           Disabled="gidx <= 0" title="Pujar grup"
+                                           OnClick="() => MoveGroupAsync(gidx, -1)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                                           Disabled="gidx >= _groups.Count - 1" title="Baixar grup"
+                                           OnClick="() => MoveGroupAsync(gidx, 1)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error" title="Eliminar grup"
+                                           OnClick="() => DeleteGroupAsync(g)" />
+                        }
                     </MudStack>
 
                 <div class="dnd-members">
@@ -263,6 +282,10 @@
     private bool _showCriteria  = false;
     private bool _savingCriteria = false;
     private List<CriterionItem> _criteriaItems = [];
+
+    // ── Renomenar grup inline ────────────────────────────────────────────────
+    private int?   _editingGroupId   = null;
+    private string _editingGroupName = "";
 
     // ── Reordenació de grups ─────────────────────────────────────────────────
 
@@ -365,6 +388,43 @@
         (_groups[idx], _groups[newIdx]) = (_groups[newIdx], _groups[idx]);
         Api.SetToken(UserState.Token!);
         await Api.ReorderGroupsAsync(ActivityId, _groups.Select(g => g.Id).ToList());
+    }
+
+    // ── Renomenar grups ──────────────────────────────────────────────────────
+
+    private void StartRename(int groupId, string currentName)
+    {
+        _editingGroupId   = groupId;
+        _editingGroupName = currentName;
+    }
+
+    private void CancelRename()
+    {
+        _editingGroupId   = null;
+        _editingGroupName = "";
+    }
+
+    private async Task OnRenameKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && _editingGroupId.HasValue)
+            await RenameGroupAsync(_editingGroupId.Value);
+        else if (e.Key == "Escape")
+            CancelRename();
+    }
+
+    private async Task RenameGroupAsync(int groupId)
+    {
+        if (string.IsNullOrWhiteSpace(_editingGroupName)) { CancelRename(); return; }
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.RenameGroupAsync(ActivityId, groupId, _editingGroupName.Trim());
+        CancelRename();
+        if (ok)
+        {
+            await LoadAsync();
+            Snackbar.Add(Loc["Groups_GroupRenamed"], Severity.Success);
+        }
+        else
+            Snackbar.Add(Loc["Groups_GroupRenameErr"], Severity.Error);
     }
 
     // ── Crear / esborrar grups ───────────────────────────────────────────────

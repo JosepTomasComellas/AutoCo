@@ -132,6 +132,8 @@ html, body {
     flex: 1;
     /* Evita que el footer fix solapi el contingut inferior */
     padding-bottom: 56px !important;
+    /* overflow-y: auto permet que position:sticky funcioni dins del contenidor */
+    overflow-y: auto;
 }
 
 /* ── Mode fosc ───────────────────────────────────────────────────────────── */
@@ -159,7 +161,7 @@ html, body {
     border-color: #92400e;
 }
 
-/* ── Targetes d'activitat: efecte hover ──────────────────────────────────── */
+/* ── Targetes d'activitat: efecte hover i tancades ───────────────────────── */
 .activity-card {
     transition: transform .15s ease, box-shadow .15s ease;
 }
@@ -169,6 +171,14 @@ html, body {
 }
 .app-dark .activity-card:hover {
     box-shadow: 0 8px 24px rgba(0,0,0,.45) !important;
+}
+.activity-card--closed {
+    background: #fecaca !important;
+    border: 1px solid #f87171 !important;
+}
+.app-dark .activity-card--closed {
+    background: #450a0a !important;
+    border: 1px solid #7f1d1d !important;
 }
 
 /* ── Taula resultats: color per rang de nota ─────────────────────────────── */
