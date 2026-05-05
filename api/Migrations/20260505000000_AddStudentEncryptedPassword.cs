@@ -1,10 +1,13 @@
+using AutoCo.Api.Data;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 #nullable disable
 
 namespace AutoCo.Api.Migrations
 {
-    /// <inheritdoc />
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20260505000000_AddStudentEncryptedPassword")]
     public partial class AddStudentEncryptedPassword : Migration
     {
         /// <inheritdoc />
