@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.2.3
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.4.1
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -26,6 +26,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Duplicació d'activitats** reutilitzant la configuració de grups
 - **Duplicació creuada** d'activitats a una altra classe i mòdul
 - **Indicador de participació** en temps real a cada targeta (Redis pub/sub, instantani)
+- **Botó «Convidar a participar»** directament visible a la targeta quan l'activitat és oberta — envia correu a tots els alumnes del grup amb barra de progrés en temps real
 - **Recordatoris per correu** als alumnes que no han omplert l'avaluació
 - **Notificació automàtica al professor** quan el 100% de l'activitat s'ha completat
 - **Desfer eliminació** — finestra de 5 s per cancel·lar eliminació d'activitats i alumnes
@@ -38,7 +39,8 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Notes del professor** per alumne: camp editable inline a la taula de resultats
 - **Gràfiques comparatives** per grup (Auto vs. Co, desglossament per criteri) amb Chart.js
 - **Informe PDF individual per alumne**: pàgina optimitzada per a impressió/PDF amb dades, notes globals, detall per criteri i comentaris
-- **Exportació CSV i Excel (.xlsx)** de resultats amb format i color per rang de nota
+- **Informe PDF complet per activitat** (`/professor/informe-activitat/{id}`): capçalera, taula resum per grup, estadístiques per criteri (distribució A–E), detall individual opcional per alumne amb salt de pàgina
+- **Exportació CSV i Excel (.xlsx)** de resultats amb format, color per rang de nota i columna de comentaris (autoavaluació)
 
 **Perfil i autenticació**
 - **Pàgina de perfil** del professor: canvi de nom, cognoms i contrasenya des de la barra de navegació
@@ -51,7 +53,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 **Administració**
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
-- **Còpies de seguretat**: exportació/importació JSON de tota la base de dades
+- **Còpies de seguretat**: exportació/importació JSON completa (incloent criteris, notes, plantilles i contrasenyes xifrades); **backup automàtic** diari/setmanal configurable via variables d'entorn (`BACKUP_*`)
 - **KPIs al tauler**: classes, mòduls, alumnes, activitats, obertes i grups
 - **Mode fosc** i **selector de tema de color** (6 opcions) amb preferències desades al navegador
 
@@ -71,6 +73,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - Puntuació amb **escala de 5 estrelles** mostrada com a lletra (E / D / C / B / A)
 - **Desar parcialment**: l'alumne pot guardar l'avanç sense haver completat tots els criteris
 - **Barra de progrés** d'avaluació completada en temps real (X/Y criteris puntuats)
+- **Canvi de contrasenya propi** des del dashboard de l'alumne
 
 ---
 
@@ -260,6 +263,11 @@ Copia `.env.example` a `.env` i ajusta els valors:
 | `SMTP_FROM_ADDRESS` | Adreça remitent dels correus | |
 | `SMTP_FROM_NAME` | Nom remitent dels correus | |
 | `APP_WEB_URL` | URL pública (p.ex. `https://autoco.centre.cat`) — per als QR i links dels correus | |
+| `BACKUP_ENABLED` | Activa el backup automàtic (`true`/`false`, per defecte `false`) | |
+| `BACKUP_DAILY_HOUR` | Hora del backup diari en UTC (0–23, per defecte `2`) | |
+| `BACKUP_WEEKLY_DAY` | Dia de la setmana del backup setmanal (0=Dg, 1=Dl … 6=Ds, per defecte `0`) | |
+| `BACKUP_DAILY_RETENTION` | Nombre màxim de backups diaris a conservar (per defecte `7`) | |
+| `BACKUP_WEEKLY_RETENTION` | Nombre màxim de backups setmanals a conservar (per defecte `4`) | |
 
 > SMTP és opcional. Si no es configura, les funcions d'email queden desactivades però l'aplicació funciona amb normalitat.
 
@@ -331,6 +339,23 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.4.1
+- **Fix**: atributs `[DbContext]` i `[Migration]` afegits a la migració `AddStudentEncryptedPassword` — sense ells EF Core no descobria la migració per reflexió i la columna `PlainPasswordEncrypted` no es creava en desplegaments existents
+- **UX**: botó «Convidar a participar» (campana) mogut del menú desplegable a les accions visibles de la targeta d'activitat, al costat del botó de gràfica; visible directament quan l'activitat és oberta
+
+### v2.4.0
+- **Informe PDF complet per activitat** — nova pàgina `/professor/informe-activitat/{id}`: capçalera amb dades del mòdul i classe, taula resum per grup (nota auto/co, comentari, nombre d'avaluadors), estadístiques per criteri (mitjana auto/co, distribució A–E amb badges de color), detall individual opcional per alumne (salt de pàgina entre alumnes, inclou avaluacions rebudes i nota del professor)
+- **Backup complet** — `BackupService` ampliats per incloure `ActivityCriteria`, `ProfessorNotes`, `ActivityTemplates` i camp `PlainPasswordEncrypted`; `ImportAsync` restaura correctament les taules noves
+- **Backup automàtic** (`BackupHostedService`) — servei en background que executa backups diaris i setmanals a l'hora configurada; retenció configurable via `BACKUP_*` variables d'entorn
+- **Columna «Comentari»** a l'exportació Excel (.xlsx): autoavaluació de l'alumne inclosa com a columna addicional
+
+### v2.3.0
+- **Contrasenya xifrada d'alumnes** — camp `PlainPasswordEncrypted` (AES-GCM) a la taula `Students`; permet al professor consultar la contrasenya en text pla a la pantalla de gestió d'alumnes
+- **Canvi de contrasenya propi per a alumnes** — el dashboard de l'alumne inclou un formulari per canviar la seva pròpia contrasenya
+- **Botó «Convidar a participar»** — disponible des de la targeta d'activitat quan és oberta; envia correu a tots els alumnes del grup amb barra de progrés d'enviament en temps real
+- **Refactorització de recordatoris** — lògica unificada entre «Convidar» (tots els alumnes) i «Recordar» (alumnes que no han avaluat)
+- **Ordenació de columnes al DataGrid** de resultats per Nom i Coavaluació
 
 ### v2.2.3
 - **Fix estadístiques**: participació mitjana capada al 100% — valors superiors indicaven alumnes que van avaluar i després van ser moguts o eliminats del grup
