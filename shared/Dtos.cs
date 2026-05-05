@@ -97,7 +97,7 @@ public record EvaluationFormDto(
 
 public record EvaluationEntryDto(
     int StudentId, string StudentName, bool IsSelf,
-    Dictionary<string, double> Scores, string? Comment);
+    Dictionary<string, double> Scores, string? Comment, string? FotoUrl = null);
 
 public record SaveEvaluationsRequest(List<EvaluationEntryRequest> Evaluations);
 
@@ -114,7 +114,8 @@ public record StudentResultDto(
     Dictionary<string, double?> SelfScores, string? SelfComment,
     List<PeerEvaluationDto> PeerEvaluations,
     Dictionary<string, double?> AvgCoScores,
-    double? AvgGlobal, double? AutAvgGlobal, int NumPeerEvaluators);
+    double? AvgGlobal, double? AutAvgGlobal, int NumPeerEvaluators,
+    string? FotoUrl = null);
 
 public record PeerEvaluationDto(
     int EvaluatorId, string EvaluatorName,

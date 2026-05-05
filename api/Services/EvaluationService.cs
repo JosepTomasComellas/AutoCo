@@ -16,7 +16,7 @@ public interface IEvaluationService
 }
 
 public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactory,
-    IConnectionMultiplexer redis, ILogger<EvaluationService> logger) : IEvaluationService
+    IConnectionMultiplexer redis, ILogger<EvaluationService> logger, IPhotoService photos) : IEvaluationService
 {
     public async Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId)
     {
@@ -53,7 +53,8 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
             var eval = existingEvals.FirstOrDefault(e => e.EvaluatedId == s.Id);
             var scores = eval?.Scores.ToDictionary(sc => sc.CriteriaKey, sc => sc.Score)
                 ?? [];
-            return new EvaluationEntryDto(s.Id, s.NomComplet, s.Id == studentId, scores, eval?.Comment);
+            return new EvaluationEntryDto(s.Id, s.NomComplet, s.Id == studentId, scores, eval?.Comment,
+                photos.GetStudentFotoUrl(s.Id));
         }).ToList();
 
         var actDto   = new ActivityDto(

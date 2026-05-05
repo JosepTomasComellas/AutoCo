@@ -54,13 +54,19 @@ else
 
         <!-- Dades de l'alumne -->
         <div class="informe-section">
-            <table class="informe-dades">
-                <tr>
-                    <td class="label">@Loc["Informe_ColStudent"]</td>
-                    <td class="valor"><strong>@_student.Cognoms, @_student.Nom</strong></td>
-                    <td class="label">@Loc["Informe_ColActivity"]</td>
-                    <td class="valor"><strong>@_results.Activity.Name</strong></td>
-                </tr>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+                @if (_student.FotoUrl is not null)
+                {
+                    <img src="@_student.FotoUrl" alt="@_student.StudentName"
+                         style="width:72px;height:72px;object-fit:cover;border-radius:4px;flex-shrink:0;border:1px solid #e2e8f0" />
+                }
+                <table class="informe-dades" style="flex:1">
+                    <tr>
+                        <td class="label">@Loc["Informe_ColStudent"]</td>
+                        <td class="valor"><strong>@_student.Cognoms, @_student.Nom</strong></td>
+                        <td class="label">@Loc["Informe_ColActivity"]</td>
+                        <td class="valor"><strong>@_results.Activity.Name</strong></td>
+                    </tr>
                 <tr>
                     <td class="label">@Loc["Informe_ColGroup"]</td>
                     <td class="valor">@_student.GroupName</td>
@@ -73,7 +79,8 @@ else
                     <td class="label">@Loc["Informe_ColEvaluators"]</td>
                     <td class="valor">@Loc["Informe_Evaluators", _student.NumPeerEvaluators]</td>
                 </tr>
-            </table>
+                </table>
+            </div>
         </div>
 
         <!-- Resum de notes globals -->

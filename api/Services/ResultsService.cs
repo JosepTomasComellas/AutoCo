@@ -17,7 +17,7 @@ public interface IResultsService
     Task InvalidateCacheAsync(int activityId);
 }
 
-public class ResultsService(AppDbContext db, IDistributedCache cache) : IResultsService
+public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoService photos) : IResultsService
 {
     private static readonly DistributedCacheEntryOptions _cacheOpts = new()
     {
@@ -123,7 +123,8 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
             studentResults.Add(new StudentResultDto(
                 s.Id, s.Nom, s.Cognoms, s.NomComplet, s.Email, s.NumLlista, member.GroupName,
                 selfScores, selfEval?.Comment,
-                peerDtos, avgCoScores, avgGlobal, autAvgGlobal, peerEvals.Count));
+                peerDtos, avgCoScores, avgGlobal, autAvgGlobal, peerEvals.Count,
+                photos.GetStudentFotoUrl(s.Id)));
         }
 
         var actDto = new ActivityDto(

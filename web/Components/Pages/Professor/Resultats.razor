@@ -133,7 +133,17 @@ else
             </TemplateColumn>
             <TemplateColumn Title="@Loc["Results_ColNom"]" Sortable="true"
                             SortBy='(StudentResultDto s) => s.Cognoms + " " + s.Nom'>
-                <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
+                <CellTemplate>
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                        @if (context.Item.FotoUrl is not null)
+                        {
+                            <MudAvatar Size="Size.Small" Style="width:28px;height:28px;min-width:28px;flex-shrink:0">
+                                <MudImage Src="@context.Item.FotoUrl" Style="width:100%;height:100%;object-fit:cover" />
+                            </MudAvatar>
+                        }
+                        <span>@context.Item.Cognoms, @context.Item.Nom</span>
+                    </MudStack>
+                </CellTemplate>
             </TemplateColumn>
             <PropertyColumn Property="s => s.GroupName" Title="@Loc["Results_ColGroup"]" Sortable="true" />
             @foreach (var c in _results.Criteria)
@@ -254,7 +264,13 @@ else
         var sid = s.StudentId;
         <MudExpansionPanel Class="mb-1">
             <TitleContent>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%" Spacing="2">
+                    @if (s.FotoUrl is not null)
+                    {
+                        <MudAvatar Size="Size.Small" Style="width:28px;height:28px;min-width:28px;flex-shrink:0">
+                            <MudImage Src="@s.FotoUrl" Style="width:100%;height:100%;object-fit:cover" />
+                        </MudAvatar>
+                    }
                     <MudText Typo="Typo.body1">@s.Cognoms, @s.Nom (@s.GroupName)</MudText>
                     <MudSpacer />
                     <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Primary"

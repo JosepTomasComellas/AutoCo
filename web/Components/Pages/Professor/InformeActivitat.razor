@@ -112,7 +112,14 @@ else
                         {
                             <tr>
                                 <td>@s.NumLlista</td>
-                                <td><strong>@s.Cognoms</strong>, @s.Nom</td>
+                                <td>
+                                    @if (s.FotoUrl is not null)
+                                    {
+                                        <img src="@s.FotoUrl" alt=""
+                                             style="width:24px;height:24px;object-fit:cover;border-radius:3px;vertical-align:middle;margin-right:6px;border:1px solid #e2e8f0" />
+                                    }
+                                    <strong>@s.Cognoms</strong>, @s.Nom
+                                </td>
                                 <td class="col-nota @(s.AutAvgGlobal.HasValue ? GradeClass(s.AutAvgGlobal.Value) : "grade-none")">
                                     @(s.AutAvgGlobal.HasValue ? s.AutAvgGlobal.Value.ToString("F1") : "—")
                                 </td>
@@ -186,7 +193,13 @@ else
                 <div class="informe-page-break">
                     <!-- Subencapçalament de l'alumne -->
                     <div class="informe-section informe-student-subheader">
-                        <table class="informe-dades">
+                        <div style="display:flex;gap:12px;align-items:center">
+                            @if (s.FotoUrl is not null)
+                            {
+                                <img src="@s.FotoUrl" alt="@s.StudentName"
+                                     style="width:56px;height:56px;object-fit:cover;border-radius:4px;flex-shrink:0;border:1px solid #e2e8f0" />
+                            }
+                        <table class="informe-dades" style="flex:1">
                             <tr>
                                 <td class="label">@Loc["Informe_ColStudent"]</td>
                                 <td class="valor"><strong>@s.Cognoms, @s.Nom</strong></td>
@@ -196,6 +209,7 @@ else
                                 <td>@s.NumLlista</td>
                             </tr>
                         </table>
+                        </div>
                     </div>
                     <!-- Globals -->
                     <div class="informe-section">
