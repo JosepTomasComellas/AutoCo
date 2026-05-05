@@ -42,7 +42,7 @@ public record MoveStudentRequest(int TargetClassId);
 public record BulkMoveStudentsRequest(List<int> StudentIds, int TargetClassId);
 
 public record BulkCreateStudentsRequest(List<CreateStudentRequest> Students);
-public record BulkCreateResult(int Created, int Skipped, List<string> Errors);
+public record BulkCreateResult(int Created, int Updated, int Skipped, List<string> Errors);
 public record ResetPasswordResult(string NewPassword);
 public record SendPasswordResult(bool Sent, string? Reason);
 public record ChangeStudentPasswordRequest(string CurrentPassword, string NewPassword);

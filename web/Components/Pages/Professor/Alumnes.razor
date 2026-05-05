@@ -628,10 +628,11 @@
             _importErrors.AddRange(result.Errors);
             var parts = new List<string>();
             if (result.Created > 0) parts.Add($"{result.Created} alumnes creats");
+            if (result.Updated > 0) parts.Add($"{result.Updated} actualitzats");
             if (result.Skipped > 0) parts.Add($"{result.Skipped} omesos");
             _importSummary = string.Join(", ", parts) + ".";
 
-            if (result.Created > 0)
+            if (result.Created > 0 || result.Updated > 0)
                 Snackbar.Add(_importSummary, Severity.Success);
             else
                 Snackbar.Add(Loc["ClassStudents_NoCreated"].Value, Severity.Warning);

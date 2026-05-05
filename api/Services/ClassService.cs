@@ -160,12 +160,8 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
 
     public async Task<BulkCreateResult> BulkAddStudentsAsync(int classId, BulkCreateStudentsRequest req)
     {
-        int created = 0, skipped = 0;
-        var errors  = new List<string>();
-        var classe  = await db.Classes.FindAsync(classId);
-
-        // Guardem les parelles (estudiant, contrasenya) per enviar correus DESPRÉS de guardar
-        var toEmail   = new List<(Student Student, string Password)>();
+        int created = 0, updated = 0, skipped = 0;
+        var errors      = new List<string>();
         var batchEmails = new HashSet<string>(); // detecta duplicats dins del mateix CSV
 
         foreach (var s in req.Students)
@@ -185,16 +181,34 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
                 skipped++; continue;
             }
 
-            // Comprova duplicats dins el CSV i a la BD
-            if (batchEmails.Contains(emailNorm) || await db.Students.AnyAsync(x => x.Email == emailNorm))
+            if (batchEmails.Contains(emailNorm))
             {
-                errors.Add($"Alumne #{s.NumLlista}: correu duplicat omès ({emailNorm}).");
+                errors.Add($"Alumne #{s.NumLlista}: correu duplicat al fitxer ({emailNorm}).");
                 skipped++; continue;
             }
             batchEmails.Add(emailNorm);
 
+            var existing = await db.Students.FirstOrDefaultAsync(x => x.Email == emailNorm);
+            if (existing is not null)
+            {
+                // Si és d'una altra classe, no el toquem
+                if (existing.ClassId != classId)
+                {
+                    errors.Add($"Alumne #{s.NumLlista}: correu pertany a una altra classe ({emailNorm}).");
+                    skipped++; continue;
+                }
+
+                // Actualitza les dades (sense tocar la contrasenya)
+                existing.NumLlista = s.NumLlista;
+                existing.Nom       = s.Nom.Trim();
+                existing.Cognoms   = s.Cognoms.Trim();
+                existing.Dni       = string.IsNullOrWhiteSpace(s.Dni) ? existing.Dni : s.Dni.Trim().ToUpperInvariant();
+                updated++;
+                continue;
+            }
+
             var password = PasswordHelper.Generate();
-            var student  = new Student
+            db.Students.Add(new Student
             {
                 ClassId                = classId,
                 NumLlista              = s.NumLlista,
@@ -204,13 +218,11 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
                 Email                  = emailNorm,
                 PasswordHash           = PasswordHelper.Hash(password),
                 PlainPasswordEncrypted = pwdCrypto.Encrypt(password)
-            };
-            db.Students.Add(student);
-            toEmail.Add((student, password));
+            });
             created++;
         }
 
-        if (created > 0)
+        if (created > 0 || updated > 0)
         {
             try
             {
@@ -220,13 +232,11 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
                 when (ex.InnerException?.Message.Contains("IX_Students_Email") == true)
             {
                 errors.Add("Error en guardar: algun correu ja existia a la base de dades.");
-                return new BulkCreateResult(0, skipped + created, errors);
+                return new BulkCreateResult(0, 0, skipped + created, errors);
             }
-
-            // Correus no s'envien automàticament; l'admin pot enviar-los manualment
         }
 
-        return new BulkCreateResult(created, skipped, errors);
+        return new BulkCreateResult(created, updated, skipped, errors);
     }
 
     public async Task<ResetPasswordResult?> ResetPasswordAsync(int classId, int studentId)
