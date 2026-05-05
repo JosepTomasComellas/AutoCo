@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.1
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -342,6 +342,11 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.1
+- **Foto al formulari d'avaluació** — l'alumne veu la foto de cada company/a quan omple l'avaluació
+- **Foto als resultats** — la foto apareix a la taula de resultats i als panells d'expansió de coavaluadors
+- **Foto als informes PDF** — informe individual i informe d'activitat mostren la foto de l'alumne (compatible amb impressió)
 
 ### v2.5.0
 - **Fotos d'alumnes** — upload individual (botó càmera per alumne) i **importació massiva en ZIP** (fotos nomenades per la part numèrica del DNI, compatible amb el format EPSS); les fotos es serveixen com a fitxers estàtics via volum Docker compartit (`fotos-data`)
