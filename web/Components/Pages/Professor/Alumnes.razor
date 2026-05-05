@@ -81,6 +81,45 @@
                                   Variant="Variant.Outlined" Class="mt-3" Immediate="true"
                                   HelperText="@Loc["ClassStudents_DniHint"]" />
                 </MudCardContent>
+                @if (_editStudentId != 0)
+                {
+                    <MudDivider Class="mx-4" />
+                    <MudCardContent Class="pt-3 pb-1">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudAvatar Style="width:56px;height:56px;flex-shrink:0">
+                                @if (_editFotoUrl is not null)
+                                {
+                                    <MudImage Src="@($"{_editFotoUrl}?v={_fotoVersion}")"
+                                              Width="56" Height="56" ObjectFit="ObjectFit.Cover" />
+                                }
+                                else
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Large" />
+                                }
+                            </MudAvatar>
+                            <MudStack Spacing="1">
+                                <MudFileUpload T="IBrowserFile" FilesChanged="UploadEditFotoAsync"
+                                               Accept=".jpg,.jpeg,.png,.webp" MaximumFileCount="1">
+                                    <ActivatorContent>
+                                        <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                                                   StartIcon="@Icons.Material.Filled.CameraAlt"
+                                                   Color="Color.Warning">
+                                            @Loc["Profile_ChangeFoto"]
+                                        </MudButton>
+                                    </ActivatorContent>
+                                </MudFileUpload>
+                                @if (_editFotoUrl is not null)
+                                {
+                                    <MudButton Variant="Variant.Text" Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                                               Color="Color.Error" OnClick="DeleteEditFotoAsync">
+                                        @Loc["Profile_DeleteFoto"]
+                                    </MudButton>
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                }
                 <MudCardActions Class="px-4 pb-4 gap-2">
                     @if (_editStudentId == 0)
                     {
@@ -357,6 +396,7 @@
     private string _correu       = "";
     private string _dni          = "";
     private int    _editStudentId = 0;
+    private string? _editFotoUrl  = null;
 
     private IBrowserFile?  _importFile;
     private List<string>   _importErrors = [];
@@ -555,12 +595,14 @@
         _numLlista     = s.NumLlista;
         _correu        = s.Email;
         _dni           = s.Dni ?? "";
+        _editFotoUrl   = s.FotoUrl;
     }
 
     private void CancelEdit()
     {
         _editStudentId = 0;
         _nom = ""; _cognoms = ""; _correu = ""; _numLlista = 1; _dni = "";
+        _editFotoUrl = null;
     }
 
     private async Task SaveEditAsync()
@@ -926,6 +968,38 @@
     }
 
     // ── Fotos ────────────────────────────────────────────────────────────────
+
+    private async Task UploadEditFotoAsync(IBrowserFile file)
+    {
+        if (file is null || _editStudentId == 0) return;
+        Api.SetToken(UserState.Token!);
+        var url = await Api.UploadStudentFotoAsync(ClassId, _editStudentId, file);
+        if (url is not null)
+        {
+            _editFotoUrl = url;
+            var idx = _students.FindIndex(s => s.Id == _editStudentId);
+            if (idx >= 0) _students[idx] = _students[idx] with { FotoUrl = url };
+            _fotoVersion++;
+            Snackbar.Add(Loc["ClassStudents_FotoUploaded"].Value, Severity.Success);
+        }
+        else Snackbar.Add(Loc["ClassStudents_FotoError"].Value, Severity.Error);
+    }
+
+    private async Task DeleteEditFotoAsync()
+    {
+        if (_editStudentId == 0) return;
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.DeleteStudentFotoAsync(ClassId, _editStudentId);
+        if (ok)
+        {
+            _editFotoUrl = null;
+            var idx = _students.FindIndex(s => s.Id == _editStudentId);
+            if (idx >= 0) _students[idx] = _students[idx] with { FotoUrl = null };
+            _fotoVersion++;
+            Snackbar.Add(Loc["Profile_FotoDeleted"].Value, Severity.Success);
+        }
+        else Snackbar.Add(Loc["ClassStudents_FotoError"].Value, Severity.Error);
+    }
 
     private async Task UploadFotoAsync(StudentDto student, IBrowserFile file)
     {
