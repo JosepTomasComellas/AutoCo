@@ -103,7 +103,14 @@
                                 <MudAvatar Color="@(p.IsAdmin ? Color.Warning : Color.Default)"
                                            Variant="Variant.Filled" Size="Size.Medium"
                                            Style="font-size:.85rem;font-weight:700;flex-shrink:0">
-                                    @(p.Nom.Length > 0 ? p.Nom[0].ToString().ToUpper() : "")@(p.Cognoms.Length > 0 ? p.Cognoms[0].ToString().ToUpper() : "")
+                                    @if (p.FotoUrl is not null)
+                                    {
+                                        <MudImage Src="@p.FotoUrl" Width="40" Height="40" ObjectFit="ObjectFit.Cover" />
+                                    }
+                                    else
+                                    {
+                                        @(p.Nom.Length > 0 ? p.Nom[0].ToString().ToUpper() : "")@(p.Cognoms.Length > 0 ? p.Cognoms[0].ToString().ToUpper() : "")
+                                    }
                                 </MudAvatar>
                                 <MudStack Spacing="0" Style="flex:1;min-width:0">
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">

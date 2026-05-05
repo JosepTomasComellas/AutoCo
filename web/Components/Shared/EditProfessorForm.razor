@@ -1,8 +1,48 @@
 @inject ApiClient Api
 @inject UserStateService UserState
+@inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResources> Loc
 
-<MudStack Spacing="2" Class="pa-2">
+<MudStack Spacing="3" Class="pa-2">
+
+    @* ── Foto ──────────────────────────────────────────────────────────── *@
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudAvatar Style="width:64px;height:64px;flex-shrink:0">
+            @if (_fotoUrl is not null)
+            {
+                <MudImage Src="@($"{_fotoUrl}?v={_fotoVersion}")"
+                          Width="64" Height="64" ObjectFit="ObjectFit.Cover" />
+            }
+            else
+            {
+                <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Size="Size.Large" />
+            }
+        </MudAvatar>
+        <MudStack Spacing="1">
+            <MudFileUpload T="IBrowserFile" FilesChanged="UploadFotoAsync"
+                           Accept=".jpg,.jpeg,.png" MaximumFileCount="1">
+                <ActivatorContent>
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.CameraAlt"
+                               Color="Color.Primary">
+                        @Loc["Profile_ChangeFoto"]
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+            @if (_fotoUrl is not null)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small"
+                           StartIcon="@Icons.Material.Filled.DeleteForever"
+                           Color="Color.Error" OnClick="DeleteFotoAsync">
+                    @Loc["Profile_DeleteFoto"]
+                </MudButton>
+            }
+        </MudStack>
+    </MudStack>
+
+    <MudDivider />
+
+    @* ── Dades ─────────────────────────────────────────────────────────── *@
     <MudTextField @bind-Value="_email" Label="@Loc["Label_Email"]"
                   InputType="InputType.Email" Variant="Variant.Outlined" />
     <MudGrid Spacing="2">
@@ -35,6 +75,8 @@
     private bool   _isAdmin = false;
     private bool   _saving  = false;
     private bool   _showPwd = false;
+    private string? _fotoUrl;
+    private int    _fotoVersion = 0;
     private string _pwdIcon => _showPwd ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
 
     protected override void OnParametersSet()
@@ -44,6 +86,7 @@
         _cognoms = Professor.Cognoms;
         _isAdmin = Professor.IsAdmin;
         _newPwd  = "";
+        _fotoUrl = Professor.FotoUrl;
     }
 
     private async Task SaveAsync()
@@ -62,5 +105,36 @@
             _newPwd = "";
             await OnSaved.InvokeAsync(updated);
         }
+    }
+
+    private async Task UploadFotoAsync(IBrowserFile file)
+    {
+        if (file is null) return;
+        Api.SetToken(UserState.Token!);
+        var url = await Api.UploadProfessorFotoAsync(Professor.Id, file);
+        if (url is not null)
+        {
+            _fotoUrl = url;
+            _fotoVersion++;
+            if (UserState.UserId == Professor.Id)
+                UserState.UpdateFotoUrl(url);
+            Snackbar.Add(Loc["Profile_FotoUpdated"].Value, Severity.Success);
+        }
+        else Snackbar.Add(Loc["Profile_FotoError"].Value, Severity.Error);
+    }
+
+    private async Task DeleteFotoAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.DeleteProfessorFotoAsync(Professor.Id);
+        if (ok)
+        {
+            _fotoUrl = null;
+            _fotoVersion++;
+            if (UserState.UserId == Professor.Id)
+                UserState.UpdateFotoUrl(null);
+            Snackbar.Add(Loc["Profile_FotoDeleted"].Value, Severity.Success);
+        }
+        else Snackbar.Add(Loc["Profile_FotoError"].Value, Severity.Error);
     }
 }
