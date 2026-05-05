@@ -45,6 +45,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(s => s.Nom).HasMaxLength(100);
             e.Property(s => s.Cognoms).HasMaxLength(200);
             e.Property(s => s.PasswordHash).HasMaxLength(100);
+            e.Property(s => s.PlainPasswordEncrypted).HasMaxLength(500);
             e.Ignore(s => s.NomComplet);
         });
 

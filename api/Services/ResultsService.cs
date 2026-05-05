@@ -298,6 +298,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
         var headers = new List<string> { "Núm.", "Nom", "Cognoms", "Correu", "Grup", "Coavaluació", "Autoavaluació" };
         foreach (var c in results.Criteria) headers.Add($"Co: {c.Label}");
         foreach (var c in results.Criteria) headers.Add($"Auto: {c.Label}");
+        headers.Add("Comentari");
 
         int row = 5, col = 1;
         foreach (var h in headers)
@@ -346,6 +347,13 @@ public class ResultsService(AppDbContext db, IDistributedCache cache) : IResults
                 var autoScore = s.SelfScores.TryGetValue(c.Key, out var av) ? av : null;
                 var c2 = ws.Cell(row, col++);
                 if (autoScore.HasValue) c2.Value = autoScore.Value;
+            }
+
+            var commentCell = ws.Cell(row, col++);
+            if (!string.IsNullOrWhiteSpace(s.SelfComment))
+            {
+                commentCell.Value = s.SelfComment;
+                commentCell.Style.Alignment.WrapText = true;
             }
         }
 

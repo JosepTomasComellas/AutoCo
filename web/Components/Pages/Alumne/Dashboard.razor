@@ -3,6 +3,7 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResources> Loc
+@inject ISnackbar Snackbar
 
 <PageTitle>Les meves activitats – AutoCo</PageTitle>
 @if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
@@ -10,8 +11,47 @@
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
     <MudText Typo="Typo.h5">@Loc["Student_Welcome", UserState.NomComplet ?? ""]</MudText>
     <MudSpacer />
-    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">@Loc["Student_Activities"]</MudText>
+    <MudIconButton Icon="@Icons.Material.Filled.Lock"
+                   title="@Loc["Student_ChangePassword"]"
+                   OnClick="OpenChangePwdDialog" Size="Size.Small" />
 </MudStack>
+
+<!-- Diàleg canvi de contrasenya -->
+<MudDialog @bind-IsOpen="_pwdDialogOpen">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" Style="vertical-align:middle" />
+            @Loc["Student_ChangePassword"]
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3" Style="min-width:300px">
+            <MudTextField @bind-Value="_pwdActual" Label="@Loc["Profile_CurrentPassword"]"
+                          InputType="@_pwdTypeActual" Variant="Variant.Outlined"
+                          Adornment="Adornment.End" AdornmentIcon="@_pwdIconActual"
+                          OnAdornmentClick="() => _showActual = !_showActual" />
+            <MudTextField @bind-Value="_pwdNova" Label="@Loc["Profile_NewPassword"]"
+                          InputType="@_pwdTypeNova" Variant="Variant.Outlined"
+                          HelperText="@Loc["Student_PwdMinLength"]"
+                          Adornment="Adornment.End" AdornmentIcon="@_pwdIconNova"
+                          OnAdornmentClick="() => _showNova = !_showNova" />
+            <MudTextField @bind-Value="_pwdConfirm" Label="@Loc["Profile_ConfirmPassword"]"
+                          InputType="InputType.Password" Variant="Variant.Outlined" />
+            @if (_pwdError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true">@_pwdError</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => _pwdDialogOpen = false">@Loc["Action_Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   OnClick="SavePasswordAsync" Disabled="_pwdSaving">
+            @if (_pwdSaving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" /> }
+            @Loc["Action_Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
 
 @if (_loading)
 {
@@ -113,6 +153,20 @@ else
         .Where(a => !_nomesPendents || (a.IsOpen && a.AlreadyEvaluated < a.TotalToEvaluate))
         .ToList();
 
+    // Canvi de contrasenya
+    private bool   _pwdDialogOpen = false;
+    private string _pwdActual     = "";
+    private string _pwdNova       = "";
+    private string _pwdConfirm    = "";
+    private bool   _pwdSaving     = false;
+    private string? _pwdError;
+    private bool _showActual = false;
+    private bool _showNova   = false;
+    private InputType _pwdTypeActual => _showActual ? InputType.Text : InputType.Password;
+    private InputType _pwdTypeNova   => _showNova   ? InputType.Text : InputType.Password;
+    private string _pwdIconActual => _showActual ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+    private string _pwdIconNova   => _showNova   ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility;
+
     protected override async Task OnInitializedAsync()
     {
         if (!UserState.IsStudent) return;
@@ -120,5 +174,38 @@ else
         var dashboard = await Api.GetStudentDashboardAsync();
         _activities = dashboard?.Activities ?? [];
         _loading = false;
+    }
+
+    private void OpenChangePwdDialog()
+    {
+        _pwdActual = _pwdNova = _pwdConfirm = "";
+        _pwdError  = null;
+        _pwdDialogOpen = true;
+    }
+
+    private async Task SavePasswordAsync()
+    {
+        _pwdError = null;
+        if (string.IsNullOrWhiteSpace(_pwdActual))
+        { _pwdError = Loc["Profile_NeedCurrentPwd"].Value; return; }
+        if (_pwdNova.Length < 6)
+        { _pwdError = Loc["Student_PwdMinLength"].Value; return; }
+        if (_pwdNova != _pwdConfirm)
+        { _pwdError = Loc["Profile_PwdMismatch"].Value; return; }
+
+        _pwdSaving = true;
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.ChangeStudentPasswordAsync(_pwdActual, _pwdNova);
+        _pwdSaving = false;
+
+        if (ok)
+        {
+            _pwdDialogOpen = false;
+            Snackbar.Add(Loc["Student_PwdChanged"].Value, Severity.Success);
+        }
+        else
+        {
+            _pwdError = Loc["Profile_NeedCurrentPwd"].Value;
+        }
     }
 }

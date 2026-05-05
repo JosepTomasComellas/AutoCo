@@ -44,6 +44,7 @@ public record BulkCreateStudentsRequest(List<CreateStudentRequest> Students);
 public record BulkCreateResult(int Created, int Skipped, List<string> Errors);
 public record ResetPasswordResult(string NewPassword);
 public record SendPasswordResult(bool Sent, string? Reason);
+public record ChangeStudentPasswordRequest(string CurrentPassword, string NewPassword);
 
 // ─── Criteris per activitat ──────────────────────────────────────────────────
 public record ActivityCriterionDto(int Id, string Key, string Label, int OrderIndex);
@@ -77,6 +78,9 @@ public record ImportGroupsRequest(string CsvContent);
 public record ImportGroupsResult(int Assigned, int Skipped, List<string> Errors);
 public record ParticipationDto(int ActivityId, int Submitted, int Total);
 public record ReminderResult(int Sent, int Skipped, bool EmailDisabled);
+public record InviteTargetDto(int StudentId, string NomComplet, string Email, string GroupName);
+public record InviteOneRequest(bool IncludePassword);
+public record InviteOneResult(bool Sent, string? Error);
 
 // ─── Grups ───────────────────────────────────────────────────────────────────
 public record GroupDto(int Id, int ActivityId, string Name, List<StudentDto> Members, int OrderIndex = 0);
@@ -136,7 +140,8 @@ public record BackupDto(
     string Version, DateTime CreatedAt,
     List<ProfessorBackupDto>  Professors,
     List<ClassBackupDto>      Classes,
-    List<ActivityBackupDto>   Activities);
+    List<ActivityBackupDto>   Activities,
+    List<TemplateBackupDto>?  Templates = null);
 
 public record ProfessorBackupDto(
     int Id, string Email, string Nom, string Cognoms,
@@ -149,17 +154,26 @@ public record ClassBackupDto(
 
 public record StudentBackupDto(
     int Id, string Nom, string Cognoms, int NumLlista,
-    string Email, string PasswordHash, DateTime CreatedAt);
+    string Email, string PasswordHash, DateTime CreatedAt,
+    string? PlainPasswordEncrypted = null);
 
 public record ModuleBackupDto(
     int Id, int ProfessorId, string Code, string Name, DateTime CreatedAt,
     List<int> ExcludedStudentIds);
 
+public record CriterionBackupDto(string Key, string Label, int OrderIndex);
+public record NoteBackupDto(int StudentId, string Note, DateTime UpdatedAt);
+public record TemplateBackupDto(
+    int Id, int ProfessorId, string Name, string? Description,
+    string CriteriaJson, DateTime CreatedAt);
+
 public record ActivityBackupDto(
     int Id, int ModuleId, string Name, string? Description,
     bool IsOpen, DateTime CreatedAt,
-    List<GroupBackupDto>      Groups,
-    List<EvaluationBackupDto> Evaluations);
+    List<GroupBackupDto>       Groups,
+    List<EvaluationBackupDto>  Evaluations,
+    List<CriterionBackupDto>?  Criteria  = null,
+    List<NoteBackupDto>?       Notes     = null);
 
 public record GroupBackupDto(int Id, string Name, List<int> StudentIds);
 

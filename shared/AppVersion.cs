@@ -3,9 +3,9 @@ namespace AutoCo.Shared;
 /// <summary>Versió de l'aplicació AutoCo. Actualitzar en cada canvi significatiu.</summary>
 public static class AppVersion
 {
-    public const string Current = "2.2.3";
+    public const string Current = "2.3.0";
     public const string Name    = "AutoCo Avaluació";
 
     /// <summary>Descripció del canvi per al changelog intern.</summary>
-    public const string ChangeLog = "v2.2.3: fix participació mitjana capada al 100%";
+    public const string ChangeLog = "v2.3.0: contrasenya xifrada alumnes, invitació per correu amb progress, comentaris a Excel, backup complet amb automatització";
 }

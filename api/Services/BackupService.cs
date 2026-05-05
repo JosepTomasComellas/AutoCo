@@ -10,13 +10,15 @@ namespace AutoCo.Api.Services;
 
 public interface IBackupService
 {
-    Task<BackupDto>              ExportAsync();
-    Task<ImportResult>           ImportAsync(BackupDto backup);
+    Task<BackupDto>               ExportAsync();
+    Task<ImportResult>            ImportAsync(BackupDto backup);
     Task<List<BackupFileInfoDto>> ListFilesAsync();
-    Task<BackupFileInfoDto>      CreateFileAsync();
+    Task<BackupFileInfoDto>       CreateFileAsync();
+    Task<BackupFileInfoDto>       CreateAutoBackupAsync(string type);
+    Task                          ApplyRetentionAsync(string type, int maxCount);
     Task<(byte[] Data, string Name)?> DownloadFileAsync(string name);
-    Task<bool>                   DeleteFileAsync(string name);
-    Task<ImportResult>           RestoreFileAsync(string name);
+    Task<bool>                    DeleteFileAsync(string name);
+    Task<ImportResult>            RestoreFileAsync(string name);
 }
 
 public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupService> logger) : IBackupService
@@ -41,15 +43,18 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var modules    = await db.Modules.AsNoTracking().ToListAsync();
         var exclusions = await db.ModuleExclusions.AsNoTracking().ToListAsync();
         var activities = await db.Activities.AsNoTracking().ToListAsync();
+        var criteria   = await db.ActivityCriteria.AsNoTracking().ToListAsync();
         var groups     = await db.Groups.AsNoTracking().ToListAsync();
         var members    = await db.GroupMembers.AsNoTracking().ToListAsync();
         var evals      = await db.Evaluations.AsNoTracking().Include(e => e.Scores).ToListAsync();
+        var notes      = await db.ProfessorNotes.AsNoTracking().ToListAsync();
+        var templates  = await db.ActivityTemplates.AsNoTracking().ToListAsync();
 
         var classDtos = classes.Select(c => new ClassBackupDto(
             c.Id, c.Name, c.AcademicYear, c.CreatedAt,
             students.Where(s => s.ClassId == c.Id)
                 .Select(s => new StudentBackupDto(s.Id, s.Nom, s.Cognoms, s.NumLlista,
-                    s.Email, s.PasswordHash, s.CreatedAt)).ToList(),
+                    s.Email, s.PasswordHash, s.CreatedAt, s.PlainPasswordEncrypted)).ToList(),
             modules.Where(m => m.ClassId == c.Id)
                 .Select(m => new ModuleBackupDto(m.Id, m.ProfessorId, m.Code, m.Name, m.CreatedAt,
                     exclusions.Where(e => e.ModuleId == m.Id).Select(e => e.StudentId).ToList()))
@@ -67,13 +72,26 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                     e.EvaluatorId, e.EvaluatedId, e.IsSelf,
                     e.Scores.ToDictionary(s => s.CriteriaKey, s => s.Score),
                     e.Comment, e.UpdatedAt))
+                .ToList(),
+            criteria.Where(c => c.ActivityId == a.Id)
+                .OrderBy(c => c.OrderIndex)
+                .Select(c => new CriterionBackupDto(c.Key, c.Label, c.OrderIndex))
                 .ToList()
+                .NullIfEmpty(),
+            notes.Where(n => n.ActivityId == a.Id)
+                .Select(n => new NoteBackupDto(n.StudentId, n.Note, n.UpdatedAt))
+                .ToList()
+                .NullIfEmpty()
         )).ToList();
+
+        var templateDtos = templates.Select(t => new TemplateBackupDto(
+            t.Id, t.ProfessorId, t.Name, t.Description, t.CriteriaJson, t.CreatedAt)).ToList();
 
         return new BackupDto("1.0", DateTime.UtcNow,
             professors.Select(p => new ProfessorBackupDto(
                 p.Id, p.Email, p.Nom, p.Cognoms, p.IsAdmin, p.PasswordHash, p.CreatedAt)).ToList(),
-            classDtos, activityDtos);
+            classDtos, activityDtos,
+            templateDtos.Count > 0 ? templateDtos : null);
     }
 
     // ── Import (substitueix totes les dades) ──────────────────────────────────
@@ -85,6 +103,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             // Esborrar en ordre de dependències FK
             await db.EvaluationScores.ExecuteDeleteAsync();
             await db.Evaluations.ExecuteDeleteAsync();
+            await db.ProfessorNotes.ExecuteDeleteAsync();
+            await db.ActivityCriteria.ExecuteDeleteAsync();
             await db.GroupMembers.ExecuteDeleteAsync();
             await db.Groups.ExecuteDeleteAsync();
             await db.Activities.ExecuteDeleteAsync();
@@ -92,6 +112,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             await db.Modules.ExecuteDeleteAsync();
             await db.Students.ExecuteDeleteAsync();
             await db.Classes.ExecuteDeleteAsync();
+            await db.ActivityTemplates.ExecuteDeleteAsync();
             await db.Professors.ExecuteDeleteAsync();
 
             // ── Professors (1 SaveChanges) ────────────────────────────────────
@@ -104,6 +125,22 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             await db.SaveChangesAsync();
             var profMap = bk.Professors.Zip(profEnts)
                 .ToDictionary(x => x.First.Id, x => x.Second.Id);
+
+            // ── Activity Templates (1 SaveChanges) ───────────────────────────
+            if (bk.Templates is { Count: > 0 })
+            {
+                foreach (var t in bk.Templates)
+                    if (profMap.TryGetValue(t.ProfessorId, out var newProfId))
+                        db.ActivityTemplates.Add(new ActivityTemplate
+                        {
+                            ProfessorId  = newProfId,
+                            Name         = t.Name,
+                            Description  = t.Description,
+                            CriteriaJson = t.CriteriaJson,
+                            CreatedAt    = t.CreatedAt
+                        });
+                await db.SaveChangesAsync();
+            }
 
             // ── Classes (1 SaveChanges) ───────────────────────────────────────
             var classEnts = bk.Classes.Select(c => new Class
@@ -121,7 +158,9 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                     {
                         ClassId = classEnts[ci].Id, Nom = s.Nom, Cognoms = s.Cognoms,
                         NumLlista = s.NumLlista, Email = s.Email,
-                        PasswordHash = s.PasswordHash, CreatedAt = s.CreatedAt
+                        PasswordHash = s.PasswordHash,
+                        PlainPasswordEncrypted = s.PlainPasswordEncrypted,
+                        CreatedAt = s.CreatedAt
                     };
                     studentPairs.Add((s, ent));
                     db.Students.Add(ent);
@@ -171,6 +210,19 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             }
             await db.SaveChangesAsync();
 
+            // ── Activity Criteria (1 SaveChanges) ────────────────────────────
+            foreach (var (aDto, actEnt) in actPairs)
+                if (aDto.Criteria is { Count: > 0 })
+                    foreach (var c in aDto.Criteria)
+                        db.ActivityCriteria.Add(new ActivityCriterion
+                        {
+                            ActivityId = actEnt.Id,
+                            Key        = c.Key,
+                            Label      = c.Label,
+                            OrderIndex = c.OrderIndex
+                        });
+            await db.SaveChangesAsync();
+
             // ── Groups (1 SaveChanges) ────────────────────────────────────────
             var groupPairs = new List<(GroupBackupDto Dto, Group Ent)>();
             foreach (var (aDto, actEnt) in actPairs)
@@ -204,13 +256,27 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                     evalPairs.Add((ent, ev.Scores));
                     db.Evaluations.Add(ent);
                 }
-            await db.SaveChangesAsync(); // obté els Ids per als Scores
+            await db.SaveChangesAsync();
 
             // ── Evaluation Scores (1 SaveChanges) ─────────────────────────────
             foreach (var (evEnt, scores) in evalPairs)
                 foreach (var (key, score) in scores)
                     db.EvaluationScores.Add(new EvaluationScore
                         { EvaluationId = evEnt.Id, CriteriaKey = key, Score = score });
+            await db.SaveChangesAsync();
+
+            // ── Professor Notes (1 SaveChanges) ───────────────────────────────
+            foreach (var (aDto, actEnt) in actPairs)
+                if (aDto.Notes is { Count: > 0 })
+                    foreach (var n in aDto.Notes)
+                        if (studentMap.TryGetValue(n.StudentId, out var newStId))
+                            db.ProfessorNotes.Add(new ProfessorNote
+                            {
+                                ActivityId = actEnt.Id,
+                                StudentId  = newStId,
+                                Note       = n.Note,
+                                UpdatedAt  = n.UpdatedAt
+                            });
             await db.SaveChangesAsync();
 
             await tx.CommitAsync();
@@ -252,6 +318,33 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         return new BackupFileInfoDto(name, info.LastWriteTimeUtc, info.Length);
     }
 
+    public async Task<BackupFileInfoDto> CreateAutoBackupAsync(string type)
+    {
+        EnsureDir();
+        var backup = await ExportAsync();
+        var name   = $"backup_{type}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+        var path   = Path.Combine(BackupsDir, name);
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(backup, _json));
+        var info   = new FileInfo(path);
+        logger.LogInformation("Backup automàtic {Type} creat: {Name}", type, name);
+        return new BackupFileInfoDto(name, info.LastWriteTimeUtc, info.Length);
+    }
+
+    public Task ApplyRetentionAsync(string type, int maxCount)
+    {
+        EnsureDir();
+        var files = new DirectoryInfo(BackupsDir)
+            .GetFiles($"backup_{type}_*.json")
+            .OrderByDescending(f => f.Name)
+            .ToList();
+        foreach (var f in files.Skip(maxCount))
+        {
+            logger.LogInformation("Retenció backup {Type}: esborrant {File}", type, f.Name);
+            f.Delete();
+        }
+        return Task.CompletedTask;
+    }
+
     public async Task<(byte[] Data, string Name)?> DownloadFileAsync(string name)
     {
         var path = SafePath(name);
@@ -286,4 +379,11 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         if (!name.StartsWith("backup_") || !name.EndsWith(".json")) return null;
         return Path.Combine(BackupsDir, name);
     }
+}
+
+// ── Extensió auxiliar ─────────────────────────────────────────────────────────
+file static class ListExtensions
+{
+    public static List<T>? NullIfEmpty<T>(this List<T> list) =>
+        list.Count > 0 ? list : null;
 }

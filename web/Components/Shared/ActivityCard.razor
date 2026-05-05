@@ -103,8 +103,12 @@
             </MudMenuItem>
             @if (Act.IsOpen)
             {
+                <MudMenuItem Icon="@Icons.Material.Filled.Campaign"
+                             OnClick="OpenInviteDialogAsync">
+                    @Loc["Card_Invite"]
+                </MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive"
-                             OnClick="SendRemindersAsync">
+                             OnClick="OpenRemindDialogAsync">
                     @Loc["Card_SendReminders"]
                 </MudMenuItem>
             }
@@ -121,6 +125,92 @@
         </MudMenu>
     </MudCardActions>
 </MudCard>
+
+<!-- Diàleg d'enviament de missatges (invitació i recordatori) -->
+<MudDialog @bind-IsOpen="_emailDialogOpen" Options="_emailDialogOpts">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+            <MudIcon Icon="@(_emailIsInvite ? Icons.Material.Filled.Campaign : Icons.Material.Filled.NotificationsActive)"
+                     Size="Size.Small" />
+            <MudText Typo="Typo.h6">@_emailDialogTitle</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (_emailPhase == "confirm")
+        {
+            @if (_emailTargets.Count == 0)
+            {
+                <MudText>@Loc[_emailIsInvite ? "Card_InviteNoTargets" : "Card_RemindNoTargets"]</MudText>
+            }
+            else
+            {
+                <MudText Class="mb-3">
+                    @Loc[_emailIsInvite ? "Card_InviteInfo" : "Card_RemindersInfo2", _emailTargets.Count]
+                </MudText>
+                @if (_emailIsInvite)
+                {
+                    <MudCheckBox @bind-Value="_emailIncludePwd" Color="Color.Primary"
+                                 Label="@Loc["Card_InviteIncludePwd"]" />
+                }
+            }
+        }
+        else if (_emailPhase == "sending")
+        {
+            <MudStack Spacing="2">
+                <MudProgressLinear Value="_emailProgress" Max="_emailTargets.Count"
+                                   Color="Color.Primary" Rounded="true" />
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                    @Loc["Card_EmailSendingProgress", _emailProgress, _emailTargets.Count]
+                </MudText>
+                @if (!string.IsNullOrEmpty(_emailCurrent))
+                {
+                    <MudText Typo="Typo.body2" Align="Align.Center">@_emailCurrent</MudText>
+                }
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="1">
+                @if (_emailSent > 0)
+                {
+                    <MudChip T="string" Icon="@Icons.Material.Filled.CheckCircle"
+                             Color="Color.Success" Size="Size.Small">
+                        @Loc["Card_EmailSent", _emailSent]
+                    </MudChip>
+                }
+                @if (_emailSkipped > 0)
+                {
+                    <MudChip T="string" Icon="@Icons.Material.Filled.Error"
+                             Color="Color.Error" Size="Size.Small">
+                        @Loc["Card_EmailErrors", _emailSkipped]
+                    </MudChip>
+                }
+                @if (_emailSent == 0 && _emailSkipped == 0)
+                {
+                    <MudText>@Loc["Card_AllEvaluated"]</MudText>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (_emailPhase == "confirm")
+        {
+            <MudButton OnClick="() => _emailDialogOpen = false">@Loc["Action_Cancel"]</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="StartEmailSendAsync"
+                       Disabled="_emailTargets.Count == 0">
+                @Loc["Action_Send"]
+            </MudButton>
+        }
+        else if (_emailPhase == "done")
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="() => _emailDialogOpen = false">
+                @Loc["Action_Close"]
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
 
 @code {
     [Parameter, EditorRequired] public ActivityDto Act { get; set; } = default!;
@@ -297,25 +387,67 @@
             Snackbar.Add(Loc["Card_TemplateError"].Value, Severity.Error);
     }
 
-    private async Task SendRemindersAsync()
+    // ── Diàleg d'enviament de missatges ─────────────────────────────────────
+    private bool   _emailDialogOpen = false;
+    private string _emailDialogTitle = "";
+    private bool   _emailIsInvite   = false;
+    private bool   _emailIncludePwd = false;
+    private List<InviteTargetDto> _emailTargets = [];
+    private int    _emailSent     = 0;
+    private int    _emailSkipped  = 0;
+    private int    _emailProgress = 0;
+    private string _emailCurrent  = "";
+    private string _emailPhase    = "confirm"; // confirm | sending | done
+    private static readonly DialogOptions _emailDialogOpts = new()
+        { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private async Task OpenInviteDialogAsync()
     {
-        var confirm = await Dialog.ShowMessageBox(Loc["Card_RemindersTitle"].Value,
-            Loc["Card_RemindersInfo"].Value,
-            yesText: Loc["Action_Send"].Value, cancelText: Loc["Action_Cancel"].Value);
-        if (confirm != true) return;
-
         Api.SetToken(UserState.Token!);
-        var result = await Api.SendRemindersAsync(Act.Id);
-        if (result is null) { Snackbar.Add(Loc["Card_SendReminders"].Value, Severity.Error); return; }
+        _emailTargets   = await Api.GetInviteTargetsAsync(Act.Id) ?? [];
+        _emailIsInvite  = true;
+        _emailIncludePwd = false;
+        ResetEmailState();
+        _emailDialogTitle = Loc["Card_InviteTitle"].Value;
+        _emailDialogOpen  = true;
+    }
 
-        if (result.EmailDisabled)
-            Snackbar.Add(Loc["Card_EmailDisabled"].Value, Severity.Warning);
-        else if (result.Sent == 0 && result.Skipped == 0)
-            Snackbar.Add(Loc["Card_AllEvaluated"].Value, Severity.Success);
-        else
-            Snackbar.Add(Loc["Card_RemindersSent", result.Sent].Value +
-                (result.Skipped > 0 ? Loc["Card_RemindersErrors", result.Skipped].Value : ""),
-                result.Skipped > 0 ? Severity.Warning : Severity.Success);
+    private async Task OpenRemindDialogAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        _emailTargets  = await Api.GetRemindTargetsAsync(Act.Id) ?? [];
+        _emailIsInvite = false;
+        ResetEmailState();
+        _emailDialogTitle = Loc["Card_RemindersTitle"].Value;
+        _emailDialogOpen  = true;
+    }
+
+    private void ResetEmailState()
+    {
+        _emailSent = _emailSkipped = _emailProgress = 0;
+        _emailCurrent = "";
+        _emailPhase   = "confirm";
+    }
+
+    private async Task StartEmailSendAsync()
+    {
+        _emailPhase = "sending";
+        StateHasChanged();
+
+        foreach (var target in _emailTargets)
+        {
+            _emailCurrent = target.NomComplet;
+            StateHasChanged();
+            bool sent = _emailIsInvite
+                ? await Api.InviteOneAsync(Act.Id, target.StudentId, _emailIncludePwd)
+                : await Api.RemindOneAsync(Act.Id, target.StudentId);
+            if (sent) _emailSent++; else _emailSkipped++;
+            _emailProgress++;
+            StateHasChanged();
+        }
+
+        _emailPhase = "done";
+        StateHasChanged();
     }
 
     private async Task DeleteAsync()

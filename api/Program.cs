@@ -13,9 +13,6 @@ using AutoCo.Api.Data.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// L'API usa JWT (no DataProtection). Silencia l'avís de claus no persistides.
-builder.Logging.AddFilter("Microsoft.AspNetCore.DataProtection", LogLevel.Error);
-
 // ── Base de dades ─────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -41,6 +38,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ── Serveis ───────────────────────────────────────────────────────────────────
+builder.Services.AddSingleton<IPasswordCryptoService>(
+    new PasswordCryptoService(jwtSecret));
 builder.Services.AddScoped<IAuthService,       AuthService>();
 builder.Services.AddScoped<IProfessorService,  ProfessorService>();
 builder.Services.AddScoped<IClassService,      ClassService>();
@@ -50,6 +49,7 @@ builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IResultsService,    ResultsService>();
 builder.Services.AddScoped<IEmailService,      EmailService>();
 builder.Services.AddScoped<IBackupService,     BackupService>();
+builder.Services.AddHostedService<BackupHostedService>();
 
 // ── Redis (caché de resultats) ─────────────────────────────────────────────────
 var redisConn = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
@@ -626,6 +626,85 @@ app.MapPost("/api/activities/{id:int}/remind", async (int id, IActivityService s
     return Results.Ok(result);
 }).RequireAuthorization();
 
+app.MapGet("/api/activities/{id:int}/remind-targets", async (
+    int id, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var profId = GetUserId(user); var isAdmin = IsAdmin(user);
+    var activity = await db.Activities
+        .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
+        .Include(a => a.Module)
+        .FirstOrDefaultAsync(a => a.Id == id && a.IsOpen &&
+            (isAdmin || a.Module.ProfessorId == profId));
+    if (activity is null) return Results.NotFound();
+    var submittedIds = await db.Evaluations
+        .Where(e => e.ActivityId == id).Select(e => e.EvaluatorId).Distinct().ToHashSetAsync();
+    var targets = activity.Groups
+        .SelectMany(g => g.Members)
+        .Select(m => m.Student).DistinctBy(s => s.Id)
+        .Where(s => !submittedIds.Contains(s.Id))
+        .Select(s => new InviteTargetDto(s.Id, s.NomComplet, s.Email, ""))
+        .OrderBy(t => t.NomComplet).ToList();
+    return Results.Ok(targets);
+}).RequireAuthorization();
+
+app.MapPost("/api/activities/{id:int}/remind-one/{studentId:int}", async (
+    int id, int studentId, AppDbContext db, IEmailService emailSvc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var profId = GetUserId(user); var isAdmin = IsAdmin(user);
+    var activity = await db.Activities
+        .Include(a => a.Module).ThenInclude(m => m.Class)
+        .FirstOrDefaultAsync(a => a.Id == id && a.IsOpen &&
+            (isAdmin || a.Module.ProfessorId == profId));
+    if (activity is null) return Results.NotFound();
+    var student = await db.Students.FindAsync(studentId);
+    if (student is null) return Results.NotFound();
+    var sent = await emailSvc.SendReminderAsync(
+        student.Email, student.NomComplet, activity.Name, activity.Module.Class.Name);
+    return Results.Ok(new InviteOneResult(sent, sent ? null : "Error en l'enviament."));
+}).RequireAuthorization();
+
+app.MapGet("/api/activities/{id:int}/invite-targets", async (
+    int id, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var profId = GetUserId(user); var isAdmin = IsAdmin(user);
+    var activity = await db.Activities
+        .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
+        .Include(a => a.Module)
+        .FirstOrDefaultAsync(a => a.Id == id && a.IsOpen &&
+            (isAdmin || a.Module.ProfessorId == profId));
+    if (activity is null) return Results.NotFound();
+    var targets = activity.Groups
+        .SelectMany(g => g.Members, (g, m) => new InviteTargetDto(
+            m.StudentId, m.Student.NomComplet, m.Student.Email, g.Name))
+        .DistinctBy(t => t.StudentId)
+        .OrderBy(t => t.GroupName).ThenBy(t => t.NomComplet).ToList();
+    return Results.Ok(targets);
+}).RequireAuthorization();
+
+app.MapPost("/api/activities/{id:int}/invite/{studentId:int}", async (
+    int id, int studentId, InviteOneRequest req,
+    AppDbContext db, IClassService classSvc, IEmailService emailSvc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var profId = GetUserId(user); var isAdmin = IsAdmin(user);
+    var activity = await db.Activities
+        .Include(a => a.Module).ThenInclude(m => m.Class)
+        .FirstOrDefaultAsync(a => a.Id == id && a.IsOpen &&
+            (isAdmin || a.Module.ProfessorId == profId));
+    if (activity is null) return Results.NotFound();
+    var student = await db.Students.FindAsync(studentId);
+    if (student is null) return Results.NotFound();
+    string? password = req.IncludePassword
+        ? await classSvc.GetOrRefreshPlainPasswordAsync(studentId) : null;
+    var sent = await emailSvc.SendInvitationAsync(
+        student.Email, student.NomComplet, activity.Name,
+        activity.Module.Class.Name, req.IncludePassword, password);
+    return Results.Ok(new InviteOneResult(sent, sent ? null : "Error en l'enviament."));
+}).RequireAuthorization();
+
 app.MapGet("/api/activities/{id:int}/criteria", async (int id, IActivityService svc,
     ClaimsPrincipal user) =>
 {
@@ -788,6 +867,16 @@ app.MapGet("/api/student/activities", async (IActivityService svc, ClaimsPrincip
     var list    = await svc.GetStudentActivitiesAsync(GetUserId(user), classId);
     return Results.Ok(new StudentDashboardDto(list));
 }).RequireAuthorization();
+
+app.MapPut("/api/student/password", async (
+    ChangeStudentPasswordRequest req, IClassService svc, ClaimsPrincipal user) =>
+{
+    if (!user.IsInRole("Student")) return Results.Forbid();
+    if (string.IsNullOrWhiteSpace(req.NewPassword) || req.NewPassword.Length < 6)
+        return Results.BadRequest(new { error = "La nova contrasenya ha de tenir almenys 6 caràcters." });
+    var ok = await svc.ChangeStudentPasswordAsync(GetUserId(user), req.CurrentPassword, req.NewPassword);
+    return ok ? Results.NoContent() : Results.BadRequest(new { error = "La contrasenya actual és incorrecta." });
+}).RequireAuthorization().RequireRateLimiting("auth");
 
 // ════════════════════════════════════════════════════════════════════════════
 // AVALUACIONS

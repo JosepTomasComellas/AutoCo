@@ -143,6 +143,26 @@ public class ApiClient
     public Task<ReminderResult?> SendRemindersAsync(int activityId) =>
         PostAsync<ReminderResult>($"/api/activities/{activityId}/remind", (object?)null);
 
+    public Task<List<InviteTargetDto>?> GetRemindTargetsAsync(int activityId) =>
+        GetAsync<List<InviteTargetDto>>($"/api/activities/{activityId}/remind-targets");
+
+    public async Task<bool> RemindOneAsync(int activityId, int studentId)
+    {
+        var r = await PostAsync<InviteOneResult>($"/api/activities/{activityId}/remind-one/{studentId}", (object?)null);
+        return r?.Sent == true;
+    }
+
+    public Task<List<InviteTargetDto>?> GetInviteTargetsAsync(int activityId) =>
+        GetAsync<List<InviteTargetDto>>($"/api/activities/{activityId}/invite-targets");
+
+    public async Task<bool> InviteOneAsync(int activityId, int studentId, bool includePassword)
+    {
+        var r = await PostAsync<InviteOneResult>(
+            $"/api/activities/{activityId}/invite/{studentId}",
+            new InviteOneRequest(includePassword));
+        return r?.Sent == true;
+    }
+
     public Task<List<ActivityCriterionDto>?> GetActivityCriteriaAsync(int activityId) =>
         GetAsync<List<ActivityCriterionDto>>($"/api/activities/{activityId}/criteria");
 
@@ -195,6 +215,10 @@ public class ApiClient
 
     public Task<StudentDashboardDto?> GetStudentDashboardAsync() =>
         GetAsync<StudentDashboardDto>("/api/student/activities");
+
+    public Task<bool> ChangeStudentPasswordAsync(string currentPassword, string newPassword) =>
+        PutNoContentAsync("/api/student/password",
+            new ChangeStudentPasswordRequest(currentPassword, newPassword));
 
     // ── Resultats ─────────────────────────────────────────────────────────────
 

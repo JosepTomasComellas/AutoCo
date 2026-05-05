@@ -10,6 +10,7 @@ public interface IEmailService
     Task<bool> SendStudentPasswordAsync(string toEmail, string toName, string className, string password);
     Task<bool> SendProfessorCredentialsAsync(string toEmail, string toName, string password);
     Task<bool> SendReminderAsync(string toEmail, string toName, string activityName, string className);
+    Task<bool> SendInvitationAsync(string toEmail, string toName, string activityName, string className, bool includePassword, string? password);
     Task<bool> SendActivityCompletedAsync(string toEmail, string toName, string activityName, string className, int total);
     Task<bool> SendPasswordResetAsync(string toEmail, string toName, string code);
 }
@@ -93,6 +94,37 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
             Departament d'Informàtica · Salesians de Sarrià
             """;
         return await SendAsync(toEmail, toName, $"Recordatori: avaluació pendent – {activityName}", body);
+    }
+
+    public async Task<bool> SendInvitationAsync(string toEmail, string toName,
+        string activityName, string className, bool includePassword, string? password)
+    {
+        if (!IsEnabled) return false;
+        var url  = string.IsNullOrWhiteSpace(_webUrl) ? "(URL no configurada)" : $"{_webUrl}/auth/login-alumne";
+        var pwdBlock = includePassword && password is not null
+            ? $"""
+
+              ─────────────────────────────────────
+               DADES D'ACCÉS
+              ─────────────────────────────────────
+               Correu:       {toEmail}
+               Contrasenya:  {password}
+              ─────────────────────────────────────
+
+              """
+            : "\n";
+        var body = $"""
+            Hola, {toName}!
+
+            El professor/a us convida a participar en l'avaluació de l'activitat «{activityName}» de la classe {className}.
+            {pwdBlock}
+            Accedeix aquí: {url}
+
+            Si tens qualsevol problema, contacta amb el teu professor/a.
+
+            Departament d'Informàtica · Salesians de Sarrià
+            """;
+        return await SendAsync(toEmail, toName, $"Convit: avaluació «{activityName}»", body);
     }
 
     public async Task<bool> SendActivityCompletedAsync(string toEmail, string toName,

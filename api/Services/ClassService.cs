@@ -22,10 +22,13 @@ public interface IClassService
     Task<ResetPasswordResult?> ResetPasswordAsync(int classId, int studentId);
     Task<SendPasswordResult>   SendPasswordAsync(int classId, int studentId);
     Task<SendAllResult>        SendAllPasswordsAsync(int classId);
+    Task<bool>                 ChangeStudentPasswordAsync(int studentId, string currentPassword, string newPassword);
+    Task<string>               GetOrRefreshPlainPasswordAsync(int studentId);
 }
 
-public class ClassService(AppDbContext db, IEmailService email) : IClassService
+public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoService pwdCrypto) : IClassService
 {
+
     // ── Classes ──────────────────────────────────────────────────────────────
 
     public async Task<List<ClassDto>> GetAllAsync() =>
@@ -83,12 +86,13 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         var password = PasswordHelper.Generate();
         var student = new Student
         {
-            ClassId      = classId,
-            NumLlista    = req.NumLlista,
-            Nom          = req.Nom.Trim(),
-            Cognoms      = req.Cognoms.Trim(),
-            Email        = req.Email.Trim().ToLower(),
-            PasswordHash = PasswordHelper.Hash(password)
+            ClassId                = classId,
+            NumLlista              = req.NumLlista,
+            Nom                    = req.Nom.Trim(),
+            Cognoms                = req.Cognoms.Trim(),
+            Email                  = req.Email.Trim().ToLower(),
+            PasswordHash           = PasswordHelper.Hash(password),
+            PlainPasswordEncrypted = pwdCrypto.Encrypt(password)
         };
         db.Students.Add(student);
         await db.SaveChangesAsync();
@@ -189,12 +193,13 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
             var password = PasswordHelper.Generate();
             var student  = new Student
             {
-                ClassId      = classId,
-                NumLlista    = s.NumLlista,
-                Nom          = s.Nom.Trim(),
-                Cognoms      = s.Cognoms.Trim(),
-                Email        = emailNorm,
-                PasswordHash = PasswordHelper.Hash(password)
+                ClassId                = classId,
+                NumLlista              = s.NumLlista,
+                Nom                    = s.Nom.Trim(),
+                Cognoms                = s.Cognoms.Trim(),
+                Email                  = emailNorm,
+                PasswordHash           = PasswordHelper.Hash(password),
+                PlainPasswordEncrypted = pwdCrypto.Encrypt(password)
             };
             db.Students.Add(student);
             toEmail.Add((student, password));
@@ -225,7 +230,8 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         var student = await db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
         if (student is null) return null;
         var newPassword = PasswordHelper.Generate();
-        student.PasswordHash = PasswordHelper.Hash(newPassword);
+        student.PasswordHash           = PasswordHelper.Hash(newPassword);
+        student.PlainPasswordEncrypted = pwdCrypto.Encrypt(newPassword);
         await db.SaveChangesAsync();
         return new ResetPasswordResult(newPassword);
     }
@@ -238,7 +244,8 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         if (!email.IsEnabled) return new SendPasswordResult(false, "Correu no configurat.");
 
         var newPassword = PasswordHelper.Generate();
-        student.PasswordHash = PasswordHelper.Hash(newPassword);
+        student.PasswordHash           = PasswordHelper.Hash(newPassword);
+        student.PlainPasswordEncrypted = pwdCrypto.Encrypt(newPassword);
         await db.SaveChangesAsync();
 
         var sent = await email.SendStudentPasswordAsync(student.Email, student.NomComplet,
@@ -258,7 +265,8 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
         foreach (var s in students)
         {
             var newPassword = PasswordHelper.Generate();
-            s.PasswordHash = PasswordHelper.Hash(newPassword);
+            s.PasswordHash           = PasswordHelper.Hash(newPassword);
+            s.PlainPasswordEncrypted = pwdCrypto.Encrypt(newPassword);
             passwords[s.Id] = newPassword;
         }
         await db.SaveChangesAsync();
@@ -270,6 +278,35 @@ public class ClassService(AppDbContext db, IEmailService email) : IClassService
             if (ok) sent++; else { skipped++; details.Add($"{s.NomComplet}: error."); }
         }
         return new SendAllResult(sent, skipped, details);
+    }
+
+    public async Task<bool> ChangeStudentPasswordAsync(int studentId, string currentPassword, string newPassword)
+    {
+        var student = await db.Students.FindAsync(studentId);
+        if (student is null || !PasswordHelper.Verify(currentPassword, student.PasswordHash))
+            return false;
+        student.PasswordHash           = PasswordHelper.Hash(newPassword);
+        student.PlainPasswordEncrypted = pwdCrypto.Encrypt(newPassword);
+        await db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<string> GetOrRefreshPlainPasswordAsync(int studentId)
+    {
+        var student = await db.Students.FindAsync(studentId);
+        if (student is null) return "";
+
+        if (student.PlainPasswordEncrypted is not null)
+        {
+            var decrypted = pwdCrypto.TryDecrypt(student.PlainPasswordEncrypted);
+            if (decrypted is not null) return decrypted;
+        }
+
+        var newPassword = PasswordHelper.Generate();
+        student.PasswordHash           = PasswordHelper.Hash(newPassword);
+        student.PlainPasswordEncrypted = pwdCrypto.Encrypt(newPassword);
+        await db.SaveChangesAsync();
+        return newPassword;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

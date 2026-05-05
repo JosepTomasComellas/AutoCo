@@ -76,6 +76,11 @@ services:
       Smtp__FromName:               "${SMTP_FROM_NAME}"
       App__WebUrl:                  "${APP_WEB_URL}"
       Redis__ConnectionString:      "redis:6379"
+      Backup__Enabled:              "${BACKUP_ENABLED:-false}"
+      Backup__DailyHour:            "${BACKUP_DAILY_HOUR:-2}"
+      Backup__WeeklyDay:            "${BACKUP_WEEKLY_DAY:-0}"
+      Backup__DailyRetention:       "${BACKUP_DAILY_RETENTION:-7}"
+      Backup__WeeklyRetention:      "${BACKUP_WEEKLY_RETENTION:-4}"
     expose:
       - "8080"
     volumes:

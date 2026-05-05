@@ -131,7 +131,8 @@ else
                 </HeaderTemplate>
                 <CellTemplate>@context.Item.NumLlista</CellTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="@Loc["Results_ColNom"]" Sortable="true">
+            <TemplateColumn Title="@Loc["Results_ColNom"]" Sortable="true"
+                            SortBy='(StudentResultDto s) => s.Cognoms + " " + s.Nom'>
                 <CellTemplate>@context.Item.Cognoms, @context.Item.Nom</CellTemplate>
             </TemplateColumn>
             <PropertyColumn Property="s => s.GroupName" Title="@Loc["Results_ColGroup"]" Sortable="true" />
@@ -194,7 +195,8 @@ else
                     </span>
                 </CellTemplate>
             </TemplateColumn>
-            <TemplateColumn Title="@Loc["Results_ColCoavs"]">
+            <TemplateColumn Title="@Loc["Results_ColCoavs"]" Sortable="true"
+                            SortBy='(StudentResultDto s) => s.NumPeerEvaluators'>
                 <HeaderTemplate>
                     <MudTooltip Text="@Loc["Results_TooltipCoavs"]" Placement="Placement.Top">
                         <span style="cursor:help">@Loc["Results_ColCoavs"]</span>
