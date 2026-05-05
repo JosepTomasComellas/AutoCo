@@ -40,7 +40,7 @@
         </MudButton>
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Print"
-                   OnClick="PrintAsync">
+                   Href="@($"/professor/informe-activitat/{ActivityId}")">
             PDF
         </MudButton>
     }
@@ -443,6 +443,4 @@ else
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }
 
-    private async Task PrintAsync() =>
-        await JS.InvokeVoidAsync("window.print");
 }

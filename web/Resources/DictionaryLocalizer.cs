@@ -594,6 +594,26 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Informe_ColComment"]      = "Comentari",
         ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo v{0}",
 
+        // ── Informe d'activitat (InformeActivitat.razor) ──────────────────────
+        ["InformeAct_Title"]        = "Informe d'Activitat",
+        ["InformeAct_NotFound"]     = "Activitat no trobada o sense resultats.",
+        ["InformeAct_BackToResults"]= "← Resultats",
+        ["InformeAct_ShowDetail"]   = "Incloure detall individual",
+        ["InformeAct_SummaryTitle"] = "Taula resum per grup",
+        ["InformeAct_CriteriaStats"]= "Estadístiques per criteri",
+        ["InformeAct_DetailTitle"]  = "Detall individual per alumne",
+        ["InformeAct_ColAuto"]      = "Auto",
+        ["InformeAct_ColCo"]        = "Co-av.",
+        ["InformeAct_ColComment"]   = "Comentari",
+        ["InformeAct_ColEvaluators"]= "Coavs.",
+        ["InformeAct_ColAvgAuto"]   = "Mitj. Auto",
+        ["InformeAct_ColAvgCo"]     = "Mitj. Co-av.",
+        ["InformeAct_ColDistrib"]   = "Distribució Co-av.",
+        ["InformeAct_Completion"]   = "Participació: {0}/{1} ({2}%)",
+        ["InformeAct_GroupHeader"]  = "Grup: {0}",
+        ["InformeAct_Module"]       = "Mòdul",
+        ["InformeAct_Class"]        = "Classe",
+
         // ── Diàlegs compartits ────────────────────────────────────────────────
         ["Dlg_ActivityName"]     = "Nom de l'activitat",
         ["Dlg_ActivityDesc"]     = "Descripció (opcional)",
@@ -1277,6 +1297,26 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Informe_ColEvaluator"]    = "Evaluador/a",
         ["Informe_ColComment"]      = "Comentario",
         ["Informe_Footer"]          = "Salesians de Sarrià · Dept. d'Informàtica · AutoCo v{0}",
+
+        // ── Informe d'activitat (InformeActivitat.razor) ──────────────────────
+        ["InformeAct_Title"]        = "Informe de Actividad",
+        ["InformeAct_NotFound"]     = "Actividad no encontrada o sin resultados.",
+        ["InformeAct_BackToResults"]= "← Resultados",
+        ["InformeAct_ShowDetail"]   = "Incluir detalle individual",
+        ["InformeAct_SummaryTitle"] = "Tabla resumen por grupo",
+        ["InformeAct_CriteriaStats"]= "Estadísticas por criterio",
+        ["InformeAct_DetailTitle"]  = "Detalle individual por alumno",
+        ["InformeAct_ColAuto"]      = "Auto",
+        ["InformeAct_ColCo"]        = "Co-ev.",
+        ["InformeAct_ColComment"]   = "Comentario",
+        ["InformeAct_ColEvaluators"]= "Coevs.",
+        ["InformeAct_ColAvgAuto"]   = "Med. Auto",
+        ["InformeAct_ColAvgCo"]     = "Med. Co-ev.",
+        ["InformeAct_ColDistrib"]   = "Distribución Co-ev.",
+        ["InformeAct_Completion"]   = "Participación: {0}/{1} ({2}%)",
+        ["InformeAct_GroupHeader"]  = "Grupo: {0}",
+        ["InformeAct_Module"]       = "Módulo",
+        ["InformeAct_Class"]        = "Clase",
 
         // ── Diàlegs compartits ────────────────────────────────────────────────
         ["Dlg_ActivityName"]     = "Nombre de la actividad",

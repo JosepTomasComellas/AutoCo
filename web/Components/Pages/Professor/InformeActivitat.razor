@@ -1,0 +1,342 @@
+@page "/professor/informe-activitat/{ActivityId:int}"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
+@using AutoCo.Shared
+
+<PageTitle>Informe activitat – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<!-- Barra d'acció (s'oculta en imprimir) -->
+<div class="no-print">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+        <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text"
+                   Href="@($"/professor/resultats/{ActivityId}")">
+            @Loc["InformeAct_BackToResults"]
+        </MudButton>
+        <MudSpacer />
+        @if (_results is not null)
+        {
+            <MudSwitch @bind-Value="_showDetail" Color="Color.Primary"
+                       Label="@Loc["InformeAct_ShowDetail"]" Size="Size.Small" Class="mr-2" />
+        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Print"
+                   OnClick='async () => await JS.InvokeVoidAsync("window.print")'>
+            @Loc["Informe_Print"]
+        </MudButton>
+    </MudStack>
+</div>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else if (_results is null || !_results.Students.Any())
+{
+    <MudAlert Severity="Severity.Error">@Loc["InformeAct_NotFound"]</MudAlert>
+}
+else
+{
+    var totalAlumnes = _results.Students.Count;
+    var ambCoaval    = _results.Students.Count(s => s.NumPeerEvaluators > 0);
+    var pctCompletat = totalAlumnes > 0 ? (double)ambCoaval / totalAlumnes * 100 : 0;
+    var byGroup      = _results.Students.GroupBy(s => s.GroupName).OrderBy(g => g.Key);
+
+    <div class="informe-activitat">
+
+        <!-- ── Capçalera ──────────────────────────────────────────────────── -->
+        <div class="informe-header">
+            <div class="informe-logo-area">
+                <img src="/images/logo2.png" height="40" alt="AutoCo" />
+            </div>
+            <div class="informe-titol-area">
+                <div class="informe-titol">@Loc["InformeAct_Title"]</div>
+                <div class="informe-subtitol">
+                    @_results.Activity.ClassName · @_results.Activity.ModuleName
+                    @if (_results.Activity.ClassAcademicYear is not null)
+                    { <span> · @_results.Activity.ClassAcademicYear</span> }
+                </div>
+            </div>
+            <div class="informe-data-area">
+                <div>@DateTime.Now.ToString("dd/MM/yyyy")</div>
+                <div style="font-size:.75rem;opacity:.6">AutoCo v@(AppVersion.Current)</div>
+            </div>
+        </div>
+
+        <!-- ── Dades de l'activitat ───────────────────────────────────────── -->
+        <div class="informe-section">
+            <table class="informe-dades">
+                <tr>
+                    <td class="label">@Loc["Informe_ColActivity"]</td>
+                    <td class="valor"><strong>@_results.Activity.Name</strong></td>
+                    <td class="label">@Loc["Informe_ColTeacher"]</td>
+                    <td class="valor">@_results.Activity.ProfessorName</td>
+                </tr>
+                <tr>
+                    <td class="label">@Loc["InformeAct_Class"]</td>
+                    <td class="valor">@_results.Activity.ClassName</td>
+                    <td class="label">@Loc["InformeAct_Module"]</td>
+                    <td class="valor">@_results.Activity.ModuleCode · @_results.Activity.ModuleName</td>
+                </tr>
+                <tr>
+                    <td class="label">@Loc["Results_EvalProgress", ambCoaval, totalAlumnes, pctCompletat.ToString("F0")]</td>
+                    <td colspan="3" class="valor" style="color:@(ambCoaval==totalAlumnes?"#16a34a":"inherit")">
+                        @Loc["InformeAct_Completion", ambCoaval, totalAlumnes, pctCompletat.ToString("F0")]
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- ── Taula resum per grup ───────────────────────────────────────── -->
+        <div class="informe-section">
+            <div class="informe-section-title">@Loc["InformeAct_SummaryTitle"]</div>
+            @foreach (var grp in byGroup)
+            {
+                <div class="informe-group-header">@Loc["InformeAct_GroupHeader", grp.Key]</div>
+                <table class="informe-taula" style="margin-bottom:.5rem">
+                    <thead>
+                        <tr>
+                            <th style="width:36px">#</th>
+                            <th>@Loc["Informe_ColStudent"]</th>
+                            <th class="col-nota">@Loc["InformeAct_ColAuto"]</th>
+                            <th class="col-nota">@Loc["InformeAct_ColCo"]</th>
+                            <th style="font-weight:500">@Loc["InformeAct_ColComment"]</th>
+                            <th style="width:50px;text-align:center">@Loc["InformeAct_ColEvaluators"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in grp.OrderBy(x => x.NumLlista))
+                        {
+                            <tr>
+                                <td>@s.NumLlista</td>
+                                <td><strong>@s.Cognoms</strong>, @s.Nom</td>
+                                <td class="col-nota @(s.AutAvgGlobal.HasValue ? GradeClass(s.AutAvgGlobal.Value) : "grade-none")">
+                                    @(s.AutAvgGlobal.HasValue ? s.AutAvgGlobal.Value.ToString("F1") : "—")
+                                </td>
+                                <td class="col-nota @(s.AvgGlobal.HasValue ? GradeClass(s.AvgGlobal.Value) : "grade-none")">
+                                    @(s.AvgGlobal.HasValue ? s.AvgGlobal.Value.ToString("F1") : "—")
+                                </td>
+                                <td style="font-style:italic;color:#475569;font-size:.8rem;max-width:220px">
+                                    @s.SelfComment
+                                </td>
+                                <td style="text-align:center">@s.NumPeerEvaluators</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        <!-- ── Estadístiques per criteri ─────────────────────────────────── -->
+        <div class="informe-section">
+            <div class="informe-section-title">@Loc["InformeAct_CriteriaStats"]</div>
+            <table class="informe-taula">
+                <thead>
+                    <tr>
+                        <th class="col-criteri">@Loc["Informe_ColCriteria"]</th>
+                        <th class="col-nota">@Loc["InformeAct_ColAvgAuto"]</th>
+                        <th class="col-nota">@Loc["InformeAct_ColAvgCo"]</th>
+                        <th>@Loc["InformeAct_ColDistrib"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in _results.Criteria)
+                    {
+                        var autoVals = _results.Students
+                            .Where(s => s.SelfScores.TryGetValue(c.Key, out var v) && v.HasValue)
+                            .Select(s => s.SelfScores[c.Key]!.Value).ToList();
+                        var coVals = _results.Students
+                            .Where(s => s.AvgCoScores.TryGetValue(c.Key, out var v) && v.HasValue)
+                            .Select(s => s.AvgCoScores[c.Key]!.Value).ToList();
+                        var avgAuto = autoVals.Count > 0 ? (double?)autoVals.Average() : null;
+                        var avgCo   = coVals.Count   > 0 ? (double?)coVals.Average()   : null;
+                        var highCo  = coVals.Count(v => v >= 8);
+                        var midCo   = coVals.Count(v => v >= 5 && v < 8);
+                        var lowCo   = coVals.Count(v => v < 5);
+                        <tr>
+                            <td class="col-criteri">@c.Label</td>
+                            <td class="col-nota @(avgAuto.HasValue ? GradeClass(avgAuto.Value) : "grade-none")">
+                                @(avgAuto.HasValue ? avgAuto.Value.ToString("F1") : "—")
+                            </td>
+                            <td class="col-nota @(avgCo.HasValue ? GradeClass(avgCo.Value) : "grade-none")">
+                                @(avgCo.HasValue ? avgCo.Value.ToString("F1") : "—")
+                            </td>
+                            <td>
+                                <div class="informe-distrib">
+                                    @if (highCo > 0) { <span class="distrib-badge grade-high">↑ @highCo</span> }
+                                    @if (midCo  > 0) { <span class="distrib-badge grade-mid">~ @midCo</span>  }
+                                    @if (lowCo  > 0) { <span class="distrib-badge grade-low">↓ @lowCo</span>  }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ── Detall individual per alumne (opcional) ───────────────────── -->
+        @if (_showDetail)
+        {
+            foreach (var s in _results.Students.OrderBy(x => x.GroupName).ThenBy(x => x.NumLlista))
+            {
+                var note = _notes.GetValueOrDefault(s.StudentId, "");
+                <div class="informe-page-break">
+                    <!-- Subencapçalament de l'alumne -->
+                    <div class="informe-section informe-student-subheader">
+                        <table class="informe-dades">
+                            <tr>
+                                <td class="label">@Loc["Informe_ColStudent"]</td>
+                                <td class="valor"><strong>@s.Cognoms, @s.Nom</strong></td>
+                                <td class="label">@Loc["Informe_ColGroup"]</td>
+                                <td class="valor">@s.GroupName</td>
+                                <td class="label">@Loc["Informe_ColListNum"]</td>
+                                <td>@s.NumLlista</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <!-- Globals -->
+                    <div class="informe-section">
+                        <div class="informe-globals">
+                            <div class="informe-global-box @(GlobalCss(s.AutAvgGlobal))">
+                                <div class="global-label">@Loc["Informe_SelfEval"]</div>
+                                <div class="global-nota">@(s.AutAvgGlobal.HasValue ? s.AutAvgGlobal.Value.ToString("F1") : "—")</div>
+                                <div class="global-max">/ 10</div>
+                            </div>
+                            <div class="informe-global-box @(GlobalCss(s.AvgGlobal))">
+                                <div class="global-label">@Loc["Informe_CoEval"]</div>
+                                <div class="global-nota">@(s.AvgGlobal.HasValue ? s.AvgGlobal.Value.ToString("F1") : "—")</div>
+                                <div class="global-max">/ 10</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Detall per criteri -->
+                    <div class="informe-section">
+                        <table class="informe-taula">
+                            <thead>
+                                <tr>
+                                    <th class="col-criteri">@Loc["Informe_ColCriteria"]</th>
+                                    <th class="col-nota">@Loc["Informe_ColSelfEval"]</th>
+                                    <th class="col-nota">@Loc["Informe_ColCoEval"]</th>
+                                    <th class="col-barra">@Loc["Informe_ColChart"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var c in _results.Criteria)
+                                {
+                                    var auto = s.SelfScores.TryGetValue(c.Key, out var av) && av.HasValue ? av : null;
+                                    var co   = s.AvgCoScores.TryGetValue(c.Key, out var cv) && cv.HasValue ? cv : null;
+                                    <tr>
+                                        <td class="col-criteri">@c.Label</td>
+                                        <td class="col-nota @(auto.HasValue ? GradeClass(auto.Value) : "grade-none")">
+                                            @(auto.HasValue ? auto.Value.ToString("G") : "—")
+                                        </td>
+                                        <td class="col-nota @(co.HasValue ? GradeClass(co.Value) : "grade-none")">
+                                            @(co.HasValue ? co.Value.ToString("F1") : "—")
+                                        </td>
+                                        <td class="col-barra">
+                                            @if (auto.HasValue)
+                                            {
+                                                <div class="barra-wrap">
+                                                    <div class="barra auto" style="width:@(auto.Value * 10)%"></div>
+                                                    @if (co.HasValue)
+                                                    {
+                                                        <div class="barra co" style="width:@(co.Value * 10)%;opacity:.5"></div>
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Comentari de l'alumne -->
+                    @if (!string.IsNullOrWhiteSpace(s.SelfComment))
+                    {
+                        <div class="informe-section">
+                            <div class="informe-section-title">@Loc["Informe_StudentComment"]</div>
+                            <div class="informe-comentari">@s.SelfComment</div>
+                        </div>
+                    }
+                    <!-- Nota del professor -->
+                    @if (!string.IsNullOrWhiteSpace(note))
+                    {
+                        <div class="informe-section">
+                            <div class="informe-section-title">@Loc["Informe_TeacherNote"]</div>
+                            <div class="informe-comentari informe-nota-prof">@note</div>
+                        </div>
+                    }
+                    <!-- Coavaluadors -->
+                    @if (s.PeerEvaluations.Any())
+                    {
+                        <div class="informe-section">
+                            <div class="informe-section-title">@Loc["Informe_PeerDetail"]</div>
+                            <table class="informe-taula">
+                                <thead>
+                                    <tr>
+                                        <th>@Loc["Informe_ColEvaluator"]</th>
+                                        @foreach (var c in _results.Criteria)
+                                        {
+                                            <th class="col-nota">@c.Label</th>
+                                        }
+                                        <th>@Loc["Informe_ColComment"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var peer in s.PeerEvaluations)
+                                    {
+                                        <tr>
+                                            <td>@peer.EvaluatorName</td>
+                                            @foreach (var c in _results.Criteria)
+                                            {
+                                                var v = peer.Scores.TryGetValue(c.Key, out var sv) ? (double?)sv : null;
+                                                <td class="col-nota @(v.HasValue ? GradeClass(v.Value) : "grade-none")">
+                                                    @(v.HasValue ? v.Value.ToString("G") : "—")
+                                                </td>
+                                            }
+                                            <td>@peer.Comment</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        <!-- ── Peu de pàgina ─────────────────────────────────────────────── -->
+        <div class="informe-peu">@Loc["Informe_Footer", AppVersion.Current]</div>
+
+    </div>
+}
+
+@code {
+    [Parameter] public int ActivityId { get; set; }
+
+    private ActivityResultsDto?     _results    = null;
+    private Dictionary<int, string> _notes      = [];
+    private bool                    _loading    = true;
+    private bool                    _showDetail = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+        var resultsTask = Api.GetResultsAsync(ActivityId);
+        var notesTask   = Api.GetNotesForActivityAsync(ActivityId);
+        await Task.WhenAll(resultsTask, notesTask);
+        _results = resultsTask.Result;
+        _notes   = (notesTask.Result ?? []).ToDictionary(n => n.StudentId, n => n.Note);
+        _loading = false;
+    }
+
+    private static string GradeClass(double v) =>
+        v >= 8 ? "grade-high" : v >= 5 ? "grade-mid" : "grade-low";
+
+    private static string GlobalCss(double? v) =>
+        v is null ? "grade-none" : v >= 8 ? "global-high" : v >= 5 ? "global-mid" : "global-low";
+}
