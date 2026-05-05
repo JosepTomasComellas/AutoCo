@@ -80,6 +80,12 @@
         <MudIconButton Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary"
                        title="@Loc["Card_ViewChart"]"
                        OnClick="ShowChartAsync" />
+        @if (Act.IsOpen)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Campaign" Color="Color.Info"
+                           title="@Loc["Card_Invite"]"
+                           OnClick="OpenInviteDialogAsync" />
+        }
         <MudSpacer />
         <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Default"
                  title="@Loc["Card_MoreActions"]"
@@ -103,10 +109,6 @@
             </MudMenuItem>
             @if (Act.IsOpen)
             {
-                <MudMenuItem Icon="@Icons.Material.Filled.Campaign"
-                             OnClick="OpenInviteDialogAsync">
-                    @Loc["Card_Invite"]
-                </MudMenuItem>
                 <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive"
                              OnClick="OpenRemindDialogAsync">
                     @Loc["Card_SendReminders"]
