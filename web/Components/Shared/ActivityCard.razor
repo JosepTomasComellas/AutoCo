@@ -129,7 +129,7 @@
 </MudCard>
 
 <!-- Diàleg d'enviament de missatges (invitació i recordatori) -->
-<MudDialog @bind-IsOpen="_emailDialogOpen" Options="_emailDialogOpts">
+<MudDialog @bind-Visible="_emailDialogOpen" Options="_emailDialogOpts">
     <TitleContent>
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
             <MudIcon Icon="@(_emailIsInvite ? Icons.Material.Filled.Campaign : Icons.Material.Filled.NotificationsActive)"
