@@ -10,6 +10,7 @@ public class Student
     public string Email        { get; set; } = null!;
     public string  PasswordHash            { get; set; } = null!;
     public string? PlainPasswordEncrypted  { get; set; }
+    public string? Dni                     { get; set; }
     public DateTime CreatedAt              { get; set; } = DateTime.UtcNow;
 
     public string NomComplet => $"{Nom} {Cognoms}";

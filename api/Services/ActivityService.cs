@@ -35,7 +35,7 @@ public interface IActivityService
     Task<List<StudentActivityDto>> GetStudentActivitiesAsync(int studentId, int classId);
 }
 
-public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivityService
+public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoService photos) : IActivityService
 {
     // ── Activitats ───────────────────────────────────────────────────────────
 
@@ -636,6 +636,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache) : IActivi
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents);
     }
 
-    private static StudentDto ToStudentDto(Student s) => new(
-        s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt);
+    private StudentDto ToStudentDto(Student s) => new(
+        s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt,
+        s.Dni, photos.GetStudentFotoUrl(s.Id));
 }

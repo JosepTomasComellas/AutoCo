@@ -26,7 +26,7 @@ public interface IClassService
     Task<string>               GetOrRefreshPlainPasswordAsync(int studentId);
 }
 
-public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoService pwdCrypto) : IClassService
+public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoService pwdCrypto, IPhotoService photos) : IClassService
 {
 
     // ── Classes ──────────────────────────────────────────────────────────────
@@ -75,11 +75,12 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
 
     // ── Alumnes ──────────────────────────────────────────────────────────────
 
-    public async Task<List<StudentDto>> GetStudentsAsync(int classId) =>
-        await db.Students.Where(s => s.ClassId == classId)
-            .OrderBy(s => s.NumLlista)
-            .Select(s => ToStudentDto(s))
-            .ToListAsync();
+    public async Task<List<StudentDto>> GetStudentsAsync(int classId)
+    {
+        var list = await db.Students.Where(s => s.ClassId == classId)
+            .OrderBy(s => s.NumLlista).ToListAsync();
+        return list.Select(ToStudentDto).ToList();
+    }
 
     public async Task<StudentDto> AddStudentAsync(int classId, CreateStudentRequest req)
     {
@@ -91,6 +92,7 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
             Nom                    = req.Nom.Trim(),
             Cognoms                = req.Cognoms.Trim(),
             Email                  = req.Email.Trim().ToLower(),
+            Dni                    = string.IsNullOrWhiteSpace(req.Dni) ? null : req.Dni.Trim().ToUpperInvariant(),
             PasswordHash           = PasswordHelper.Hash(password),
             PlainPasswordEncrypted = pwdCrypto.Encrypt(password)
         };
@@ -107,6 +109,7 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
         student.Cognoms  = req.Cognoms.Trim();
         student.NumLlista = req.NumLlista;
         student.Email    = req.Email.Trim().ToLower();
+        student.Dni      = string.IsNullOrWhiteSpace(req.Dni) ? null : req.Dni.Trim().ToUpperInvariant();
         await db.SaveChangesAsync();
         return ToStudentDto(student);
     }
@@ -197,6 +200,7 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
                 NumLlista              = s.NumLlista,
                 Nom                    = s.Nom.Trim(),
                 Cognoms                = s.Cognoms.Trim(),
+                Dni                    = string.IsNullOrWhiteSpace(s.Dni) ? null : s.Dni.Trim().ToUpperInvariant(),
                 Email                  = emailNorm,
                 PasswordHash           = PasswordHelper.Hash(password),
                 PlainPasswordEncrypted = pwdCrypto.Encrypt(password)
@@ -314,7 +318,8 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
     private static ClassDto ToClassDto(Class c) => new(
         c.Id, c.Name, c.AcademicYear, c.CreatedAt, c.Students.Count);
 
-    private static StudentDto ToStudentDto(Student s) => new(
-        s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt);
+    private StudentDto ToStudentDto(Student s) => new(
+        s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt,
+        s.Dni, photos.GetStudentFotoUrl(s.Id));
 
 }

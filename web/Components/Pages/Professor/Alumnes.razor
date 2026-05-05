@@ -77,6 +77,9 @@
                     <MudTextField @bind-Value="_correu" Label="@Loc["Label_Email"]"
                                   Variant="Variant.Outlined" InputType="InputType.Email"
                                   Class="mt-3" Immediate="true" />
+                    <MudTextField @bind-Value="_dni" Label="@Loc["ClassStudents_Dni"]"
+                                  Variant="Variant.Outlined" Class="mt-3" Immediate="true"
+                                  HelperText="@Loc["ClassStudents_DniHint"]" />
                 </MudCardContent>
                 <MudCardActions Class="px-4 pb-4 gap-2">
                     @if (_editStudentId == 0)
@@ -153,6 +156,49 @@
                                 </MudListItem>
                             }
                         </MudList>
+                    }
+                </MudPaper>
+            }
+
+            <!-- Importació de fotos en ZIP -->
+            <MudCard Elevation="2" Class="mt-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@Loc["ClassStudents_ImportFotosTitle"]</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                        @Loc["ClassStudents_ImportFotosHint"]
+                    </MudText>
+                    <MudFileUpload T="IBrowserFile" Accept=".zip" FilesChanged="OnFotosZipSelected">
+                        <ActivatorContent>
+                            <MudButton Variant="Variant.Outlined" FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Photo">
+                                @(_fotosZipFile is null ? Loc["ClassStudents_SelectZip"].Value : _fotosZipFile.Name)
+                            </MudButton>
+                        </ActivatorContent>
+                    </MudFileUpload>
+                </MudCardContent>
+                <MudCardActions Class="px-4 pb-4">
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary"
+                               OnClick="ImportFotosZipAsync" Disabled="_fotosZipFile is null || _saving"
+                               StartIcon="@Icons.Material.Filled.Upload">
+                        @Loc["ClassStudents_ImportFotosBtn"]
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+
+            @if (_fotosSummary is not null)
+            {
+                <MudPaper Elevation="0" Class="pa-3 mt-2" Style="border:1px solid var(--mud-palette-divider);border-radius:8px">
+                    <MudText Typo="Typo.body2" Style="font-weight:600">@_fotosSummary</MudText>
+                    @if (_fotosNotFound.Any())
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Warning" Class="mt-1">
+                            @Loc["ClassStudents_FotosNotFound", _fotosNotFound.Count]:
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@string.Join(", ", _fotosNotFound.Take(10))@(_fotosNotFound.Count > 10 ? "..." : "")</MudText>
                     }
                 </MudPaper>
             }
@@ -243,9 +289,19 @@
                 <TemplateColumn Title="@Loc["ClassStudents_ColStudent"]">
                     <CellTemplate>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudAvatar Style="@GetAvatarStyle(context.Item)" Size="Size.Small">
-                                @GetInitials(context.Item)
-                            </MudAvatar>
+                            @if (context.Item.FotoUrl is not null)
+                            {
+                                <MudAvatar Size="Size.Small" Style="width:28px;height:28px;min-width:28px">
+                                    <MudImage Src="@($"{context.Item.FotoUrl}?v={_fotoVersion}")"
+                                              Style="width:100%;height:100%;object-fit:cover" />
+                                </MudAvatar>
+                            }
+                            else
+                            {
+                                <MudAvatar Style="@GetAvatarStyle(context.Item)" Size="Size.Small">
+                                    @GetInitials(context.Item)
+                                </MudAvatar>
+                            }
                             <span>@context.Item.Cognoms, @context.Item.Nom</span>
                         </MudStack>
                     </CellTemplate>
@@ -258,6 +314,15 @@
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                            Color="Color.Primary" title="Editar"
                                            OnClick="() => StartEdit(context.Item)" />
+                            <MudFileUpload T="IBrowserFile" Accept=".jpg,.jpeg,.png,.webp"
+                                           FilesChanged="f => UploadFotoAsync(context.Item, f)"
+                                           Style="display:inline-block">
+                                <ActivatorContent>
+                                    <MudIconButton Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Small"
+                                                   Color="@(context.Item.FotoUrl is not null ? Color.Success : Color.Default)"
+                                                   title="@Loc["ClassStudents_UploadFoto"]" />
+                                </ActivatorContent>
+                            </MudFileUpload>
                             <MudIconButton Icon="@Icons.Material.Filled.Email" Size="Size.Small"
                                            Color="Color.Secondary" title="Enviar contrasenya"
                                            OnClick="() => SendPasswordAsync(context.Item)" />
@@ -290,11 +355,18 @@
     private string _nom          = "";
     private string _cognoms      = "";
     private string _correu       = "";
+    private string _dni          = "";
     private int    _editStudentId = 0;
 
     private IBrowserFile?  _importFile;
     private List<string>   _importErrors = [];
     private string?        _importSummary;
+
+    // Fotos
+    private IBrowserFile? _fotosZipFile;
+    private string?       _fotosSummary;
+    private List<string>  _fotosNotFound = [];
+    private int           _fotoVersion   = 0;
 
     // ── Selecció massiva ──────────────────────────────────────────────────────
     private HashSet<int> _selected = [];
@@ -462,12 +534,13 @@
         _saving = true;
         Api.SetToken(UserState.Token!);
         var s = await Api.AddStudentAsync(ClassId,
-            new CreateStudentRequest(_nom.Trim(), _cognoms.Trim(), _numLlista, _correu.Trim()));
+            new CreateStudentRequest(_nom.Trim(), _cognoms.Trim(), _numLlista, _correu.Trim(),
+                string.IsNullOrWhiteSpace(_dni) ? null : _dni.Trim()));
         if (s is not null)
         {
             _students.Add(s);
             _students = [.. _students.OrderBy(x => x.NumLlista)];
-            _nom = ""; _cognoms = ""; _correu = ""; _numLlista++;
+            _nom = ""; _cognoms = ""; _correu = ""; _numLlista++; _dni = "";
             Snackbar.Add(Loc["ClassStudents_AddOk", s.NomComplet].Value, Severity.Success);
         }
         else Snackbar.Add(Loc["ClassStudents_AddError"].Value, Severity.Error);
@@ -481,12 +554,13 @@
         _cognoms       = s.Cognoms;
         _numLlista     = s.NumLlista;
         _correu        = s.Email;
+        _dni           = s.Dni ?? "";
     }
 
     private void CancelEdit()
     {
         _editStudentId = 0;
-        _nom = ""; _cognoms = ""; _correu = ""; _numLlista = 1;
+        _nom = ""; _cognoms = ""; _correu = ""; _numLlista = 1; _dni = "";
     }
 
     private async Task SaveEditAsync()
@@ -499,7 +573,8 @@
         _saving = true;
         Api.SetToken(UserState.Token!);
         var updated = await Api.UpdateStudentAsync(ClassId, _editStudentId,
-            new UpdateStudentRequest(_nom.Trim(), _cognoms.Trim(), _numLlista, _correu.Trim()));
+            new UpdateStudentRequest(_nom.Trim(), _cognoms.Trim(), _numLlista, _correu.Trim(),
+                string.IsNullOrWhiteSpace(_dni) ? null : _dni.Trim()));
         if (updated is not null)
         {
             var idx = _students.FindIndex(x => x.Id == _editStudentId);
@@ -678,6 +753,7 @@
             // Els cognoms tenen espais múltiples de padding → normalitzar
             var cognoms = System.Text.RegularExpressions.Regex.Replace(cells[1].Trim(), @"\s+", " ");
             var nom     = cells[2].Trim();
+            var dni     = cells[3].Trim();
             var baixa   = cells[5].Trim();
             var email   = cells[9].Trim();
 
@@ -698,7 +774,8 @@
             if (!usedEmails.Add(emailNorm))
             { errors.Add($"Fila {rowNum}: correu '{email}' duplicat al fitxer."); continue; }
 
-            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, emailNorm));
+            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, emailNorm,
+                string.IsNullOrEmpty(dni) ? null : dni.ToUpperInvariant()));
         }
 
         return (students, errors);
@@ -728,6 +805,7 @@
             var numRaw  = row[0]?.ToString()?.Trim() ?? "";
             var cognoms = row[1]?.ToString()?.Trim() ?? "";
             var nom     = row[2]?.ToString()?.Trim() ?? "";
+            var dni     = row[3]?.ToString()?.Trim() ?? "";
             var baixa   = row[5]?.ToString()?.Trim() ?? "";
             var email   = row[9]?.ToString()?.Trim() ?? "";
 
@@ -754,7 +832,8 @@
             if (!usedEmails.Add(emailNorm))
             { errors.Add($"Fila {r + 1}: correu '{email}' duplicat al fitxer."); continue; }
 
-            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, emailNorm));
+            students.Add(new CreateStudentRequest(nom, cognoms, numLlista, emailNorm,
+                string.IsNullOrEmpty(dni) ? null : dni.ToUpperInvariant()));
         }
 
         return (students, errors);
@@ -843,6 +922,60 @@
         try { await Task.Delay(5500, cts.Token); } catch (OperationCanceledException) { }
         if (cancelled) Snackbar.Add("Eliminació cancel·lada.", Severity.Info);
         return !cancelled;
+    }
+
+    // ── Fotos ────────────────────────────────────────────────────────────────
+
+    private async Task UploadFotoAsync(StudentDto student, IBrowserFile file)
+    {
+        Api.SetToken(UserState.Token!);
+        var url = await Api.UploadStudentFotoAsync(ClassId, student.Id, file);
+        if (url is not null)
+        {
+            var idx = _students.FindIndex(s => s.Id == student.Id);
+            if (idx >= 0) _students[idx] = _students[idx] with { FotoUrl = url };
+            _fotoVersion++;
+            Snackbar.Add(Loc["ClassStudents_FotoUploaded"].Value, Severity.Success);
+        }
+        else Snackbar.Add(Loc["ClassStudents_FotoError"].Value, Severity.Error);
+    }
+
+    private void OnFotosZipSelected(IBrowserFile file)
+    {
+        _fotosZipFile  = file;
+        _fotosSummary  = null;
+        _fotosNotFound = [];
+    }
+
+    private async Task ImportFotosZipAsync()
+    {
+        if (_fotosZipFile is null) return;
+        _saving       = true;
+        _fotosSummary = null;
+        _fotosNotFound = [];
+
+        Api.SetToken(UserState.Token!);
+        var result = await Api.ImportStudentFotosZipAsync(ClassId, _fotosZipFile);
+        _fotosZipFile = null;
+
+        if (result is not null)
+        {
+            _fotosNotFound = result.NotFound;
+            var parts = new List<string> { $"{result.Imported} fotos importades" };
+            if (result.NotFound.Count > 0) parts.Add($"{result.NotFound.Count} no trobades");
+            if (result.Errors.Count > 0)   parts.Add($"{result.Errors.Count} errors");
+            _fotosSummary = string.Join(", ", parts) + ".";
+            if (result.Imported > 0)
+            {
+                _fotoVersion++;
+                await LoadAsync();
+                Snackbar.Add(_fotosSummary, Severity.Success);
+            }
+            else Snackbar.Add(_fotosSummary, Severity.Warning);
+        }
+        else Snackbar.Add(Loc["Msg_Error"].Value, Severity.Error);
+
+        _saving = false;
     }
 
     private async Task ExportCsvAsync()

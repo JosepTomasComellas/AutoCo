@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.4.1
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -10,7 +10,10 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 **Gestió de l'estructura docent**
 - Gestió de **classes**, **alumnes** i **mòduls** (UF/MP), amb edició inline
-- **Avatars** d'alumne amb inicials i color per número de llista
+- **Camp DNI** als alumnes, extret automàticament en importar des de l'EPSS
+- **Fotos d'alumnes**: upload individual per botó càmera o **importació massiva en ZIP** (fotos nomenades per DNI, format EPSS)
+- **Fotos de professors**: upload manual des de la pàgina de perfil; visible a la barra de navegació
+- **Avatars** d'alumne amb inicials i color per número de llista (fallback si no hi ha foto)
 - **Mou alumnes** entre classes (elimina participació anterior i reassigna)
 - **Exclusions per mòdul**: alumnes que no participen en un mòdul concret
 - Enviament de **credencials per correu** als alumnes (SMTP configurable)
@@ -339,6 +342,12 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.0
+- **Fotos d'alumnes** — upload individual (botó càmera per alumne) i **importació massiva en ZIP** (fotos nomenades per la part numèrica del DNI, compatible amb el format EPSS); les fotos es serveixen com a fitxers estàtics via volum Docker compartit (`fotos-data`)
+- **Fotos de professors** — upload manual des de la pàgina de perfil; l'avatar apareix a la barra de navegació; persistit a la sessió
+- **Camp DNI als alumnes** — nou camp opcional `Dni`; s'extreu automàticament en importar des del format HTML/XLS de l'EPSS (columna 3: `Num|Cognoms|Nom|DNI|…`); és la clau per associar fotos del ZIP
+- **Arquitectura de fotos** — volum Docker `fotos-data` muntat a `/app/fotos` (API, escriptura) i `/app/wwwroot/fotos` (Web, servei HTTP); `PhotoService` centralitza la lògica de persistència i URL
 
 ### v2.4.1
 - **Fix**: atributs `[DbContext]` i `[Migration]` afegits a la migració `AddStudentEncryptedPassword` — sense ells EF Core no descobria la migració per reflexió i la columna `PlainPasswordEncrypted` no es creava en desplegaments existents

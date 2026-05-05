@@ -16,11 +16,13 @@ public interface IProfessorService
     Task<SendAllResult>          SendAllCredentialsAsync();
 }
 
-public class ProfessorService(AppDbContext db, IEmailService email) : IProfessorService
+public class ProfessorService(AppDbContext db, IEmailService email, IPhotoService photos) : IProfessorService
 {
-    public async Task<List<ProfessorDto>> GetAllAsync() =>
-        await db.Professors.OrderBy(p => p.Cognoms).ThenBy(p => p.Nom)
-            .Select(p => ToDto(p)).ToListAsync();
+    public async Task<List<ProfessorDto>> GetAllAsync()
+    {
+        var list = await db.Professors.OrderBy(p => p.Cognoms).ThenBy(p => p.Nom).ToListAsync();
+        return list.Select(ToDto).ToList();
+    }
 
     public async Task<ProfessorDto?> GetByIdAsync(int id)
     {
@@ -111,7 +113,8 @@ public class ProfessorService(AppDbContext db, IEmailService email) : IProfessor
         return new SendAllResult(sent, skipped, details);
     }
 
-    private static ProfessorDto ToDto(Professor p) => new(
-        p.Id, p.Email, p.Nom, p.Cognoms, p.NomComplet, p.IsAdmin, p.CreatedAt);
+    private ProfessorDto ToDto(Professor p) => new(
+        p.Id, p.Email, p.Nom, p.Cognoms, p.NomComplet, p.IsAdmin, p.CreatedAt,
+        photos.GetProfessorFotoUrl(p.Id));
 
 }

@@ -49,6 +49,7 @@ builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IResultsService,    ResultsService>();
 builder.Services.AddScoped<IEmailService,      EmailService>();
 builder.Services.AddScoped<IBackupService,     BackupService>();
+builder.Services.AddScoped<IPhotoService,      PhotoService>();
 builder.Services.AddHostedService<BackupHostedService>();
 
 // ── Redis (caché de resultats) ─────────────────────────────────────────────────
@@ -1265,6 +1266,112 @@ app.MapGet("/api/activities/{id:int}/log", async (
         .Select(l => new ActivityLogDto(l.Id, l.Action, l.ActorName, l.Details, l.CreatedAt))
         .ToListAsync();
     return Results.Ok(logs);
+}).RequireAuthorization();
+
+// ════════════════════════════════════════════════════════════════════════════
+// FOTOS
+// ════════════════════════════════════════════════════════════════════════════
+
+// Pujar foto d'alumne individual
+app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/foto",
+    async (int classId, int studentId, HttpRequest request,
+           AppDbContext db, IPhotoService photos, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var student = await db.Students.FirstOrDefaultAsync(s => s.Id == studentId && s.ClassId == classId);
+    if (student is null) return Results.NotFound();
+
+    var file = request.Form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0) return Results.BadRequest(new { error = "Cap fitxer." });
+    if (file.Length > 5 * 1024 * 1024) return Results.BadRequest(new { error = "Fitxer massa gran (màx 5 MB)." });
+
+    using var stream = file.OpenReadStream();
+    var ok = await photos.SaveStudentFotoAsync(studentId, stream, file.ContentType);
+    if (!ok) return Results.Problem("Error en desar la foto.");
+
+    var url = photos.GetStudentFotoUrl(studentId);
+    return Results.Ok(new { fotoUrl = url });
+}).RequireAuthorization().DisableAntiforgery();
+
+// Eliminar foto d'alumne
+app.MapDelete("/api/classes/{classId:int}/students/{studentId:int}/foto",
+    async (int classId, int studentId, AppDbContext db, IPhotoService photos, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var exists = await db.Students.AnyAsync(s => s.Id == studentId && s.ClassId == classId);
+    if (!exists) return Results.NotFound();
+    photos.DeleteStudentFoto(studentId);
+    return Results.NoContent();
+}).RequireAuthorization();
+
+// Importar fotos en ZIP (coincidència per DNI)
+app.MapPost("/api/classes/{classId:int}/students/fotos/zip",
+    async (int classId, HttpRequest request,
+           AppDbContext db, IPhotoService photos, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+
+    var file = request.Form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0) return Results.BadRequest(new { error = "Cap fitxer ZIP." });
+    if (file.Length > 100 * 1024 * 1024) return Results.BadRequest(new { error = "Fitxer massa gran (màx 100 MB)." });
+
+    // Construeix mapa DNI→StudentId per als alumnes d'aquesta classe
+    var students = await db.Students
+        .Where(s => s.ClassId == classId && s.Dni != null)
+        .Select(s => new { s.Id, s.Dni })
+        .ToListAsync();
+
+    var dniMap = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+    foreach (var s in students)
+    {
+        // Guarda la part numèrica del DNI com a clau (eg "53971108X" → "53971108")
+        var dniParts = System.Text.RegularExpressions.Regex.Match(s.Dni!, @"^\d+");
+        if (dniParts.Success) dniMap[dniParts.Value] = s.Id;
+        dniMap[s.Dni!] = s.Id;
+    }
+
+    using var stream = file.OpenReadStream();
+    var (imported, notFound, errors) = await photos.ImportZipFotosAsync(stream, dniMap);
+
+    return Results.Ok(new ImportFotosResult(imported, notFound, errors));
+}).RequireAuthorization().DisableAntiforgery();
+
+// Pujar foto de professor (perfil propi)
+app.MapPost("/api/professors/{id:int}/foto",
+    async (int id, HttpRequest request,
+           AppDbContext db, IPhotoService photos, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var callerProfId = GetUserId(user);
+    // Cada professor pot canviar la seva pròpia foto; l'admin pot canviar qualsevol
+    if (callerProfId != id && !IsAdmin(user)) return Results.Forbid();
+
+    var professor = await db.Professors.FindAsync(id);
+    if (professor is null) return Results.NotFound();
+
+    var file = request.Form.Files.FirstOrDefault();
+    if (file is null || file.Length == 0) return Results.BadRequest(new { error = "Cap fitxer." });
+    if (file.Length > 5 * 1024 * 1024) return Results.BadRequest(new { error = "Fitxer massa gran (màx 5 MB)." });
+
+    using var stream = file.OpenReadStream();
+    var ok = await photos.SaveProfessorFotoAsync(id, stream, file.ContentType);
+    if (!ok) return Results.Problem("Error en desar la foto.");
+
+    var url = photos.GetProfessorFotoUrl(id);
+    return Results.Ok(new { fotoUrl = url });
+}).RequireAuthorization().DisableAntiforgery();
+
+// Eliminar foto de professor
+app.MapDelete("/api/professors/{id:int}/foto",
+    async (int id, AppDbContext db, IPhotoService photos, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var callerProfId = GetUserId(user);
+    if (callerProfId != id && !IsAdmin(user)) return Results.Forbid();
+    var exists = await db.Professors.AnyAsync(p => p.Id == id);
+    if (!exists) return Results.NotFound();
+    photos.DeleteProfessorFoto(id);
+    return Results.NoContent();
 }).RequireAuthorization();
 
 app.Run();

@@ -37,9 +37,22 @@
                 </MudText>
                 @if (UserState.IsProfessor)
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
-                                   Color="Color.Inherit" title="@Loc["Nav_MyProfile"]"
-                                   Href="/professor/perfil" />
+                    <MudTooltip Text="@Loc["Nav_MyProfile"]" Placement="Placement.Bottom">
+                        <MudIconButton Href="/professor/perfil" Style="padding:4px">
+                            @if (UserState.FotoUrl is not null)
+                            {
+                                <MudAvatar Style="width:32px;height:32px">
+                                    <MudImage Src="@($"{UserState.FotoUrl}?v={UserState.FotoVersion}")"
+                                              Style="width:100%;height:100%;object-fit:cover" />
+                                </MudAvatar>
+                            }
+                            else
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.AccountCircle"
+                                         Color="Color.Inherit" Style="font-size:28px" />
+                            }
+                        </MudIconButton>
+                    </MudTooltip>
                 }
                 <!-- Selector d'idioma -->
                 <MudMenu Icon="@Icons.Material.Filled.Translate" Color="Color.Inherit"

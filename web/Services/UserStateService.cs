@@ -12,6 +12,8 @@ public class UserStateService
     public string? NomComplet { get; private set; }
     public string? Role       { get; private set; }
     public int?    UserId     { get; private set; }
+    public string? FotoUrl    { get; private set; }
+    public int     FotoVersion { get; private set; } = 0;
 
     public bool IsLoggedIn   => Token is not null;
     public bool IsProfessor  => Role is "Professor" or "Admin";
@@ -28,6 +30,14 @@ public class UserStateService
         NomComplet = login.NomComplet;
         Role       = login.Role;
         UserId     = login.UserId;
+        FotoUrl    = login.FotoUrl;
+        OnChange?.Invoke();
+    }
+
+    public void UpdateFotoUrl(string? url)
+    {
+        FotoUrl = url;
+        FotoVersion++;
         OnChange?.Invoke();
     }
 
@@ -37,6 +47,8 @@ public class UserStateService
         NomComplet = null;
         Role       = null;
         UserId     = null;
+        FotoUrl    = null;
+        FotoVersion = 0;
         OnChange?.Invoke();
     }
 

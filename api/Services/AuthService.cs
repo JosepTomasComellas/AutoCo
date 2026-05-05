@@ -14,7 +14,7 @@ public interface IAuthService
     Task<LoginResponse?> StudentLoginAsync(StudentLoginRequest req);
 }
 
-public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
+public class AuthService(AppDbContext db, IConfiguration config, IPhotoService photos) : IAuthService
 {
     public async Task<LoginResponse?> ProfessorLoginAsync(ProfessorLoginRequest req)
     {
@@ -28,7 +28,8 @@ public class AuthService(AppDbContext db, IConfiguration config) : IAuthService
 
         var role  = professor.IsAdmin ? "Admin" : "Professor";
         var token = GenerateToken(professor.Id.ToString(), professor.NomComplet, role);
-        return new LoginResponse(token, professor.NomComplet, role, professor.Id);
+        return new LoginResponse(token, professor.NomComplet, role, professor.Id,
+            photos.GetProfessorFotoUrl(professor.Id));
     }
 
     public async Task<LoginResponse?> StudentLoginAsync(StudentLoginRequest req)

@@ -3,12 +3,12 @@ namespace AutoCo.Shared.DTOs;
 // ─── Autenticació ────────────────────────────────────────────────────────────
 public record ProfessorLoginRequest(string Email, string Password);
 public record StudentLoginRequest(string Email, string Password);
-public record LoginResponse(string Token, string NomComplet, string Role, int UserId);
+public record LoginResponse(string Token, string NomComplet, string Role, int UserId, string? FotoUrl = null);
 
 // ─── Professors ──────────────────────────────────────────────────────────────
 public record ProfessorDto(
     int Id, string Email, string Nom, string Cognoms, string NomComplet,
-    bool IsAdmin, DateTime CreatedAt);
+    bool IsAdmin, DateTime CreatedAt, string? FotoUrl = null);
 
 public record CreateProfessorRequest(
     string Email, string Nom, string Cognoms, bool IsAdmin);
@@ -29,13 +29,14 @@ public record UpdateClassRequest(string Name, string? AcademicYear);
 // ─── Alumnes ─────────────────────────────────────────────────────────────────
 public record StudentDto(
     int Id, int ClassId, string Nom, string Cognoms, string NomComplet,
-    int NumLlista, string Email, DateTime CreatedAt);
+    int NumLlista, string Email, DateTime CreatedAt,
+    string? Dni = null, string? FotoUrl = null);
 
 public record CreateStudentRequest(
-    string Nom, string Cognoms, int NumLlista, string Email);
+    string Nom, string Cognoms, int NumLlista, string Email, string? Dni = null);
 
 public record UpdateStudentRequest(
-    string Nom, string Cognoms, int NumLlista, string Email);
+    string Nom, string Cognoms, int NumLlista, string Email, string? Dni = null);
 
 public record MoveStudentRequest(int TargetClassId);
 public record BulkMoveStudentsRequest(List<int> StudentIds, int TargetClassId);
@@ -45,6 +46,7 @@ public record BulkCreateResult(int Created, int Skipped, List<string> Errors);
 public record ResetPasswordResult(string NewPassword);
 public record SendPasswordResult(bool Sent, string? Reason);
 public record ChangeStudentPasswordRequest(string CurrentPassword, string NewPassword);
+public record ImportFotosResult(int Imported, List<string> NotFound, List<string> Errors);
 
 // ─── Criteris per activitat ──────────────────────────────────────────────────
 public record ActivityCriterionDto(int Id, string Key, string Label, int OrderIndex);

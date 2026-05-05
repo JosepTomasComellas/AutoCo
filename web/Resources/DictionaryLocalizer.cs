@@ -560,6 +560,23 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["ClassStudents_NoCreated"]   = "No s'ha creat cap alumne nou.",
         ["ClassStudents_FileEmpty"]   = "Fitxer buit o sense dades vàlides.",
         ["ClassStudents_FileErrors"]  = "El fitxer conté errors i no s'ha importat cap alumne.",
+        ["ClassStudents_Dni"]         = "DNI / NIE",
+        ["ClassStudents_DniHint"]     = "Opcional. S'usa per associar fotos del ZIP.",
+        ["ClassStudents_ImportFotosTitle"] = "Importar fotos",
+        ["ClassStudents_ImportFotosHint"]  = "ZIP amb fotos del sistema escolar. Nom del fitxer: part numèrica del DNI (p.ex. 53971108.jpg).",
+        ["ClassStudents_SelectZip"]   = "Seleccionar fitxer ZIP",
+        ["ClassStudents_ImportFotosBtn"] = "Importar fotos",
+        ["ClassStudents_FotosNotFound"]  = "{0} fotos no associades",
+        ["ClassStudents_UploadFoto"]  = "Canviar foto",
+        ["ClassStudents_FotoUploaded"] = "Foto actualitzada.",
+        ["ClassStudents_FotoError"]   = "Error en pujar la foto.",
+
+        // ── Perfil: fotos ─────────────────────────────────────────────────────
+        ["Profile_ChangeFoto"]   = "Canviar foto",
+        ["Profile_DeleteFoto"]   = "Eliminar foto",
+        ["Profile_FotoUpdated"]  = "Foto actualitzada correctament.",
+        ["Profile_FotoDeleted"]  = "Foto eliminada.",
+        ["Profile_FotoError"]    = "Error en pujar la foto.",
 
         // ── QR ────────────────────────────────────────────────────────────────
         ["QR_Title"]       = "Codis QR d'accés per a alumnes",
@@ -1264,6 +1281,23 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["ClassStudents_NoCreated"]   = "No se ha creado ningún alumno nuevo.",
         ["ClassStudents_FileEmpty"]   = "Archivo vacío o sin datos válidos.",
         ["ClassStudents_FileErrors"]  = "El archivo contiene errores y no se ha importado ningún alumno.",
+        ["ClassStudents_Dni"]         = "DNI / NIE",
+        ["ClassStudents_DniHint"]     = "Opcional. Se usa para asociar fotos del ZIP.",
+        ["ClassStudents_ImportFotosTitle"] = "Importar fotos",
+        ["ClassStudents_ImportFotosHint"]  = "ZIP con fotos del sistema escolar. Nombre del archivo: parte numérica del DNI (ej. 53971108.jpg).",
+        ["ClassStudents_SelectZip"]   = "Seleccionar archivo ZIP",
+        ["ClassStudents_ImportFotosBtn"] = "Importar fotos",
+        ["ClassStudents_FotosNotFound"]  = "{0} fotos no asociadas",
+        ["ClassStudents_UploadFoto"]  = "Cambiar foto",
+        ["ClassStudents_FotoUploaded"] = "Foto actualizada.",
+        ["ClassStudents_FotoError"]   = "Error al subir la foto.",
+
+        // ── Perfil: fotos ─────────────────────────────────────────────────────
+        ["Profile_ChangeFoto"]   = "Cambiar foto",
+        ["Profile_DeleteFoto"]   = "Eliminar foto",
+        ["Profile_FotoUpdated"]  = "Foto actualizada correctamente.",
+        ["Profile_FotoDeleted"]  = "Foto eliminada.",
+        ["Profile_FotoError"]    = "Error al subir la foto.",
 
         // ── QR ────────────────────────────────────────────────────────────────
         ["QR_Title"]       = "Códigos QR de acceso para alumnos",

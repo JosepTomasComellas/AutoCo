@@ -5,6 +5,7 @@
 @inject ISnackbar Snackbar
 @inject ProtectedLocalStorage LocalStorage
 @inject IStringLocalizer<SharedResources> Loc
+@using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>El meu perfil – AutoCo</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
@@ -26,6 +27,41 @@
     {
         <MudCard Elevation="3">
             <MudCardContent>
+                <!-- Foto de perfil -->
+                <MudStack AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudAvatar Style="width:96px;height:96px;margin:0 auto">
+                        @if (UserState.FotoUrl is not null)
+                        {
+                            <MudImage Src="@($"{UserState.FotoUrl}?v={UserState.FotoVersion}")"
+                                      Style="width:100%;height:100%;object-fit:cover" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle"
+                                     Style="font-size:64px" />
+                        }
+                    </MudAvatar>
+                    <MudStack Row="true" Spacing="1">
+                        <MudFileUpload T="IBrowserFile" Accept=".jpg,.jpeg,.png,.webp"
+                                       FilesChanged="UploadFotoAsync">
+                            <ActivatorContent>
+                                <MudButton StartIcon="@Icons.Material.Filled.CameraAlt"
+                                           Variant="Variant.Outlined" Size="Size.Small">
+                                    @Loc["Profile_ChangeFoto"]
+                                </MudButton>
+                            </ActivatorContent>
+                        </MudFileUpload>
+                        @if (UserState.FotoUrl is not null)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error" title="@Loc["Profile_DeleteFoto"]"
+                                           OnClick="DeleteFotoAsync" />
+                        }
+                    </MudStack>
+                </MudStack>
+
+                <MudDivider Class="mb-4" />
+
                 <!-- Info general -->
                 <MudText Typo="Typo.subtitle1" Class="mb-3" Style="font-weight:700">
                     <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" />
@@ -149,9 +185,9 @@
         }
         else
         {
-            // Actualitza la sessió amb el nou nom
+            // Actualitza la sessió amb el nou nom (manté la FotoUrl actual)
             var session = new LoginResponse(UserState.Token!, result.NomComplet,
-                UserState.Role!, result.Id);
+                UserState.Role!, result.Id, UserState.FotoUrl);
             try { await LocalStorage.SetAsync("autoco_session", session); } catch { }
             UserState.SetLogin(session);
 
@@ -161,6 +197,37 @@
             _newPassword     = "";
             _confirmPassword = "";
             Snackbar.Add(Loc["Profile_Updated"].Value, Severity.Success);
+        }
+    }
+
+    private async Task UploadFotoAsync(IBrowserFile file)
+    {
+        if (UserState.UserId is null) return;
+        Api.SetToken(UserState.Token!);
+        var url = await Api.UploadProfessorFotoAsync(UserState.UserId.Value, file);
+        if (url is not null)
+        {
+            UserState.UpdateFotoUrl(url);
+            var session = new LoginResponse(UserState.Token!, UserState.NomComplet!,
+                UserState.Role!, UserState.UserId.Value, url);
+            try { await LocalStorage.SetAsync("autoco_session", session); } catch { }
+            Snackbar.Add(Loc["Profile_FotoUpdated"].Value, Severity.Success);
+        }
+        else Snackbar.Add(Loc["Profile_FotoError"].Value, Severity.Error);
+    }
+
+    private async Task DeleteFotoAsync()
+    {
+        if (UserState.UserId is null) return;
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.DeleteProfessorFotoAsync(UserState.UserId.Value);
+        if (ok)
+        {
+            UserState.UpdateFotoUrl(null);
+            var session = new LoginResponse(UserState.Token!, UserState.NomComplet!,
+                UserState.Role!, UserState.UserId.Value, null);
+            try { await LocalStorage.SetAsync("autoco_session", session); } catch { }
+            Snackbar.Add(Loc["Profile_FotoDeleted"].Value, Severity.Success);
         }
     }
 }

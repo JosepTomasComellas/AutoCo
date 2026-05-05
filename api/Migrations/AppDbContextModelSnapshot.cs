@@ -496,6 +496,10 @@ namespace AutoCo.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("Dni")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ClassId");

@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using AutoCo.Shared.DTOs;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace AutoCo.Web.Services;
 
@@ -375,6 +376,59 @@ public class ApiClient
 
     public Task<ImportResult?> RestoreBackupFileAsync(string name) =>
         PostAsync<ImportResult>($"/api/admin/backup/files/{Uri.EscapeDataString(name)}/restore", null);
+
+    // ── Fotos ─────────────────────────────────────────────────────────────────
+
+    public async Task<string?> UploadStudentFotoAsync(int classId, int studentId, IBrowserFile file)
+    {
+        using var content = new MultipartFormDataContent();
+        var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        content.Add(new StreamContent(stream), "file", file.Name);
+        var resp = await _http.PostAsync(
+            $"/api/classes/{classId}/students/{studentId}/foto", content);
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        using var doc = System.Text.Json.JsonDocument.Parse(
+            await resp.Content.ReadAsStringAsync());
+        return doc.RootElement.TryGetProperty("fotoUrl", out var u) ? u.GetString() : null;
+    }
+
+    public async Task<bool> DeleteStudentFotoAsync(int classId, int studentId)
+    {
+        var resp = await _http.DeleteAsync(
+            $"/api/classes/{classId}/students/{studentId}/foto");
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
+        return true;
+    }
+
+    public async Task<ImportFotosResult?> ImportStudentFotosZipAsync(int classId, IBrowserFile file)
+    {
+        using var content = new MultipartFormDataContent();
+        var stream = file.OpenReadStream(maxAllowedSize: 100 * 1024 * 1024);
+        content.Add(new StreamContent(stream), "file", file.Name);
+        var resp = await _http.PostAsync(
+            $"/api/classes/{classId}/students/fotos/zip", content);
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        return await resp.Content.ReadFromJsonAsync<ImportFotosResult>(_json);
+    }
+
+    public async Task<string?> UploadProfessorFotoAsync(int professorId, IBrowserFile file)
+    {
+        using var content = new MultipartFormDataContent();
+        var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        content.Add(new StreamContent(stream), "file", file.Name);
+        var resp = await _http.PostAsync($"/api/professors/{professorId}/foto", content);
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        using var doc = System.Text.Json.JsonDocument.Parse(
+            await resp.Content.ReadAsStringAsync());
+        return doc.RootElement.TryGetProperty("fotoUrl", out var u) ? u.GetString() : null;
+    }
+
+    public async Task<bool> DeleteProfessorFotoAsync(int professorId)
+    {
+        var resp = await _http.DeleteAsync($"/api/professors/{professorId}/foto");
+        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
+        return true;
+    }
 
     // ── Privats ───────────────────────────────────────────────────────────────
 

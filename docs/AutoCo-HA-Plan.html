@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutoCo — Pla d'Infraestructura Alta Disponibilitat</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary:  #1e293b;
+      --accent:   #3b82f6;
+      --success:  #16a34a;
+      --warning:  #d97706;
+      --danger:   #dc2626;
+      --light:    #f8fafc;
+      --border:   #e2e8f0;
+      --text:     #334155;
+      --muted:    #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      font-size: 14.5px;
+      line-height: 1.65;
+      color: var(--text);
+      background: var(--light);
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 2rem 3rem 1.5rem;
+      border-bottom: 4px solid var(--accent);
+    }
+    header .logo { font-size: 0.75rem; letter-spacing: 0.15em; opacity: 0.5; text-transform: uppercase; margin-bottom: 0.4rem; }
+    header h1 { font-size: 1.75rem; font-weight: 700; }
+    header .sub { opacity: 0.65; margin-top: 0.3rem; font-size: 0.9rem; }
+    header .meta { display: flex; gap: 2rem; margin-top: 1rem; font-size: 0.8rem; opacity: 0.6; }
+
+    /* ── Nav ── */
+    nav {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 0.7rem 3rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    }
+    nav a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.82rem;
+      font-weight: 500;
+    }
+    nav a:hover { text-decoration: underline; }
+
+    /* ── Main ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 3rem 4rem; }
+
+    section { margin-bottom: 3rem; }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--primary);
+      border-left: 4px solid var(--accent);
+      padding-left: 0.8rem;
+      margin: 2.5rem 0 1.2rem;
+      scroll-margin-top: 3.5rem;
+    }
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
+      margin: 1.5rem 0 0.7rem;
+    }
+    p { margin-bottom: 0.8rem; }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.88rem;
+    }
+    th {
+      background: var(--primary);
+      color: white;
+      padding: 0.55rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    td {
+      padding: 0.48rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 0.12rem 0.55rem;
+      border-radius: 4px;
+      font-size: 0.73rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .b-green  { background:#dcfce7; color:#166534; }
+    .b-blue   { background:#dbeafe; color:#1d4ed8; }
+    .b-orange { background:#ffedd5; color:#9a3412; }
+    .b-purple { background:#f3e8ff; color:#7e22ce; }
+    .b-red    { background:#fee2e2; color:#991b1b; }
+    .b-yellow { background:#fef9c3; color:#713f12; }
+    .b-slate  { background:#f1f5f9; color:#475569; }
+
+    /* ── Diagram ── */
+    .diagram-wrap {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin: 1.2rem 0;
+      overflow-x: auto;
+    }
+    .diagram-wrap .caption {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 0.75rem;
+    }
+
+    /* ── Phase cards ── */
+    .phase-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    }
+    .phase-head {
+      background: var(--primary);
+      color: white;
+      padding: 0.8rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+    }
+    .phase-num {
+      background: var(--accent);
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .phase-head h3 { color: white; margin: 0; font-size: 1rem; }
+    .phase-body { padding: 1.25rem 1.5rem; }
+    .phase-meta { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
+
+    /* ── Steps ── */
+    .steps { list-style: none; padding: 0; }
+    .steps li {
+      padding: 0.35rem 0 0.35rem 1.75rem;
+      position: relative;
+      border-left: 2px solid var(--border);
+      margin-left: 0.75rem;
+    }
+    .steps li::before {
+      content: counter(step);
+      counter-increment: step;
+      position: absolute;
+      left: -10px;
+      top: 0.35rem;
+      background: var(--accent);
+      color: white;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      font-size: 0.65rem;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .steps { counter-reset: step; }
+
+    /* ── Code ── */
+    code {
+      background: #f1f5f9;
+      padding: 0.1rem 0.35rem;
+      border-radius: 3px;
+      font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+      font-size: 0.83rem;
+      color: #be185d;
+    }
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 1rem 1.25rem;
+      border-radius: 7px;
+      overflow-x: auto;
+      font-size: 0.83rem;
+      line-height: 1.55;
+      margin: 0.8rem 0;
+    }
+    pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+    /* ── Callouts ── */
+    .info  { background:#dbeafe; border-left:4px solid var(--accent);  padding:.7rem 1rem; border-radius:0 6px 6px 0; margin:1rem 0; font-size:.88rem; }
+    .warn  { background:#fff7ed; border-left:4px solid var(--warning); padding:.7rem 1rem; border-radius:0 6px 6px 0; margin:1rem 0; font-size:.88rem; }
+    .ok    { background:#dcfce7; border-left:4px solid var(--success); padding:.7rem 1rem; border-radius:0 6px 6px 0; margin:1rem 0; font-size:.88rem; }
+
+    /* ── Grid cards ── */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin: 1rem 0; }
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+    }
+    .card h4 { font-size: 0.9rem; font-weight: 700; color: var(--primary); margin-bottom: 0.5rem; }
+    .card p  { font-size: 0.85rem; margin: 0; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem;
+      color: #94a3b8;
+      font-size: 0.78rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Print ── */
+    @media print {
+      nav, header .meta { display: none; }
+      body { font-size: 12px; }
+      main { padding: 1rem; }
+      .phase-card, .diagram-wrap { break-inside: avoid; page-break-inside: avoid; }
+      h2 { page-break-before: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">AutoCo · Avaluació entre Iguals</div>
+  <h1>Pla d'Infraestructura — Alta Disponibilitat</h1>
+  <div class="sub">Disseny i pla d'acció per al desplegament en entorn Proxmox LXC amb Harbor, PostgreSQL HA i monitorització</div>
+  <div class="meta">
+    <span>📅 Versió 1.0 · Maig 2026</span>
+    <span>🏫 Ús intern escolar</span>
+    <span>🌐 AutoCo.ddns.net:4443</span>
+    <span>🖥 3 nodes Proxmox · i5 · 12 GB RAM</span>
+  </div>
+</header>
+
+<nav>
+  <a href="#resum">Resum</a>
+  <a href="#diagrama-logic">Diagrama lògic</a>
+  <a href="#diagrama-fisic">Diagrama físic</a>
+  <a href="#adreces">Adreçament IP</a>
+  <a href="#lxc">Especificació LXC</a>
+  <a href="#xarxes">Xarxes</a>
+  <a href="#pla">Pla d'acció</a>
+  <a href="#seguretat">Seguretat</a>
+</nav>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="resum">
+<h2>1. Resum executiu</h2>
+
+<p>
+  La solució desplega <strong>AutoCo</strong> en un clúster de tres nodes Proxmox VE amb contenidors LXC Ubuntu Server 24.04.
+  L'arquitectura s'organitza en tres capes independents, cadascuna dissenyada per al mínim consum de recursos
+  i la màxima tolerància a fallades del hardware.
+</p>
+
+<div class="card-grid">
+  <div class="card">
+    <h4>🟢 Capa 1 · Publicació</h4>
+    <p>Dos nodes actiu/passiu amb IP flotant (Keepalived VRRP). Traefik gestiona el balanceig de càrrega amb sticky sessions per a Blazor Server. Failover en &lt;5 s.</p>
+  </div>
+  <div class="card">
+    <h4>🟠 Capa 2 · Dades</h4>
+    <p>Clúster PostgreSQL de 3 nodes gestionat per Patroni + etcd. Failover automàtic en &lt;30 s. Redis amb Sentinel. pgBouncer com a proxy transparent.</p>
+  </div>
+  <div class="card">
+    <h4>🟣 Capa 3 · Monitorització</h4>
+    <p>Prometheus + Grafana + Alertmanager al node pve-3. Alertes per correu electrònic. Harbor Registry aïllat al mateix node físic.</p>
+  </div>
+</div>
+
+<div class="info">
+  <strong>Restricció de xarxa:</strong> tota la solució utilitza <strong>6 IPs</strong> de la xarxa <code>192.168.0.0/24</code>
+  (3 nodes Proxmox + 2 nodes de publicació + 1 VIP de servei). Tota la comunicació interna entre capes
+  usa la xarxa <code>10.10.0.0/24</code>, invisible des de la LAN escolar.
+</div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="diagrama-logic">
+<h2>2. Diagrama d'infraestructura lògic</h2>
+<p>Vista lògica del flux de tràfic des d'internet fins a la capa de dades, amb les relacions entre serveis.</p>
+
+<div class="diagram-wrap">
+<div class="mermaid">
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor':'#1e293b','primaryTextColor':'#fff','primaryBorderColor':'#3b82f6','lineColor':'#64748b','secondaryColor':'#f8fafc','tertiaryColor':'#f1f5f9'}}}%%
+flowchart TB
+    classDef ext  fill:#dbeafe,stroke:#2563eb,color:#1e3a8a,font-weight:bold
+    classDef vip  fill:#fef9c3,stroke:#d97706,color:#78350f,font-weight:bold
+    classDef pub  fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef dat  fill:#ffedd5,stroke:#ea580c,color:#7c2d12
+    classDef mon  fill:#f3e8ff,stroke:#9333ea,color:#581c87
+    classDef reg  fill:#fce7f3,stroke:#db2777,color:#831843
+    classDef rtr  fill:#f1f5f9,stroke:#475569,color:#1e293b
+
+    USER(["🌐 Internet\nAutoCo.ddns.net:4443"]):::ext
+
+    ROUTER["🔀 Router CPD\nNAT  :4443 → 192.168.0.200:443\nNAT  :80 → 192.168.0.200:80"]:::rtr
+
+    VIP(["⚡ VIP · 192.168.0.200\nKeepalived VRRP\nFailover &lt;5 s"]):::vip
+
+    PUB01["ct-autoco-pub-01 · pve-1\n192.168.0.101 / 10.10.0.11\n────────────────\nnginx · SSL/TLS\nTraefik · sticky LB\nBlazor web-1 · API api-1\nKeepalived ★ MASTER"]:::pub
+
+    PUB02["ct-autoco-pub-02 · pve-2\n192.168.0.102 / 10.10.0.12\n────────────────\nnginx · SSL/TLS\nTraefik · sticky LB\nBlazor web-2 · API api-2\nKeepalived  BACKUP"]:::pub
+
+    DVIP(["🗄 Data VIP · 10.10.0.100\npgBouncer · pool connexions\nSempre apunta al primari"]):::vip
+
+    DB01["ct-autoco-db-01 · pve-1\n10.10.0.21\n────────────────\nPostgreSQL PRIMARY\nPatroni · etcd-1\nRedis MASTER"]:::dat
+
+    DB02["ct-autoco-db-02 · pve-2\n10.10.0.22\n────────────────\nPostgreSQL REPLICA\nPatroni · etcd-2\nRedis REPLICA + Sentinel"]:::dat
+
+    DB03["ct-autoco-db-03 · pve-3\n10.10.0.23\n────────────────\nPostgreSQL REPLICA\nPatroni · etcd-3\nquòrum de consens"]:::dat
+
+    MON["ct-autoco-mon-01 · pve-3\n10.10.0.31\n────────────────\nPrometheus\nGrafana\nAlertmanager"]:::mon
+
+    REG["ct-autoco-reg-01 · pve-3\n192.168.0.103 / 10.10.0.32\n────────────────\nHarbor Registry\naïllat · accés LAN"]:::reg
+
+    USER       --> ROUTER
+    ROUTER     --> VIP
+    VIP        -- "actiu"   --> PUB01
+    VIP        -. "standby" .-> PUB02
+    PUB01      --> DVIP
+    PUB02      --> DVIP
+    DVIP       --> DB01
+    DB01       == "streaming replication" ==> DB02
+    DB01       == "streaming replication" ==> DB03
+    DB01       <-. "Sentinel / etcd" .-> DB02
+    DB02       <-. "etcd" .-> DB03
+    MON        -. "scraping" .-> PUB01
+    MON        -. "scraping" .-> PUB02
+    MON        -. "scraping" .-> DB01
+    MON        -. "scraping" .-> DB02
+    MON        -. "scraping" .-> DB03
+    REG        -. "docker pull" .-> PUB01
+    REG        -. "docker pull" .-> PUB02
+</div>
+<div class="caption">Flux de tràfic: Internet → VIP → Publicació → Dades · Línies contínues = tràfic de servei · Puntejades = gestió/monitorització</div>
+</div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="diagrama-fisic">
+<h2>3. Diagrama de distribució física</h2>
+<p>Vista per node físic Proxmox amb tots els contenidors LXC i els recursos assignats.</p>
+
+<div class="diagram-wrap">
+<div class="mermaid">
+%%{init: {'theme': 'base'}}%%
+graph LR
+    classDef pub  fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef dat  fill:#ffedd5,stroke:#ea580c,color:#7c2d12
+    classDef mon  fill:#f3e8ff,stroke:#9333ea,color:#581c87
+    classDef reg  fill:#fce7f3,stroke:#db2777,color:#831843
+
+    subgraph N1["🖥  pve-1 · 192.168.0.10 · Intel i5 · 12 GB RAM"]
+        direction TB
+        A1["ct-autoco-pub-01\n2 vCPU · 2 GB RAM · 10 GB disc\nnginx · Traefik · web-1 · api-1\nKeepalived MASTER"]:::pub
+        A2["ct-autoco-db-01\n2 vCPU · 4 GB RAM · 20 GB disc\nPostgreSQL PRIMARY · Patroni\netcd-1 · Redis MASTER"]:::dat
+    end
+
+    subgraph N2["🖥  pve-2 · 192.168.0.11 · Intel i5 · 12 GB RAM"]
+        direction TB
+        B1["ct-autoco-pub-02\n2 vCPU · 2 GB RAM · 10 GB disc\nnginx · Traefik · web-2 · api-2\nKeepalived BACKUP"]:::pub
+        B2["ct-autoco-db-02\n2 vCPU · 4 GB RAM · 20 GB disc\nPostgreSQL REPLICA · Patroni\netcd-2 · Redis REPLICA + Sentinel"]:::dat
+    end
+
+    subgraph N3["🖥  pve-3 · 192.168.0.12 · Intel i5 · 12 GB RAM"]
+        direction TB
+        C1["ct-autoco-db-03\n1 vCPU · 2 GB RAM · 10 GB disc\nPostgreSQL REPLICA · Patroni\netcd-3 · quòrum"]:::dat
+        C2["ct-autoco-mon-01\n2 vCPU · 2 GB RAM · 20 GB disc\nPrometheus · Grafana\nAlertmanager"]:::mon
+        C3["ct-autoco-reg-01\n2 vCPU · 2 GB RAM · 30 GB disc\nHarbor Registry\naïllat"]:::reg
+    end
+</div>
+<div class="caption">Distribució física: 7 contenidors LXC en 3 nodes Proxmox · Total utilitzat per node: ≤ 8 GB RAM (inclòs SO Proxmox)</div>
+</div>
+
+<div class="warn">
+  <strong>Tolerància a fallades:</strong> si cau <strong>pve-1</strong>, pve-2 agafa la VIP (pub-02) i db-02 és promocionat a primari per Patroni.
+  Si cau <strong>pve-2</strong>, pve-1 té la VIP i db-01 segueix com a primari. Si cau <strong>pve-3</strong>, el servei als alumnes no s'afecta.
+</div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="adreces">
+<h2>4. Taula d'adreçament IP</h2>
+
+<h3>4.1 Xarxa externa — 192.168.0.0/24 (LAN escolar)</h3>
+<table>
+  <thead>
+    <tr><th>Hostname / Rol</th><th>IP</th><th>Tipus</th><th>Accés</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Router / Gateway</td><td><code>192.168.0.1</code></td><td><span class="badge b-slate">Gateway</span></td><td>Tota la xarxa</td></tr>
+    <tr><td>pve-1 (Proxmox node 1)</td><td><code>192.168.0.10</code></td><td><span class="badge b-blue">Node</span></td><td>Gestió Proxmox</td></tr>
+    <tr><td>pve-2 (Proxmox node 2)</td><td><code>192.168.0.11</code></td><td><span class="badge b-blue">Node</span></td><td>Gestió Proxmox</td></tr>
+    <tr><td>pve-3 (Proxmox node 3)</td><td><code>192.168.0.12</code></td><td><span class="badge b-blue">Node</span></td><td>Gestió Proxmox</td></tr>
+    <tr><td>ct-autoco-pub-01 (eth0)</td><td><code>192.168.0.101</code></td><td><span class="badge b-green">LXC</span></td><td>VRRP inter-node</td></tr>
+    <tr><td>ct-autoco-pub-02 (eth0)</td><td><code>192.168.0.102</code></td><td><span class="badge b-green">LXC</span></td><td>VRRP inter-node</td></tr>
+    <tr><td>ct-autoco-reg-01 (eth0)</td><td><code>192.168.0.103</code></td><td><span class="badge b-red">LXC</span></td><td>Harbor push des de LAN</td></tr>
+    <tr><td><strong>VIP Publicació (Keepalived)</strong></td><td><code><strong>192.168.0.200</strong></code></td><td><span class="badge b-yellow">VIP</span></td><td>Entrada servei AutoCo</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2 Xarxa interna — 10.10.0.0/24 (inter-contenidors)</h3>
+<p>No exposada a la LAN escolar. Tota la comunicació entre capes usa aquest rang.</p>
+<table>
+  <thead>
+    <tr><th>Hostname</th><th>IP interna</th><th>Capa</th><th>Serveis</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>ct-autoco-pub-01 (eth1)</td><td><code>10.10.0.11</code></td><td><span class="badge b-green">Publicació</span></td><td>nginx, Traefik, web-1, api-1</td></tr>
+    <tr><td>ct-autoco-pub-02 (eth1)</td><td><code>10.10.0.12</code></td><td><span class="badge b-green">Publicació</span></td><td>nginx, Traefik, web-2, api-2</td></tr>
+    <tr><td><strong>Data VIP (pgBouncer)</strong></td><td><code><strong>10.10.0.100</strong></code></td><td><span class="badge b-yellow">VIP</span></td><td>Proxy entrada capa de dades</td></tr>
+    <tr><td>ct-autoco-db-01</td><td><code>10.10.0.21</code></td><td><span class="badge b-orange">Dades</span></td><td>PostgreSQL, Patroni, etcd-1, Redis</td></tr>
+    <tr><td>ct-autoco-db-02</td><td><code>10.10.0.22</code></td><td><span class="badge b-orange">Dades</span></td><td>PostgreSQL, Patroni, etcd-2, Redis</td></tr>
+    <tr><td>ct-autoco-db-03</td><td><code>10.10.0.23</code></td><td><span class="badge b-orange">Dades</span></td><td>PostgreSQL, Patroni, etcd-3</td></tr>
+    <tr><td>ct-autoco-mon-01</td><td><code>10.10.0.31</code></td><td><span class="badge b-purple">Monitor</span></td><td>Prometheus, Grafana, Alertmanager</td></tr>
+    <tr><td>ct-autoco-reg-01 (eth1)</td><td><code>10.10.0.32</code></td><td><span class="badge b-red">Registry</span></td><td>Harbor (accés intern dels nodes pub)</td></tr>
+  </tbody>
+</table>
+
+<h3>4.3 NAT al router</h3>
+<table>
+  <thead>
+    <tr><th>Port extern (internet)</th><th>Destí intern</th><th>Propòsit</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>TCP 4443</code></td><td><code>192.168.0.200:443</code></td><td>AutoCo HTTPS (AutoCo.ddns.net:4443)</td></tr>
+    <tr><td><code>TCP 80</code></td><td><code>192.168.0.200:80</code></td><td>Let's Encrypt ACME challenge (HTTP-01)</td></tr>
+  </tbody>
+</table>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="lxc">
+<h2>5. Especificació dels contenidors LXC</h2>
+<p>Tots els contenidors usen <strong>Ubuntu Server 24.04 LTS</strong>. Recursos mínims per reduir el consum, amb marge de creixement.</p>
+
+<table>
+  <thead>
+    <tr><th>Contenidor</th><th>Node</th><th>vCPU</th><th>RAM</th><th>Disc</th><th>eth0 (ext)</th><th>eth1 (int)</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>ct-autoco-pub-01</code></td><td>pve-1</td><td>2</td><td>2 GB</td><td>10 GB</td>
+      <td><code>192.168.0.101/24</code></td><td><code>10.10.0.11/24</code></td>
+    </tr>
+    <tr>
+      <td><code>ct-autoco-pub-02</code></td><td>pve-2</td><td>2</td><td>2 GB</td><td>10 GB</td>
+      <td><code>192.168.0.102/24</code></td><td><code>10.10.0.12/24</code></td>
+    </tr>
+    <tr>
+      <td><code>ct-autoco-db-01</code></td><td>pve-1</td><td>2</td><td>4 GB</td><td>20 GB</td>
+      <td>—</td><td><code>10.10.0.21/24</code></td>
+    </tr>
+    <tr>
+      <td><code>ct-autoco-db-02</code></td><td>pve-2</td><td>2</td><td>4 GB</td><td>20 GB</td>
+      <td>—</td><td><code>10.10.0.22/24</code></td>
+    </tr>
+    <tr>
+      <td><code>ct-autoco-db-03</code></td><td>pve-3</td><td>1</td><td>2 GB</td><td>10 GB</td>
+      <td>—</td><td><code>10.10.0.23/24</code></td>
+    </tr>
+    <tr>
+      <td><code>ct-autoco-mon-01</code></td><td>pve-3</td><td>2</td><td>2 GB</td><td>20 GB</td>
+      <td>—</td><td><code>10.10.0.31/24</code></td>
+    </tr>
+    <tr>
+      <td><code>ct-autoco-reg-01</code></td><td>pve-3</td><td>2</td><td>2 GB</td><td>30 GB</td>
+      <td><code>192.168.0.103/24</code></td><td><code>10.10.0.32/24</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>Consum per node (inclòs Proxmox OS ~1.5 GB)</h3>
+<table>
+  <thead><tr><th>Node</th><th>RAM assignada</th><th>RAM SO</th><th>Total</th><th>Disponible</th></tr></thead>
+  <tbody>
+    <tr><td>pve-1</td><td>2 + 4 = 6 GB</td><td>~1.5 GB</td><td>~7.5 GB</td><td><span class="badge b-green">4.5 GB lliures</span></td></tr>
+    <tr><td>pve-2</td><td>2 + 4 = 6 GB</td><td>~1.5 GB</td><td>~7.5 GB</td><td><span class="badge b-green">4.5 GB lliures</span></td></tr>
+    <tr><td>pve-3</td><td>2 + 2 + 2 = 6 GB</td><td>~1.5 GB</td><td>~7.5 GB</td><td><span class="badge b-green">4.5 GB lliures</span></td></tr>
+  </tbody>
+</table>
+
+<div class="ok">
+  El marge de <strong>4.5 GB per node</strong> permet absorbir el tràfic d'un altre node en cas de fallada sense degradació de servei perceptible per als alumnes.
+</div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="xarxes">
+<h2>6. Disseny de xarxes Proxmox</h2>
+
+<h3>Bridges Linux (fase inicial — un sol node físic)</h3>
+<p>En la fase inicial, tots els LXC corren al mateix Proxmox. Els bridges són locals:</p>
+<table>
+  <thead><tr><th>Bridge</th><th>Tipus</th><th>Rang</th><th>Propòsit</th></tr></thead>
+  <tbody>
+    <tr><td><code>vmbr0</code></td><td>Bridge extern</td><td><code>192.168.0.0/24</code></td><td>Uplink al switch físic → internet</td></tr>
+    <tr><td><code>vmbr1</code></td><td>Bridge intern</td><td><code>10.10.0.0/24</code></td><td>Comunicació inter-contenidors (sense uplink)</td></tr>
+  </tbody>
+</table>
+
+<h3>Configuració <code>/etc/network/interfaces</code> (per node)</h3>
+<pre><code>auto lo
+iface lo inet loopback
+
+# NIC física
+auto enp3s0
+iface enp3s0 inet manual
+
+# Bridge extern (LAN escolar)
+auto vmbr0
+iface vmbr0 inet static
+    address 192.168.0.10/24     # .11 per pve-2, .12 per pve-3
+    gateway 192.168.0.1
+    bridge-ports enp3s0
+    bridge-stp off
+    bridge-fd 0
+
+# Bridge intern (inter-contenidors, sense uplink)
+auto vmbr1
+iface vmbr1 inet static
+    address 10.10.0.254/24      # IP del node al bridge intern
+    bridge-ports none
+    bridge-stp off
+    bridge-fd 0</code></pre>
+
+<h3>Fase producció — 3 nodes separats</h3>
+<p>
+  Quan es distribueix en 3 nodes físics, <code>vmbr1</code> (xarxa interna) ha d'estendre's entre nodes.
+  Opcions per ordre de preferència:
+</p>
+<table>
+  <thead><tr><th>Opció</th><th>Requisit</th><th>Com</th></tr></thead>
+  <tbody>
+    <tr><td>VLANs 802.1Q</td><td>Switch gestionat</td><td>Trunk VLAN al switch, <code>vmbr0</code> VLAN-aware, tag VLAN 10 a vmbr1</td></tr>
+    <tr><td>2a NIC dedicada</td><td>2a targeta de xarxa</td><td><code>vmbr1</code> amb uplink a la 2a NIC en xarxa isolada</td></tr>
+    <tr><td>WireGuard overlay</td><td>Cap (software)</td><td>Túnel xifrat entre nodes sobre vmbr0. Solució temporal fins tenir switch gestionat.</td></tr>
+  </tbody>
+</table>
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="pla">
+<h2>7. Pla d'acció fase a fase</h2>
+<p>Cada fase és independent i verificable. Es pot aturar entre fases sense deixar el sistema en un estat inconsistent.</p>
+
+<!-- FASE 0 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">0</div>
+    <div>
+      <h3>Preparació del clúster Proxmox</h3>
+      <div style="font-size:0.82rem;opacity:0.75">Prerequisit de tot · Sense downtime</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 2-3 h</span>
+      <span class="badge b-green">Downtime: cap</span>
+      <span class="badge b-slate">Prerequisit: Proxmox 8.x instal·lat als 3 nodes</span>
+    </div>
+    <ol class="steps">
+      <li>Crear el clúster al node primari: <code>pvecm create autoco-cluster</code></li>
+      <li>Unir pve-2 al clúster: <code>pvecm add 192.168.0.10</code> (des de pve-2)</li>
+      <li>Unir pve-3 al clúster: <code>pvecm add 192.168.0.10</code> (des de pve-3)</li>
+      <li>Verificar clúster: <code>pvecm status</code> → 3 nodes, quòrum OK</li>
+      <li>Configurar els bridges <code>vmbr0</code> i <code>vmbr1</code> als 3 nodes</li>
+      <li>Descarregar plantilla Ubuntu 24.04: <code>pveam download local ubuntu-24.04-standard_*.tar.zst</code></li>
+      <li>Configurar emmagatzematge compartit (opcional: NFS o Ceph per a HA de LXC via Proxmox)</li>
+    </ol>
+    <div class="info">Verificació: <code>pvecm status</code> ha de mostrar <em>Quorum OK</em> i els 3 nodes amb estat <em>online</em>.</div>
+  </div>
+</div>
+
+<!-- FASE 1 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">1</div>
+    <div>
+      <h3>Creació dels contenidors LXC base</h3>
+      <div style="font-size:0.82rem;opacity:0.75">Tots els 7 contenidors · Ubuntu 24.04 · Docker instal·lat</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 1-2 h</span>
+      <span class="badge b-green">Downtime: cap</span>
+      <span class="badge b-slate">Prerequisit: Fase 0 completada</span>
+    </div>
+    <p>Crear cada LXC amb la comanda següent (ajustar <code>VMID</code>, <code>hostname</code>, IPs i node destí):</p>
+    <pre><code># Exemple per a ct-autoco-pub-01 (VMID 101, a pve-1)
+pct create 101 local:vztmpl/ubuntu-24.04-standard_*.tar.zst \
+  --hostname ct-autoco-pub-01 \
+  --cores 2 --memory 2048 --swap 512 \
+  --rootfs local-lvm:10 \
+  --net0 name=eth0,bridge=vmbr0,ip=192.168.0.101/24,gw=192.168.0.1 \
+  --net1 name=eth1,bridge=vmbr1,ip=10.10.0.11/24 \
+  --features nesting=1,fuse=1 \
+  --unprivileged 0 \
+  --start 1</code></pre>
+    <ol class="steps">
+      <li>Crear els 7 contenidors seguint la taula d'especificació (secció 5)</li>
+      <li>Instal·lar Docker Engine a cada contenidor: <code>curl -fsSL https://get.docker.com | sh</code></li>
+      <li>Instal·lar <code>docker compose</code>, <code>curl</code>, <code>htop</code>, <code>vim</code> a cada contenidor</li>
+      <li>Configurar SSH key-based auth des de la màquina de gestió</li>
+      <li>Verificar connectivitat interna: <code>ping 10.10.0.21</code> des de pub-01</li>
+    </ol>
+    <div class="warn"><strong>Docker en LXC privilegiat:</strong> cal <code>nesting=1</code> i <code>unprivileged=0</code> per a Docker. Afegir a <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code>: <code>lxc.apparmor.profile: unconfined</code></div>
+  </div>
+</div>
+
+<!-- FASE 2 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">2</div>
+    <div>
+      <h3>Capa de dades — PostgreSQL HA + Redis</h3>
+      <div style="font-size:0.82rem;opacity:0.75">Patroni + etcd (3 nodes) · Failover automàtic · Redis Sentinel</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 3-4 h</span>
+      <span class="badge b-green">Downtime: cap (nova infraestructura)</span>
+      <span class="badge b-slate">Prerequisit: Fase 1 completada</span>
+    </div>
+    <ol class="steps">
+      <li>Desplegar clúster <strong>etcd</strong> als 3 nodes db via Docker Compose (ports interns 2379/2380)</li>
+      <li>Verificar quòrum etcd: <code>etcdctl endpoint health --endpoints=10.10.0.21:2379,10.10.0.22:2379,10.10.0.23:2379</code></li>
+      <li>Desplegar <strong>Patroni</strong> + PostgreSQL 16 als 3 nodes db. Patroni gestiona l'elecció del primari via etcd.</li>
+      <li>Verificar clúster Patroni: <code>patronictl -c /etc/patroni.yml list</code> → 1 Leader + 2 Replica</li>
+      <li>Desplegar <strong>Redis</strong> master (db-01) + replica (db-02) + Sentinel (db-01, db-02)</li>
+      <li>Desplegar <strong>pgBouncer</strong> a db-01 i db-02, apuntant al primari PostgreSQL actual</li>
+      <li>Configurar <strong>Keepalived</strong> als nodes db per al Data VIP <code>10.10.0.100</code> → segueix el primari Patroni</li>
+    </ol>
+    <h4 style="margin-top:1rem">Estructura docker-compose.db.yml (esquema)</h4>
+    <pre><code>services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5
+    # ...configuració cluster etcd
+
+  patroni:
+    image: patroni/patroni:latest
+    environment:
+      PATRONI_NAME: db-01
+      PATRONI_POSTGRESQL_DATA_DIR: /data/patroni
+      PATRONI_ETCD3_HOSTS: "10.10.0.21:2379,10.10.0.22:2379,10.10.0.23:2379"
+      PATRONI_POSTGRESQL_CONNECT_ADDRESS: "10.10.0.21:5432"
+    volumes:
+      - pg-data:/data/patroni
+      - ./patroni.yml:/etc/patroni.yml
+
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    # apunta sempre al Data VIP 10.10.0.100
+
+  redis:
+    image: redis:7-alpine
+    # master a db-01, replica a db-02</code></pre>
+    <div class="info">Verificació final: matar el contenidor patroni a db-01 → Patroni ha de promoure db-02 a primari en &lt;30 s sense intervenció manual.</div>
+  </div>
+</div>
+
+<!-- FASE 3 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">3</div>
+    <div>
+      <h3>Capa de publicació — nginx + Traefik + Keepalived</h3>
+      <div style="font-size:0.82rem;opacity:0.75">VIP actiu/passiu · Sticky sessions Blazor · SSL</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 2-3 h</span>
+      <span class="badge b-green">Downtime: cap (nova infraestructura)</span>
+      <span class="badge b-slate">Prerequisit: Fase 2 completada</span>
+    </div>
+    <ol class="steps">
+      <li>Desplegar <strong>Traefik v3</strong> a cada node pub amb sticky sessions configurades per a Blazor Server</li>
+      <li>Desplegar <strong>nginx</strong> com a proxy SSL per davant de Traefik (terminació TLS)</li>
+      <li>Desplegar contenidors de prova (o l'app AutoCo si ja està migrada) darrere Traefik</li>
+      <li>Configurar <strong>Keepalived</strong> a pub-01 (MASTER) i pub-02 (BACKUP) per al VIP <code>192.168.0.200</code></li>
+      <li>Provar failover: <code>systemctl stop keepalived</code> a pub-01 → la VIP ha de moure's a pub-02 en &lt;5 s</li>
+    </ol>
+    <h4 style="margin-top:1rem">Configuració Keepalived (pub-01 MASTER)</h4>
+    <pre><code>vrrp_instance VI_PUB {
+    state MASTER
+    interface eth0
+    virtual_router_id 51
+    priority 110
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass autoco2026
+    }
+    virtual_ipaddress {
+        192.168.0.200/24
+    }
+    track_script {
+        chk_nginx
+    }
+}</code></pre>
+    <div class="info">Verificació: <code>ip addr show eth0 | grep 192.168.0.200</code> ha d'apareixer a pub-01. Aturant nginx a pub-01, la VIP ha de migrar a pub-02.</div>
+  </div>
+</div>
+
+<!-- FASE 4 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">4</div>
+    <div>
+      <h3>Harbor Registry — contenidor aïllat</h3>
+      <div style="font-size:0.82rem;opacity:0.75">Registry privat per a imatges Docker · Accés des de la LAN</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 1-2 h</span>
+      <span class="badge b-green">Downtime: cap</span>
+      <span class="badge b-slate">Prerequisit: Fase 1 completada (independent de les altres fases)</span>
+    </div>
+    <ol class="steps">
+      <li>Descarregar l'instal·lador de Harbor: <code>wget https://github.com/goharbor/harbor/releases/latest/download/harbor-offline-installer.tgz</code></li>
+      <li>Configurar <code>harbor.yml</code>: hostname <code>192.168.0.103</code>, certificat SSL auto-signat (o Let's Encrypt intern)</li>
+      <li>Executar <code>./install.sh</code> → arrenca ~8 contenidors automàticament</li>
+      <li>Accedir a <code>https://192.168.0.103</code> amb les credencials inicials (<code>admin / Harbor12345</code> → canviar)</li>
+      <li>Crear projecte privat <strong>autoco</strong> a la UI de Harbor</li>
+      <li>Des de la màquina de desenvolupament: <code>docker login 192.168.0.103</code> i fer push d'una imatge de prova</li>
+      <li>Als nodes pub: <code>docker pull 192.168.0.103/autoco/web:latest</code> per verificar pull intern</li>
+    </ol>
+    <div class="warn"><strong>Certificat SSL Harbor:</strong> per a <code>docker login</code> sense errors, afegir el certificat auto-signat com a CA de confiança a cada màquina que faci push/pull: <code>/etc/docker/certs.d/192.168.0.103/ca.crt</code></div>
+  </div>
+</div>
+
+<!-- FASE 5 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">5</div>
+    <div>
+      <h3>Monitorització — Prometheus + Grafana + Alertmanager</h3>
+      <div style="font-size:0.82rem;opacity:0.75">Visibilitat de tots els serveis · Alertes per correu</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 2-3 h</span>
+      <span class="badge b-green">Downtime: cap</span>
+      <span class="badge b-slate">Prerequisit: Fases 2 i 3 actives</span>
+    </div>
+    <ol class="steps">
+      <li>Desplegar <strong>Prometheus</strong> a mon-01 amb scraping configurats: Traefik metrics, node-exporter (tots els LXC), postgres-exporter, redis-exporter</li>
+      <li>Desplegar <strong>Grafana</strong> amb datasource Prometheus. Importar dashboards: Traefik v3 (ID 17346), PostgreSQL (ID 9628), Redis (ID 763)</li>
+      <li>Desplegar <strong>Alertmanager</strong> amb rutes d'alerta cap a correu electrònic de l'administrador</li>
+      <li>Configurar alertes crítiques: VIP caiguda, primari PostgreSQL canviat, node LXC sense resposta, disc &gt;85%</li>
+      <li>Instal·lar <strong>node-exporter</strong> (port 9100) a cada contenidor LXC</li>
+    </ol>
+    <h4 style="margin-top:1rem">Alertes mínimes recomanades</h4>
+    <table>
+      <thead><tr><th>Alerta</th><th>Condició</th><th>Severitat</th></tr></thead>
+      <tbody>
+        <tr><td>VIP no accessible</td><td>Probe HTTPS 192.168.0.200 falla &gt;30 s</td><td><span class="badge b-red">Crítica</span></td></tr>
+        <tr><td>Failover PostgreSQL</td><td>Canvi de primari Patroni detectat</td><td><span class="badge b-orange">Alta</span></td></tr>
+        <tr><td>Node LXC sense resposta</td><td>node-exporter no respon &gt;60 s</td><td><span class="badge b-orange">Alta</span></td></tr>
+        <tr><td>Disc &gt;85%</td><td>Qualsevol volum supera el 85% d'ús</td><td><span class="badge b-yellow">Mitja</span></td></tr>
+        <tr><td>RAM &gt;90%</td><td>RAM disponible &lt;10% durant &gt;5 min</td><td><span class="badge b-yellow">Mitja</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- FASE 6 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">6</div>
+    <div>
+      <h3>Accés exterior — NAT + DDNS + Let's Encrypt</h3>
+      <div style="font-size:0.82rem;opacity:0.75">AutoCo.ddns.net:4443 accessible des d'internet</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 1 h</span>
+      <span class="badge b-yellow">Downtime: ~2 min (canvi SSL)</span>
+      <span class="badge b-slate">Prerequisit: Fase 3 activa i domini DDNS configurat</span>
+    </div>
+    <ol class="steps">
+      <li>Al router: afegir regla NAT <code>TCP 4443</code> → <code>192.168.0.200:443</code></li>
+      <li>Al router: afegir regla NAT <code>TCP 80</code> → <code>192.168.0.200:80</code> (necessari per al challenge ACME)</li>
+      <li>Configurar el client DDNS per actualitzar <code>AutoCo.ddns.net</code> amb la IP pública del router</li>
+      <li>Activar Let's Encrypt a Traefik: <code>--certificatesresolvers.le.acme.httpchallenge.entrypoint=web</code></li>
+      <li>Actualitzar la variable d'entorn: <code>APP_WEB_URL=https://AutoCo.ddns.net:4443</code></li>
+      <li>Verificar: accedir a <code>https://AutoCo.ddns.net:4443</code> des de fora de la xarxa de l'escola</li>
+    </ol>
+    <div class="warn"><strong>IP dinàmica:</strong> si l'escola no té IP pública fixa, el client DDNS ha de córrer com a servei al router o a un dels nodes Proxmox, actualitzant el registre DNS automàticament quan canviï la IP.</div>
+  </div>
+</div>
+
+<!-- FASE 7 -->
+<div class="phase-card">
+  <div class="phase-head">
+    <div class="phase-num">7</div>
+    <div>
+      <h3>Migració AutoCo — branca ha-proxmox</h3>
+      <div style="font-size:0.82rem;opacity:0.75">SQL Server → PostgreSQL · DataProtection → Redis · Harbor deploy</div>
+    </div>
+  </div>
+  <div class="phase-body">
+    <div class="phase-meta">
+      <span class="badge b-blue">Temps estimat: 4-6 h</span>
+      <span class="badge b-yellow">Downtime: ~30 min (migració de dades)</span>
+      <span class="badge b-slate">Prerequisit: Totes les fases anteriors actives</span>
+    </div>
+    <ol class="steps">
+      <li>Crear branca: <code>git checkout main &amp;&amp; git checkout -b ha-proxmox</code></li>
+      <li><strong>web/Program.cs</strong>: canviar DataProtection de filesystem a Redis (<code>PersistKeysToStackExchangeRedis</code>)</li>
+      <li><strong>api/AutoCo.Api.csproj</strong>: substituir <code>Microsoft.EntityFrameworkCore.SqlServer</code> per <code>Npgsql.EntityFrameworkCore.PostgreSQL</code></li>
+      <li><strong>api/Program.cs</strong>: canviar <code>UseSqlServer</code> per <code>UseNpgsql</code></li>
+      <li>Esborrar les migracions existents i regenerar-les per a PostgreSQL: <code>dotnet ef migrations add InitialPostgres</code></li>
+      <li>Construir imatges i pujar a Harbor: <code>docker build</code> + <code>docker push 192.168.0.103/autoco/web:ha-1.0</code></li>
+      <li>Migrar dades existents de SQL Server a PostgreSQL (script de migració o exportació CSV → reimportació)</li>
+      <li>Actualitzar <code>docker-compose.yml</code> als nodes pub amb les noves imatges de Harbor</li>
+      <li>Verificació final: login d'alumne, creació d'activitat, enviament d'avaluació</li>
+    </ol>
+    <div class="info">La branca <code>ha-proxmox</code> rep els canvis de <code>main</code> periòdicament amb <code>git merge main</code>. Els únics fitxers amb possible conflicte són els 3 modificats en els passos 2-4.</div>
+  </div>
+</div>
+
+</section>
+
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<section id="seguretat">
+<h2>8. Consideracions de seguretat</h2>
+
+<table>
+  <thead><tr><th>Mesura</th><th>On s'aplica</th><th>Detall</th></tr></thead>
+  <tbody>
+    <tr><td>Firewall Proxmox</td><td>Tots els nodes</td><td>Tancar tots els ports excepte 22 (SSH gestió), 8006 (UI Proxmox) des de la LAN admin</td></tr>
+    <tr><td>Xarxa interna aïllada</td><td>vmbr1 / 10.10.0.0/24</td><td>DB i Redis sense accés directe des de la LAN escolar ni internet</td></tr>
+    <tr><td>SSL/TLS a totes les capes</td><td>nginx, Harbor</td><td>Let's Encrypt (extern), auto-signat (intern entre contenidors)</td></tr>
+    <tr><td>Autenticació Harbor</td><td>ct-autoco-reg-01</td><td>Usuaris amb rols: push → admin, pull → deploys. Canviar contrasenya per defecte.</td></tr>
+    <tr><td>Secrets en variables d'entorn</td><td>Tots</td><td>Mai secrets als fitxers docker-compose al repositori. Usar <code>.env</code> al servidor.</td></tr>
+    <tr><td>Còpies de seguretat</td><td>ct-autoco-db-01</td><td><code>pg_dump</code> diari programat. Emmagatzemar fora del clúster (NAS, objecte extern).</td></tr>
+    <tr><td>Actualitzacions</td><td>Tots els LXC</td><td><code>unattended-upgrades</code> activat per a patches de seguretat automàtics.</td></tr>
+  </tbody>
+</table>
+</section>
+
+</main>
+
+<footer>
+  AutoCo · Pla d'Infraestructura HA · v1.0 · Maig 2026 · Document generat per a ús intern de l'escola
+</footer>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      fontSize: '13px',
+      fontFamily: 'system-ui, sans-serif'
+    },
+    flowchart: {
+      htmlLabels: true,
+      curve: 'basis',
+      rankSpacing: 60,
+      nodeSpacing: 40
+    }
+  });
+</script>
+</body>
+</html>

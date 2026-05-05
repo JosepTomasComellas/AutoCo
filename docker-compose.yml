@@ -7,6 +7,7 @@ volumes:
   redis-data:   # Volum per a Redis (persistència AOF)
   dp-keys:      # Claus de DataProtection (antiforgery, ProtectedLocalStorage)
   api-backups:  # Còpies de seguretat JSON (exportació/importació)
+  fotos-data:   # Fotos d'alumnes i professors (compartit entre api i web)
 
 services:
 
@@ -85,6 +86,7 @@ services:
       - "8080"
     volumes:
       - api-backups:/app/backups
+      - fotos-data:/app/fotos
     networks:
       - autoco-net
     depends_on:
@@ -105,6 +107,7 @@ services:
       Redis__ConnectionString: "redis:6379"
     volumes:
       - dp-keys:/app/dp-keys
+      - fotos-data:/app/wwwroot/fotos
     networks:
       - autoco-net
     depends_on:
