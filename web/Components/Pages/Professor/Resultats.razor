@@ -74,8 +74,9 @@ else
         </MudText>
     </MudStack>
 
-    <!-- Filtres avançats -->
-    <MudExpansionPanels Class="mb-4">
+    <MudExpansionPanels MultiExpansion="true" Class="mb-2">
+
+        <!-- Bloc 1: Filtres avançats -->
         <MudExpansionPanel Text="@Loc["Results_AdvancedFilters"]" Icon="@Icons.Material.Filled.FilterList">
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="6" md="3">
@@ -116,228 +117,236 @@ else
                 </MudItem>
             </MudGrid>
         </MudExpansionPanel>
-    </MudExpansionPanels>
 
-    <!-- Taula principal -->
-    <MudDataGrid T="StudentResultDto" Items="_filteredStudents" Dense="true" Hover="true"
-                 SortMode="SortMode.Single" FixedHeader="true" Height="520px" Class="mb-6"
-                 RowsPerPage="25">
-        <Columns>
-            <TemplateColumn Title="#">
-                <HeaderTemplate>
-                    <MudTooltip Text="@Loc["Results_TooltipListNum"]" Placement="Placement.Top">
-                        <span style="cursor:help">#</span>
-                    </MudTooltip>
-                </HeaderTemplate>
-                <CellTemplate>@context.Item.NumLlista</CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="@Loc["Results_ColNom"]" Sortable="true"
-                            SortBy='(StudentResultDto s) => s.Cognoms + " " + s.Nom'>
-                <CellTemplate>
-                    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                        @if (context.Item.FotoUrl is not null)
-                        {
-                            <MudAvatar Size="Size.Small" Style="width:28px;height:28px;min-width:28px;flex-shrink:0">
-                                <MudImage Src="@context.Item.FotoUrl" Style="width:100%;height:100%;object-fit:cover" />
-                            </MudAvatar>
-                        }
-                        <span>@context.Item.Cognoms, @context.Item.Nom</span>
-                    </MudStack>
-                </CellTemplate>
-            </TemplateColumn>
-            <PropertyColumn Property="s => s.GroupName" Title="@Loc["Results_ColGroup"]" Sortable="true" />
-            @foreach (var c in _results.Criteria)
-            {
-                var key = c.Key;
-                var label = c.Label;
-                <TemplateColumn Title="@label">
-                    <HeaderTemplate>
-                        <MudText Typo="Typo.caption" Style="white-space:normal;text-align:center">
-                            @label<br/><small>@Loc["Results_ColAutoCoShort"]</small>
-                        </MudText>
-                    </HeaderTemplate>
-                    <CellTemplate>
-                        @{
-                            var hasAuto = context.Item.SelfScores.TryGetValue(key, out var av) && av.HasValue;
-                            var hasCo   = context.Item.AvgCoScores.TryGetValue(key, out var cv) && cv.HasValue;
-                            var autoVal = hasAuto ? av!.Value.ToString("G")  : "–";
-                            var coVal   = hasCo   ? cv!.Value.ToString("F1") : "–";
-                            var autoCss = hasAuto ? GradeClass(av!.Value) : "grade-none";
-                            var coCss   = hasCo   ? GradeClass(cv!.Value) : "grade-none";
-                        }
-                        <span class="@autoCss">@autoVal</span>
-                        <span style="color:var(--mud-palette-text-disabled)">/</span>
-                        <span class="@coCss">@coVal</span>
-                    </CellTemplate>
-                </TemplateColumn>
-            }
-            <TemplateColumn Title="@Loc["Results_ColAutoaval"]" Sortable="true"
-                            SortBy='(StudentResultDto s) => s.AutAvgGlobal ?? -1'>
-                <HeaderTemplate>
-                    <MudTooltip Text="@Loc["Results_TooltipAutoaval"]" Placement="Placement.Top">
-                        <span style="cursor:help">@Loc["Results_ColAutoaval"]</span>
-                    </MudTooltip>
-                </HeaderTemplate>
-                <CellTemplate>
-                    @{
-                        var autGlobal = context.Item.AutAvgGlobal;
-                        var autCss    = autGlobal.HasValue ? GradeClass(autGlobal.Value) : "grade-none";
-                    }
-                    <span class="@autCss" style="font-size:.95rem">
-                        @(autGlobal.HasValue ? autGlobal.Value.ToString("F1") : "–")
-                    </span>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="@Loc["Results_ColCoaval"]" Sortable="true"
-                            SortBy='(StudentResultDto s) => s.AvgGlobal ?? -1'>
-                <HeaderTemplate>
-                    <MudTooltip Text="@Loc["Results_TooltipCoaval"]" Placement="Placement.Top">
-                        <span style="cursor:help">@Loc["Results_ColCoaval"]</span>
-                    </MudTooltip>
-                </HeaderTemplate>
-                <CellTemplate>
-                    @{
-                        var coGlobal = context.Item.AvgGlobal;
-                        var coGCss   = coGlobal.HasValue ? GradeClass(coGlobal.Value) : "grade-none";
-                    }
-                    <span class="@coGCss" style="font-size:.95rem">
-                        @(coGlobal.HasValue ? coGlobal.Value.ToString("F1") : "–")
-                    </span>
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn Title="@Loc["Results_ColCoavs"]" Sortable="true"
-                            SortBy='(StudentResultDto s) => s.NumPeerEvaluators'>
-                <HeaderTemplate>
-                    <MudTooltip Text="@Loc["Results_TooltipCoavs"]" Placement="Placement.Top">
-                        <span style="cursor:help">@Loc["Results_ColCoavs"]</span>
-                    </MudTooltip>
-                </HeaderTemplate>
-                <CellTemplate>@context.Item.NumPeerEvaluators</CellTemplate>
-            </TemplateColumn>
-            <PropertyColumn Property="s => s.SelfComment" Title="@Loc["Results_ColStudentComment"]" />
-            @if (_showNotes)
-            {
-                <TemplateColumn Title="@Loc["Results_ColTeacherNote"]">
-                    <CellTemplate>
-                        @{
-                            var sid  = context.Item.StudentId;
-                            var note = _notes.GetValueOrDefault(sid, "");
-                            var edit = _editingNote == sid;
-                        }
-                        @if (edit)
-                        {
-                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                <MudTextField @bind-Value="_editNoteText"
-                                              Variant="Variant.Outlined" Margin="Margin.Dense"
-                                              Style="min-width:180px" Immediate="true"
-                                              Placeholder="@Loc["Results_TeacherNotePh"]" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success"
-                                               Size="Size.Small" OnClick="() => SaveNoteAsync(sid)" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default"
-                                               Size="Size.Small" OnClick="CancelNoteEdit" />
-                            </MudStack>
-                        }
-                        else
-                        {
-                            <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
-                                <MudText Typo="Typo.body2"
-                                         Style="@(string.IsNullOrEmpty(note) ? "color:var(--mud-palette-text-disabled)" : "")">
-                                    @(string.IsNullOrEmpty(note) ? "—" : note)
-                                </MudText>
-                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
-                                               Size="Size.Small" OnClick="() => StartNoteEdit(sid, note)" />
-                            </MudStack>
-                        }
-                    </CellTemplate>
-                </TemplateColumn>
-            }
-        </Columns>
-        <PagerContent>
-            <MudDataGridPager T="StudentResultDto" />
-        </PagerContent>
-    </MudDataGrid>
-
-    <!-- Detall coavaluacions -->
-    <MudText Typo="Typo.h6" Class="mb-3">@Loc["Results_DetailCoeval"]</MudText>
-    @foreach (var s in _filteredStudents.Where(x => x.PeerEvaluations.Any()))
-    {
-        var sid = s.StudentId;
-        <MudExpansionPanel Class="mb-1">
+        <!-- Bloc 2: Taula de resultats -->
+        <MudExpansionPanel Icon="@Icons.Material.Filled.TableChart">
             <TitleContent>
-                <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%" Spacing="2">
-                    @if (s.FotoUrl is not null)
-                    {
-                        <MudAvatar Size="Size.Small" Style="width:28px;height:28px;min-width:28px;flex-shrink:0">
-                            <MudImage Src="@s.FotoUrl" Style="width:100%;height:100%;object-fit:cover" />
-                        </MudAvatar>
-                    }
-                    <MudText Typo="Typo.body1">@s.Cognoms, @s.Nom (@s.GroupName)</MudText>
-                    <MudSpacer />
-                    <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Primary"
-                                   Size="Size.Small" title="@Loc["Results_IndividualReport"]"
-                                   Href="@($"/professor/informe/{ActivityId}/{sid}")"
-                                   @onclick:stopPropagation="true" />
-                </MudStack>
+                <MudText Typo="Typo.body1">
+                    @Loc["Results_TableTitle"] — <strong>@_filteredStudents.Count</strong> @Loc["Results_Students"]
+                </MudText>
             </TitleContent>
             <ChildContent>
-            <MudDataGrid T="PeerEvaluationDto" Items="s.PeerEvaluations" Dense="true">
-                <Columns>
-                    <PropertyColumn Property="p => p.EvaluatorName" Title="@Loc["Results_ColEvaluator"]" />
-                    @foreach (var c in _results.Criteria)
-                    {
-                        var key = c.Key;
-                        var label = c.Label;
-                        <TemplateColumn Title="@label">
+                <MudDataGrid T="StudentResultDto" Items="_filteredStudents" Dense="true" Hover="true"
+                             SortMode="SortMode.Single" FixedHeader="true" Height="520px"
+                             RowsPerPage="25">
+                    <Columns>
+                        <TemplateColumn Title="#">
+                            <HeaderTemplate>
+                                <MudTooltip Text="@Loc["Results_TooltipListNum"]" Placement="Placement.Top">
+                                    <span style="cursor:help">#</span>
+                                </MudTooltip>
+                            </HeaderTemplate>
+                            <CellTemplate>@context.Item.NumLlista</CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="@Loc["Results_ColNom"]" Sortable="true"
+                                        SortBy='(StudentResultDto s) => s.Cognoms + " " + s.Nom'>
                             <CellTemplate>
-                                @{
-                                    var v = context.Item.Scores.TryGetValue(key, out var sv) ? (double?)sv : null;
-                                    var css = v.HasValue ? GradeClass(v.Value) : "grade-none";
-                                }
-                                <span class="@css">@(v.HasValue ? v.Value.ToString("G") : "–")</span>
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    @if (context.Item.FotoUrl is not null)
+                                    {
+                                        <MudAvatar Size="Size.Small" Style="width:28px;height:28px;min-width:28px;flex-shrink:0">
+                                            <MudImage Src="@context.Item.FotoUrl" Style="width:100%;height:100%;object-fit:cover" />
+                                        </MudAvatar>
+                                    }
+                                    <span>@context.Item.Cognoms, @context.Item.Nom</span>
+                                </MudStack>
                             </CellTemplate>
                         </TemplateColumn>
-                    }
-                    <PropertyColumn Property="p => p.Comment" Title="@Loc["Results_ColComment"]" />
-                </Columns>
-            </MudDataGrid>
+                        <PropertyColumn Property="s => s.GroupName" Title="@Loc["Results_ColGroup"]" Sortable="true" />
+                        @foreach (var c in _results.Criteria)
+                        {
+                            var key = c.Key;
+                            var label = c.Label;
+                            <TemplateColumn Title="@label">
+                                <HeaderTemplate>
+                                    <MudText Typo="Typo.caption" Style="white-space:normal;text-align:center">
+                                        @label<br/><small>@Loc["Results_ColAutoCoShort"]</small>
+                                    </MudText>
+                                </HeaderTemplate>
+                                <CellTemplate>
+                                    @{
+                                        var hasAuto = context.Item.SelfScores.TryGetValue(key, out var av) && av.HasValue;
+                                        var hasCo   = context.Item.AvgCoScores.TryGetValue(key, out var cv) && cv.HasValue;
+                                        var autoVal = hasAuto ? av!.Value.ToString("G")  : "–";
+                                        var coVal   = hasCo   ? cv!.Value.ToString("F1") : "–";
+                                        var autoCss = hasAuto ? GradeClass(av!.Value) : "grade-none";
+                                        var coCss   = hasCo   ? GradeClass(cv!.Value) : "grade-none";
+                                    }
+                                    <span class="@autoCss">@autoVal</span>
+                                    <span style="color:var(--mud-palette-text-disabled)">/</span>
+                                    <span class="@coCss">@coVal</span>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        }
+                        <TemplateColumn Title="@Loc["Results_ColAutoaval"]" Sortable="true"
+                                        SortBy='(StudentResultDto s) => s.AutAvgGlobal ?? -1'>
+                            <HeaderTemplate>
+                                <MudTooltip Text="@Loc["Results_TooltipAutoaval"]" Placement="Placement.Top">
+                                    <span style="cursor:help">@Loc["Results_ColAutoaval"]</span>
+                                </MudTooltip>
+                            </HeaderTemplate>
+                            <CellTemplate>
+                                @{
+                                    var autGlobal = context.Item.AutAvgGlobal;
+                                    var autCss    = autGlobal.HasValue ? GradeClass(autGlobal.Value) : "grade-none";
+                                }
+                                <span class="@autCss" style="font-size:.95rem">
+                                    @(autGlobal.HasValue ? autGlobal.Value.ToString("F1") : "–")
+                                </span>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="@Loc["Results_ColCoaval"]" Sortable="true"
+                                        SortBy='(StudentResultDto s) => s.AvgGlobal ?? -1'>
+                            <HeaderTemplate>
+                                <MudTooltip Text="@Loc["Results_TooltipCoaval"]" Placement="Placement.Top">
+                                    <span style="cursor:help">@Loc["Results_ColCoaval"]</span>
+                                </MudTooltip>
+                            </HeaderTemplate>
+                            <CellTemplate>
+                                @{
+                                    var coGlobal = context.Item.AvgGlobal;
+                                    var coGCss   = coGlobal.HasValue ? GradeClass(coGlobal.Value) : "grade-none";
+                                }
+                                <span class="@coGCss" style="font-size:.95rem">
+                                    @(coGlobal.HasValue ? coGlobal.Value.ToString("F1") : "–")
+                                </span>
+                            </CellTemplate>
+                        </TemplateColumn>
+                        <TemplateColumn Title="@Loc["Results_ColCoavs"]" Sortable="true"
+                                        SortBy='(StudentResultDto s) => s.NumPeerEvaluators'>
+                            <HeaderTemplate>
+                                <MudTooltip Text="@Loc["Results_TooltipCoavs"]" Placement="Placement.Top">
+                                    <span style="cursor:help">@Loc["Results_ColCoavs"]</span>
+                                </MudTooltip>
+                            </HeaderTemplate>
+                            <CellTemplate>@context.Item.NumPeerEvaluators</CellTemplate>
+                        </TemplateColumn>
+                        <PropertyColumn Property="s => s.SelfComment" Title="@Loc["Results_ColStudentComment"]" />
+                        @if (_showNotes)
+                        {
+                            <TemplateColumn Title="@Loc["Results_ColTeacherNote"]">
+                                <CellTemplate>
+                                    @{
+                                        var sid  = context.Item.StudentId;
+                                        var note = _notes.GetValueOrDefault(sid, "");
+                                        var edit = _editingNote == sid;
+                                    }
+                                    @if (edit)
+                                    {
+                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                            <MudTextField @bind-Value="_editNoteText"
+                                                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                          Style="min-width:180px" Immediate="true"
+                                                          Placeholder="@Loc["Results_TeacherNotePh"]" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Check" Color="Color.Success"
+                                                           Size="Size.Small" OnClick="() => SaveNoteAsync(sid)" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Close" Color="Color.Default"
+                                                           Size="Size.Small" OnClick="CancelNoteEdit" />
+                                        </MudStack>
+                                    }
+                                    else
+                                    {
+                                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                                            <MudText Typo="Typo.body2"
+                                                     Style="@(string.IsNullOrEmpty(note) ? "color:var(--mud-palette-text-disabled)" : "")">
+                                                @(string.IsNullOrEmpty(note) ? "—" : note)
+                                            </MudText>
+                                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
+                                                           Size="Size.Small" OnClick="() => StartNoteEdit(sid, note)" />
+                                        </MudStack>
+                                    }
+                                </CellTemplate>
+                            </TemplateColumn>
+                        }
+                    </Columns>
+                    <PagerContent>
+                        <MudDataGridPager T="StudentResultDto" />
+                    </PagerContent>
+                </MudDataGrid>
             </ChildContent>
         </MudExpansionPanel>
-    }
 
-    <!-- Registre d'activitat -->
-    @if (_log.Any())
-    {
-        <MudDivider Class="my-6" />
-        <MudText Typo="Typo.h6" Class="mb-3">
-            <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Small" Class="mr-1" Style="vertical-align:middle" />
-            @Loc["Results_ActivityLog"]
-        </MudText>
-        <MudSimpleTable Dense="true" Hover="true" Style="background:transparent;max-height:300px;overflow-y:auto">
-            <thead>
-                <tr>
-                    <th>@Loc["Results_LogColDate"]</th>
-                    <th>@Loc["Results_LogColAction"]</th>
-                    <th>@Loc["Results_LogColActor"]</th>
-                    <th>@Loc["Results_LogColDetails"]</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var entry in _log)
-                {
-                    <tr>
-                        <td><MudText Typo="Typo.caption">@entry.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</MudText></td>
-                        <td>
-                            <MudChip T="string" Size="Size.Small" Color="@LogColor(entry.Action)" Variant="Variant.Filled">
-                                @LogLabel(entry.Action)
-                            </MudChip>
-                        </td>
-                        <td><MudText Typo="Typo.body2">@(entry.ActorName ?? "—")</MudText></td>
-                        <td><MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Details</MudText></td>
-                    </tr>
-                }
-            </tbody>
-        </MudSimpleTable>
-    }
+        <!-- Bloc 3: Detall coavaluacions -->
+        <MudExpansionPanel Text="@Loc["Results_DetailCoeval"]" Icon="@Icons.Material.Filled.Groups">
+            @foreach (var s in _filteredStudents.Where(x => x.PeerEvaluations.Any()))
+            {
+                var sid = s.StudentId;
+                <MudExpansionPanel Class="mb-1">
+                    <TitleContent>
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%" Spacing="2">
+                            @if (s.FotoUrl is not null)
+                            {
+                                <MudAvatar Size="Size.Small" Style="width:28px;height:28px;min-width:28px;flex-shrink:0">
+                                    <MudImage Src="@s.FotoUrl" Style="width:100%;height:100%;object-fit:cover" />
+                                </MudAvatar>
+                            }
+                            <MudText Typo="Typo.body1">@s.Cognoms, @s.Nom (@s.GroupName)</MudText>
+                            <MudSpacer />
+                            <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Primary"
+                                           Size="Size.Small" title="@Loc["Results_IndividualReport"]"
+                                           Href="@($"/professor/informe/{ActivityId}/{sid}")"
+                                           @onclick:stopPropagation="true" />
+                        </MudStack>
+                    </TitleContent>
+                    <ChildContent>
+                        <MudDataGrid T="PeerEvaluationDto" Items="s.PeerEvaluations" Dense="true">
+                            <Columns>
+                                <PropertyColumn Property="p => p.EvaluatorName" Title="@Loc["Results_ColEvaluator"]" />
+                                @foreach (var c in _results.Criteria)
+                                {
+                                    var key = c.Key;
+                                    var label = c.Label;
+                                    <TemplateColumn Title="@label">
+                                        <CellTemplate>
+                                            @{
+                                                var v = context.Item.Scores.TryGetValue(key, out var sv) ? (double?)sv : null;
+                                                var css = v.HasValue ? GradeClass(v.Value) : "grade-none";
+                                            }
+                                            <span class="@css">@(v.HasValue ? v.Value.ToString("G") : "–")</span>
+                                        </CellTemplate>
+                                    </TemplateColumn>
+                                }
+                                <PropertyColumn Property="p => p.Comment" Title="@Loc["Results_ColComment"]" />
+                            </Columns>
+                        </MudDataGrid>
+                    </ChildContent>
+                </MudExpansionPanel>
+            }
+        </MudExpansionPanel>
+
+        <!-- Bloc 4: Registre d'activitat -->
+        @if (_log.Any())
+        {
+            <MudExpansionPanel Text="@Loc["Results_ActivityLog"]" Icon="@Icons.Material.Filled.History">
+                <MudSimpleTable Dense="true" Hover="true" Style="background:transparent;max-height:300px;overflow-y:auto">
+                    <thead>
+                        <tr>
+                            <th>@Loc["Results_LogColDate"]</th>
+                            <th>@Loc["Results_LogColAction"]</th>
+                            <th>@Loc["Results_LogColActor"]</th>
+                            <th>@Loc["Results_LogColDetails"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var entry in _log)
+                        {
+                            <tr>
+                                <td><MudText Typo="Typo.caption">@entry.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")</MudText></td>
+                                <td>
+                                    <MudChip T="string" Size="Size.Small" Color="@LogColor(entry.Action)" Variant="Variant.Filled">
+                                        @LogLabel(entry.Action)
+                                    </MudChip>
+                                </td>
+                                <td><MudText Typo="Typo.body2">@(entry.ActorName ?? "—")</MudText></td>
+                                <td><MudText Typo="Typo.caption" Color="Color.Secondary">@entry.Details</MudText></td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudExpansionPanel>
+        }
+
+    </MudExpansionPanels>
 }
 
 @code {
