@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.1
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.7
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -11,8 +11,9 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 **Gestió de l'estructura docent**
 - Gestió de **classes**, **alumnes** i **mòduls** (UF/MP), amb edició inline
 - **Camp DNI** als alumnes, extret automàticament en importar des de l'EPSS
-- **Fotos d'alumnes**: upload individual per botó càmera o **importació massiva en ZIP** (fotos nomenades per DNI, format EPSS)
-- **Fotos de professors**: upload manual des de la pàgina de perfil; visible a la barra de navegació
+- **Fotos d'alumnes**: upload individual per botó càmera (a la taula o a la fitxa d'edició) o **importació massiva en ZIP** (fotos nomenades per DNI, format EPSS)
+- **Fotos de professors**: upload manual des de la pàgina de perfil o des de la fitxa d'admin; visible a la barra de navegació
+- **Importació massiva d'alumnes**: si el correu ja existeix a la mateixa classe, **actualitza** les dades (Nom, Cognoms, NumLlista, DNI) sense tocar la contrasenya
 - **Avatars** d'alumne amb inicials i color per número de llista (fallback si no hi ha foto)
 - **Mou alumnes** entre classes (elimina participació anterior i reassigna)
 - **Exclusions per mòdul**: alumnes que no participen en un mòdul concret
@@ -37,7 +38,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Ordre de grups persistent** (▲▼) i criteris d'avaluació editables inline a la pàgina de grups
 
 **Resultats i informes**
-- Taula de **resultats** amb capçalera fixa, paginació (25 files), puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell)
+- Taula de **resultats** amb capçalera fixa, paginació (25 files), puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell); quatre blocs **col·lapsables** per defecte (filtres, taula, detall coavaluacions, registre)
 - **Filtres avançats**: per **alumne** (cerca per nom/cognoms), per grup i per rang de nota (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense coavaluació)
 - **Notes del professor** per alumne: camp editable inline a la taula de resultats
 - **Gràfiques comparatives** per grup (Auto vs. Co, desglossament per criteri) amb Chart.js
@@ -267,7 +268,7 @@ Copia `.env.example` a `.env` i ajusta els valors:
 | `SMTP_FROM_NAME` | Nom remitent dels correus | |
 | `APP_WEB_URL` | URL pública (p.ex. `https://autoco.centre.cat`) — per als QR i links dels correus | |
 | `BACKUP_ENABLED` | Activa el backup automàtic (`true`/`false`, per defecte `false`) | |
-| `BACKUP_DAILY_HOUR` | Hora del backup diari en UTC (0–23, per defecte `2`) | |
+| `BACKUP_DAILY_HOUR` | Hora del backup diari en hora local Europe/Madrid (0–23, per defecte `2`) | |
 | `BACKUP_WEEKLY_DAY` | Dia de la setmana del backup setmanal (0=Dg, 1=Dl … 6=Ds, per defecte `0`) | |
 | `BACKUP_DAILY_RETENTION` | Nombre màxim de backups diaris a conservar (per defecte `7`) | |
 | `BACKUP_WEEKLY_RETENTION` | Nombre màxim de backups setmanals a conservar (per defecte `4`) | |
@@ -342,6 +343,24 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.7
+- **Fix zona horària** — contenidors `api` i `web` configurats amb `TZ=Europe/Madrid`; EF Core ara retorna tots els `DateTime` amb `Kind=Utc` (value converter) perquè `ToLocalTime()` converteixi correctament a CET/CEST en tots els registres i timestamps de l'aplicació
+
+### v2.5.6
+- **Tauler de resultats col·lapsable** — els quatre blocs (filtres avançats, taula de resultats, detall coavaluacions, registre d'activitat) ara estan agrupats en un `MudExpansionPanels` i col·lapsats per defecte; es poden desplegar independentment
+
+### v2.5.5
+- **Foto d'alumne editable des de la fitxa d'edició** — quan es clica el botó llapis d'un alumne, el formulari mostra un avatar, botó d'upload i botó d'eliminar foto; la llista i la fitxa es sincronitzen al moment
+
+### v2.5.4
+- **Foto de professor editable des de l'admin** — la fitxa d'edició de cada professor a `/admin/professors` inclou ara una secció de foto (avatar 64px, upload, eliminació); l'avatar de la llista de professors mostra la foto si en té; si l'admin s'edita a si mateix, la navbar s'actualitza immediatament
+
+### v2.5.3
+- **Importació massiva: actualitza alumnes existents** — si un correu ja existeix a la mateixa classe, actualitza Nom, Cognoms, NumLlista i DNI sense tocar la contrasenya; si pertany a una altra classe, s'omés amb missatge; el resum mostra `X creats, Y actualitzats, Z omesos`
+
+### v2.5.2
+- **Fix `PendingModelChangesWarning`** — afegit `HasMaxLength(30)` per a `Student.Dni` a `OnModelCreating`; propietat reposicionada alfabèticament al snapshot; `ConfigureWarnings` per compatibilitat entre snapshot EF Core 9 i runtime EF Core 10
 
 ### v2.5.1
 - **Foto al formulari d'avaluació** — l'alumne veu la foto de cada company/a quan omple l'avaluació
