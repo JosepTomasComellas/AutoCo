@@ -12,6 +12,10 @@ System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Inst
 
 var builder = WebApplication.CreateBuilder(args);
 
+// logging.json muntat com a volum Docker — recarrega automàticament sense reinici.
+// DOTNET_USE_POLLING_FILE_WATCHER=true al docker-compose garanteix la detecció en Docker.
+builder.Configuration.AddJsonFile("logging.json", optional: true, reloadOnChange: true);
+
 // L'antiforgery registra com a Error quan troba una cookie vella (clau caducada/canviada),
 // però ho gestiona internament emetent una nova cookie. Silenciem el log per evitar
 // alarmar en desplegaments normals.

@@ -60,6 +60,7 @@ services:
     environment:
       TZ:                              Europe/Madrid
       ASPNETCORE_ENVIRONMENT:          Production
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
       ConnectionStrings__DefaultConnection: >
         Server=db;Database=AutoCoAvaluacio;
         User Id=sa;Password=${MSSQL_SA_PASSWORD};
@@ -88,6 +89,7 @@ services:
     volumes:
       - api-backups:/app/backups
       - fotos-data:/app/fotos
+      - ./config/logging.json:/app/logging.json:ro
     networks:
       - autoco-net
     depends_on:
@@ -109,13 +111,15 @@ services:
       dockerfile: web/Dockerfile
     container_name: autoco-web
     environment:
-      TZ:                      Europe/Madrid
-      ASPNETCORE_ENVIRONMENT:  Production
-      ApiSettings__BaseUrl:    "http://api:8080"
-      Redis__ConnectionString: "redis:6379"
+      TZ:                              Europe/Madrid
+      ASPNETCORE_ENVIRONMENT:          Production
+      DOTNET_USE_POLLING_FILE_WATCHER: "true"
+      ApiSettings__BaseUrl:            "http://api:8080"
+      Redis__ConnectionString:         "redis:6379"
     volumes:
       - dp-keys:/app/dp-keys
       - fotos-data:/app/wwwroot/fotos
+      - ./config/logging.json:/app/logging.json:ro
     networks:
       - autoco-net
     depends_on:

@@ -14,6 +14,9 @@ using AutoCo.Api.Data.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// logging.json muntat com a volum Docker — recarrega automàticament sense reinici.
+builder.Configuration.AddJsonFile("logging.json", optional: true, reloadOnChange: true);
+
 // ── Base de dades ─────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
