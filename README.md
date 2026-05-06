@@ -38,7 +38,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Ordre de grups persistent** (▲▼) i criteris d'avaluació editables inline a la pàgina de grups
 
 **Resultats i informes**
-- Taula de **resultats** amb capçalera fixa, paginació (25 files), puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell); quatre blocs **col·lapsables** per defecte (filtres, taula, detall coavaluacions, registre)
+- Taula de **resultats** amb capçalera fixa, paginació (25 files), puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell); quatre blocs **col·lapsables** (filtres, taula, detall coavaluacions, registre) amb **estat persistent** entre recàrregues (`sessionStorage` per activitat)
 - **Filtres avançats**: per **alumne** (cerca per nom/cognoms), per grup i per rang de nota (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense coavaluació)
 - **Notes del professor** per alumne: camp editable inline a la taula de resultats
 - **Gràfiques comparatives** per grup (Auto vs. Co, desglossament per criteri) amb Chart.js
@@ -58,6 +58,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 **Administració**
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
 - **Còpies de seguretat**: exportació/importació JSON completa (incloent criteris, notes, plantilles i contrasenyes xifrades); **backup automàtic** diari/setmanal configurable via variables d'entorn (`BACKUP_*`)
+- **Configuració del sistema** (`/admin/sistema`): selector de nivell de log (Error/Warning/Information/Debug/Trace), s'aplica immediatament a l'API i al web sense reinici i persisteix via Redis
 - **KPIs al tauler**: classes, mòduls, alumnes, activitats, obertes i grups
 - **Mode fosc** i **selector de tema de color** (6 opcions) amb preferències desades al navegador
 

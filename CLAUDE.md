@@ -16,6 +16,7 @@ AutoCo/
 │   ├── DTOs/Dtos.cs            # Tots els records de request/response
 │   ├── Services/               # Lògica de negoci (Auth, Class, Activity,
 │   │                           #   Evaluation, Results, Email, Backup)
+│   │   └── LogLevelHolder.cs   # Singleton: nivell de log en calent (volatile int)
 │   ├── Program.cs              # Minimal API endpoints + DI
 │   └── Dockerfile
 ├── web/                        # Frontend (Blazor Server + MudBlazor)
@@ -35,6 +36,7 @@ AutoCo/
 │   ├── Services/
 │   │   ├── ApiClient.cs            # Client HTTP cap a l'API (tots els endpoints)
 │   │   ├── UserStateService.cs     # Estat de sessió Blazor (substitueix ISession)
+│   │   ├── LogLevelHolder.cs       # Singleton: nivell de log en calent (volatile int)
 │   │   └── ParticipationNotificationService.cs  # Redis pub/sub → Blazor
 │   ├── wwwroot/
 │   │   ├── css/site.css        # Estils globals (DnD, dark mode, print, informe PDF)
@@ -162,7 +164,10 @@ GET  /api/results/{activityId}/chart         # Dades gràfica
 GET  /api/results/{activityId}/csv           # Exportar CSV
 
 GET  /api/criteria                           # Criteris globals
-GET  /api/health                             # Estat DB + Redis (autenticat)
+GET  /api/health                             # Estat DB + Redis (públic, sense auth)
+
+GET  /api/admin/log-level                    # Llegir nivell de log actual (admin)
+PUT  /api/admin/log-level                    # Canviar nivell de log en calent (admin)
 ```
 
 ## Convencions
@@ -176,3 +181,5 @@ GET  /api/health                             # Estat DB + Redis (autenticat)
 - Passwords hashejades amb BCrypt (work factor 12)
 - Caché de resultats: Redis `IDistributedCache`, TTL 5 min, invalidació automàtica
 - Temps real: Redis pub/sub → `ParticipationNotificationService` → Blazor
+- Nivell de log en calent: `LogLevelHolder` singleton (api + web), `AddFilter` predicate, persistit a Redis `autoco:loglevel`
+- Estat de panels a `Resultats.razor`: `sessionStorage` clau `autoco:resultats:{ActivityId}`, carregat a `OnAfterRenderAsync(firstRender)`
