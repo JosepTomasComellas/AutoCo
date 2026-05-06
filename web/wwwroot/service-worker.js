@@ -1,4 +1,4 @@
-// AutoCo Service Worker — v2.5.0
+// AutoCo Service Worker — v2.5.9
 // Blazor Server requereix connexió al servidor, però podem:
 //   1. Instal·lar l'app com a PWA (standalone)
 //   2. Cachear assets estàtics per càrrega més ràpida

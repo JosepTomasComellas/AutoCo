@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.8
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.9
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -343,6 +343,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.9
+- **Correus HTML amb estètica de targeta** — tots els correus transaccionals (credencials, recordatori, convit, compleció, reset de contrasenya) s'envien ara en format HTML + text pla (fallback `multipart/alternative`); la plantilla reprodueix l'estil de la pantalla de login: capçalera fosca `#1e293b`, bloc de dades amb fons `#f8fafc` i contorn, contrasenya destacada en vermell monospace, botó CTA vermell `#CC0000` i peu de pàgina gris
 
 ### v2.5.8
 - **Validació de `.env` a l'script de desplegament** — `server-update.sh` comprova ara que totes les variables obligatòries (`MSSQL_SA_PASSWORD`, `JWT_SECRET`, `ADMIN_*`) estiguin personalitzades, que `JWT_SECRET` tingui mínim 32 caràcters, que `ADMIN_EMAIL` sigui vàlid, i que `BACKUP_DAILY_HOUR`/`BACKUP_WEEKLY_DAY` estiguin en rang; avisa si SMTP no és configurat o si `APP_WEB_URL` és `localhost`; en cas d'error, atura el desplegament **sense** aturar els contenidors actuals
