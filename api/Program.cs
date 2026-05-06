@@ -63,6 +63,7 @@ builder.Services.AddScoped<IEmailService,      EmailService>();
 builder.Services.AddScoped<IBackupService,     BackupService>();
 builder.Services.AddScoped<IPhotoService,      PhotoService>();
 builder.Services.AddHostedService<BackupHostedService>();
+builder.Services.AddHostedService<ActivitySchedulerService>();
 
 // ── Redis (caché de resultats) ─────────────────────────────────────────────────
 var redisConn = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";

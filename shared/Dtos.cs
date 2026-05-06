@@ -70,10 +70,13 @@ public record ActivityDto(
     int ModuleId, string ModuleCode, string ModuleName,
     int ClassId, string ClassName, string? ClassAcademicYear, string ProfessorName,
     string Name, string? Description, bool IsOpen,
-    DateTime CreatedAt, int NumGroups, int NumStudents);
+    DateTime CreatedAt, int NumGroups, int NumStudents,
+    DateTime? OpenAt = null, DateTime? CloseAt = null);
 
-public record CreateActivityRequest(int ModuleId, string Name, string? Description);
-public record UpdateActivityRequest(string Name, string? Description);
+public record CreateActivityRequest(int ModuleId, string Name, string? Description,
+    DateTime? OpenAt = null, DateTime? CloseAt = null);
+public record UpdateActivityRequest(string Name, string? Description,
+    DateTime? OpenAt = null, DateTime? CloseAt = null);
 public record DuplicateActivityRequest(string Name, string? Description);
 public record DuplicateCrossRequest(int TargetModuleId, string Name, string? Description);
 public record ImportGroupsRequest(string CsvContent);

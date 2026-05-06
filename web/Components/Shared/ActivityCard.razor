@@ -42,6 +42,20 @@
             <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
                 @Loc["Card_Students", Act.NumStudents]
             </MudChip>
+            @if (!Act.IsOpen && Act.OpenAt.HasValue)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                         Icon="@Icons.Material.Filled.Schedule" Variant="Variant.Outlined">
+                    @Loc["Card_ScheduledOpen", Act.OpenAt.Value.ToLocalTime().ToString("dd/MM HH:mm")]
+                </MudChip>
+            }
+            @if (Act.IsOpen && Act.CloseAt.HasValue)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                         Icon="@Icons.Material.Filled.Timer" Variant="Variant.Outlined">
+                    @Loc["Card_ScheduledClose", Act.CloseAt.Value.ToLocalTime().ToString("dd/MM HH:mm")]
+                </MudChip>
+            }
             @if (Act.IsOpen && _participation is not null)
             {
                 <MudTooltip Text="@Loc["Card_EvalTooltip", _participation.Submitted, _participation.Total]">
@@ -286,17 +300,19 @@
     {
         var parameters = new DialogParameters<EditarActivitatDialog>
         {
-            { d => d.NomActual,  Act.Name },
-            { d => d.DescActual, Act.Description }
+            { d => d.NomActual,     Act.Name },
+            { d => d.DescActual,    Act.Description },
+            { d => d.OpenAtActual,  Act.OpenAt },
+            { d => d.CloseAtActual, Act.CloseAt }
         };
-        var opts   = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var opts   = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
         var dialog = await Dialog.ShowAsync<EditarActivitatDialog>(Loc["Card_EditDialogTitle"].Value, parameters, opts);
         var result = await dialog.Result;
         if (result is null || result.Canceled) return;
 
-        var (nom, desc) = ((string, string?))result.Data!;
+        var (nom, desc, openAt, closeAt) = ((string, string?, DateTime?, DateTime?))result.Data!;
         Api.SetToken(UserState.Token!);
-        var updated = await Api.UpdateActivityAsync(Act.Id, new UpdateActivityRequest(nom, desc));
+        var updated = await Api.UpdateActivityAsync(Act.Id, new UpdateActivityRequest(nom, desc, openAt, closeAt));
         if (updated is not null)
         {
             Snackbar.Add(Loc["Card_Updated"].Value, Severity.Success);

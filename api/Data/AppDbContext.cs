@@ -174,5 +174,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         foreach (var entity in b.Model.GetEntityTypes())
             foreach (var prop in entity.GetProperties().Where(p => p.ClrType == typeof(DateTime)))
                 prop.SetValueConverter(utcConv);
+
+        var utcConvN = new ValueConverter<DateTime?, DateTime?>(v => v, v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
+        foreach (var entity in b.Model.GetEntityTypes())
+            foreach (var prop in entity.GetProperties().Where(p => p.ClrType == typeof(DateTime?)))
+                prop.SetValueConverter(utcConvN);
     }
 }

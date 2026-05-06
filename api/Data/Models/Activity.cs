@@ -6,8 +6,10 @@ public class Activity
     public int    ModuleId     { get; set; }
     public string Name         { get; set; } = null!;
     public string? Description { get; set; }
-    public bool   IsOpen       { get; set; } = true;
-    public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
+    public bool      IsOpen    { get; set; } = true;
+    public DateTime? OpenAt   { get; set; }
+    public DateTime? CloseAt  { get; set; }
+    public DateTime  CreatedAt { get; set; } = DateTime.UtcNow;
 
     public Module                         Module   { get; set; } = null!;
     public ICollection<Group>             Groups   { get; set; } = [];

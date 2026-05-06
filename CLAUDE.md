@@ -16,6 +16,7 @@ AutoCo/
 │   ├── DTOs/Dtos.cs            # Tots els records de request/response
 │   ├── Services/               # Lògica de negoci (Auth, Class, Activity,
 │   │                           #   Evaluation, Results, Email, Backup)
+│   │   ├── ActivitySchedulerService.cs  # BackgroundService: obre/tanca activitats programades (cada minut)
 │   │   └── LogLevelHolder.cs   # Singleton: nivell de log en calent (volatile int)
 │   ├── Program.cs              # Minimal API endpoints + DI
 │   └── Dockerfile
@@ -101,7 +102,7 @@ ActivityTemplate (per professor, criteris JSON)
 ```
 
 - Un alumne pertany a una `Class` i autentifica amb email + contrasenya
-- Una `Activity` pertany a un `Module` (que pertany a una `Class`)
+- Una `Activity` pertany a un `Module` (que pertany a una `Class`); té camps `OpenAt?`/`CloseAt?` (UTC) per a programació automàtica
 - Un alumne avalua tots els membres del seu grup (inclòs ell mateix)
 - `IsSelf = true` quan avaluador = avaluat (autoavaluació)
 
@@ -184,3 +185,4 @@ PUT  /api/admin/log-level                    # Canviar nivell de log en calent (
 - Nivell de log en calent: `LogLevelHolder` singleton (api + web), `AddFilter` predicate, persistit a Redis `autoco:loglevel`
 - Estat de panels a `Resultats.razor`: `sessionStorage` clau `autoco:resultats:{ActivityId}`, carregat a `OnAfterRenderAsync(firstRender)`
 - `MudExpansionPanel` (MudBlazor 8.x): usar `@bind-Expanded` + `@bind-Expanded:after` — **no** `IsExpanded`/`IsExpandedChanged` (MUD0002)
+- Programació d'activitats: `OpenAt`/`CloseAt` en UTC; `ActivitySchedulerService` comprova cada minut i neteja el camp usat; `ToggleOpenAsync` neteja dates passades; UTC→local per a display, local→UTC en desar

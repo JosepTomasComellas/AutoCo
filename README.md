@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.15
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.16
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -22,6 +22,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 **Gestió d'activitats**
 - Creació d'**activitats** d'avaluació per mòdul, amb obertura i tancament manual des del tauler
+- **Programació automàtica** d'obertura i tancament: data i hora d'inici i fi opcionals; `ActivitySchedulerService` (background) comprova cada minut i obre/tanca automàticament; xip informatiu a la targeta mostra quan s'obrirà o tancarà
 - **Criteris personalitzats** per activitat (afegir, reordenar, eliminar) o usar els globals
 - **Plantilles d'activitat**: desa configuració (nom, descripció, criteris) i reutilitza-la en noves activitats
 - Configuració de **grups** per **arrossegar i deixar anar** (drag & drop)
@@ -344,6 +345,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.16
+- **Programació d'obertura i tancament automàtic d'activitats** — cada activitat pot tenir una data/hora d'obertura (`OpenAt`) i de tancament (`CloseAt`) opcionals; `ActivitySchedulerService` (BackgroundService) comprova cada minut i obre/tanca les activitats programades, netejant el camp usats per evitar re-disparaments; el diàleg d'edició inclou un panell expandible amb dos parells MudDatePicker+MudTimePicker; la targeta d'activitat mostra un xip «S'obrirà el…» o «Es tancarà el…» quan hi ha programació activa; `ToggleOpenAsync` neteja automàticament dates passades en canviar l'estat manualment
 
 ### v2.5.15
 - **Fix build**: `MudExpansionPanel` a MudBlazor 8.x no exposa `IsExpanded`/`IsExpandedChanged`; corregit a `@bind-Expanded` + `@bind-Expanded:after` per als 4 panells exteriors i `Expanded`/`ExpandedChanged` amb tipus explícit `(bool v)` per als panells interns d'alumne

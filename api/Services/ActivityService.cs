@@ -79,7 +79,9 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         {
             ModuleId    = req.ModuleId,
             Name        = req.Name.Trim(),
-            Description = req.Description?.Trim()
+            Description = req.Description?.Trim(),
+            OpenAt      = req.OpenAt,
+            CloseAt     = req.CloseAt
         };
         db.Activities.Add(activity);
         await db.SaveChangesAsync();
@@ -91,7 +93,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             modul.Id, modul.Code, modul.Name,
             modul.ClassId, modul.Class.Name, modul.Class.AcademicYear,
             modul.Professor.NomComplet,
-            activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt, 0, 0);
+            activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt, 0, 0,
+            activity.OpenAt, activity.CloseAt);
     }
 
     public async Task<ActivityDto?> UpdateAsync(int id, int professorId, bool isAdmin, UpdateActivityRequest req)
@@ -106,6 +109,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
         a.Name        = req.Name.Trim();
         a.Description = req.Description?.Trim();
+        a.OpenAt      = req.OpenAt;
+        a.CloseAt     = req.CloseAt;
         await db.SaveChangesAsync();
         return ToDto(a);
     }
@@ -132,6 +137,10 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         if (a is null) return null;
 
         a.IsOpen = !a.IsOpen;
+        // Neteja dates programades caducades per evitar re-activació no desitjada
+        var now = DateTime.UtcNow;
+        if (a.OpenAt.HasValue  && a.OpenAt.Value  <= now) a.OpenAt  = null;
+        if (a.CloseAt.HasValue && a.CloseAt.Value <= now) a.CloseAt = null;
         await db.SaveChangesAsync();
         return ToDto(a);
     }
@@ -219,7 +228,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             targetModule.ClassId, targetModule.Class.Name, targetModule.Class.AcademicYear,
             targetModule.Professor.NomComplet,
             nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
-            original.Groups.Count, 0);
+            original.Groups.Count, 0, null, null);
     }
 
     public async Task<ParticipationDto> GetParticipationAsync(int activityId, int professorId, bool isAdmin)
@@ -633,7 +642,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             a.ModuleId, a.Module.Code, a.Module.Name,
             a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
             a.Module.Professor.NomComplet,
-            a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents);
+            a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents,
+            a.OpenAt, a.CloseAt);
     }
 
     private StudentDto ToStudentDto(Student s) => new(

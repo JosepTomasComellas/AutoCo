@@ -166,6 +166,12 @@ namespace AutoCo.Api.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
+                    b.Property<DateTime?>("OpenAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("CloseAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("ModuleId")
                         .HasColumnType("int");
 
