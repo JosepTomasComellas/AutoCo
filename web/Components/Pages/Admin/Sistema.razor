@@ -123,6 +123,7 @@
         _saving = true;
         try
         {
+            Api.SetToken(UserState.Token!);
             // Actualitzar l'API (guarda a Redis i actualitza el seu filtre)
             var result = await Api.SetLogLevelAsync(_selectedLevel);
             if (result is null)
