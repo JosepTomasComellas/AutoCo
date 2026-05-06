@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.9
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.10
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -343,6 +343,12 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.10
+- **Logo incrustat als correus** — `logo2.png` copiat al contenidor API i adjuntat via CID (`LinkedResources`); es mostra sense dependre de cap URL pública ni de la web
+- **Healthcheck de l'API** — `docker-compose.yml` afegeix `healthcheck` al servei `api` (`curl /api/health`, interval 10s, start_period 60s); `/api/health` ara és públic (sense `RequireAuthorization`)
+- **Arrencada seqüencial garantida** — `web` ara espera `api: condition: service_healthy` (i `redis: service_healthy`) abans d'arrencar, evitant el `Connection refused` durant les migracions EF Core
+- **Dockerfile API** — instal·la `curl` (necessari per al healthcheck) i copia el logo a `/app/resources/logo2.png`
 
 ### v2.5.9
 - **Correus HTML amb estètica de targeta** — tots els correus transaccionals (credencials, recordatori, convit, compleció, reset de contrasenya) s'envien ara en format HTML + text pla (fallback `multipart/alternative`); la plantilla reprodueix l'estil de la pantalla de login: capçalera fosca `#1e293b`, bloc de dades amb fons `#f8fafc` i contorn, contrasenya destacada en vermell monospace, botó CTA vermell `#CC0000` i peu de pàgina gris

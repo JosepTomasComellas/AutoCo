@@ -966,7 +966,7 @@ app.MapGet("/api/health", async (AppDbContext db, StackExchange.Redis.IConnectio
     try { redisOk = redis.IsConnected; }                      catch { }
     var status = dbOk && redisOk ? "ok" : "degraded";
     return Results.Ok(new { status, db = dbOk ? "ok" : "error", redis = redisOk ? "ok" : "error" });
-}).RequireAuthorization();
+});
 
 // ════════════════════════════════════════════════════════════════════════════
 // ESTADÍSTIQUES D'ÚS (admin only)

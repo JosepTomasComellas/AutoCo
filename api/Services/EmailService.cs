@@ -26,15 +26,17 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
     private readonly string _fromName    = config["Smtp:FromName"]    ?? "Salesians de Sarrià";
     private readonly string _webUrl      = config["App:WebUrl"]       ?? "";
 
+    private static readonly string _logoPath =
+        Path.Combine(AppContext.BaseDirectory, "resources", "logo2.png");
+
     public bool IsEnabled => !string.IsNullOrWhiteSpace(_host) && !string.IsNullOrWhiteSpace(_fromAddress);
 
     public async Task<bool> SendStudentPasswordAsync(string toEmail, string toName, string className, string password)
     {
         if (!IsEnabled) return false;
         var url = LoginUrl("alumne");
-        var name = H(toName);
         var content = $"""
-            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {name}!</p>
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {H(toName)}!</p>
             <p style="margin:0 0 20px;color:#475569">T'enviem les teves credencials d'accés al sistema d'avaluació.</p>
             {CredentialBlock([("Classe", H(className), false), ("Correu", H(toEmail), false), ("Contrasenya", H(password), true)])}
             <p style="margin:20px 0 0;color:#64748b;font-size:13px">Si tens qualsevol problema, contacta amb el teu professor/a.</p>
@@ -60,9 +62,8 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
     {
         if (!IsEnabled) return false;
         var url = LoginUrl("professor");
-        var name = H(toName);
         var content = $"""
-            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {name}!</p>
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {H(toName)}!</p>
             <p style="margin:0 0 20px;color:#475569">T'enviem les teves credencials d'accés al sistema d'avaluació.</p>
             {CredentialBlock([("Correu", H(toEmail), false), ("Contrasenya", H(password), true)])}
             <p style="margin:20px 0 0;color:#64748b;font-size:13px">Es recomana canviar la contrasenya després del primer accés.</p>
@@ -89,9 +90,8 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
     {
         if (!IsEnabled) return false;
         var url = LoginUrl("alumne");
-        var name = H(toName);
         var content = $"""
-            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {name}!</p>
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {H(toName)}!</p>
             <p style="margin:0 0 8px;color:#475569">Tens pendent l'avaluació de l'activitat:</p>
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
               <tr><td style="padding:16px 20px">
@@ -121,12 +121,11 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
     {
         if (!IsEnabled) return false;
         var url = LoginUrl("alumne");
-        var name = H(toName);
         var credBlock = includePassword && password is not null
             ? CredentialBlock([("Correu", H(toEmail), false), ("Contrasenya", H(password), true)])
             : "";
         var content = $"""
-            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {name}!</p>
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {H(toName)}!</p>
             <p style="margin:0 0 8px;color:#475569">El professor/a us convida a participar en l'avaluació de l'activitat:</p>
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
               <tr><td style="padding:16px 20px">
@@ -159,9 +158,8 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
     {
         if (!IsEnabled) return false;
         var url = string.IsNullOrWhiteSpace(_webUrl) ? "#" : $"{_webUrl}/professor/resultats";
-        var name = H(toName);
         var content = $"""
-            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {name}!</p>
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {H(toName)}!</p>
             <p style="margin:0 0 8px;color:#475569">Tots els alumnes han completat l'avaluació de l'activitat:</p>
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0">
               <tr><td style="padding:16px 20px">
@@ -187,9 +185,8 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
     public async Task<bool> SendPasswordResetAsync(string toEmail, string toName, string code)
     {
         if (!IsEnabled) return false;
-        var name = H(toName);
         var content = $"""
-            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {name}!</p>
+            <p style="margin:0 0 16px;font-size:16px;font-weight:600;color:#1e293b">Hola, {H(toName)}!</p>
             <p style="margin:0 0 20px;color:#475569">Has sol·licitat restablir la teva contrasenya d'AutoCo.</p>
             <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:8px 0 20px">
               <tr>
@@ -275,9 +272,10 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
                   <td align="center" style="padding:40px 16px">
                     <table width="100%" style="max-width:480px;border-radius:12px;overflow:hidden;background:#ffffff;box-shadow:0 4px 24px rgba(0,0,0,.10)">
                       <tr>
-                        <td style="background:#1e293b;padding:24px 32px">
-                          <span style="display:block;font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-.3px">AutoCo</span>
-                          <span style="display:block;font-size:13px;color:rgba(255,255,255,.55);margin-top:3px">Avaluació entre iguals · Salesians de Sarrià</span>
+                        <td style="background:#1e293b;padding:20px 32px">
+                          <img src="cid:autoco-logo" alt="Salesians Sarrià" height="42" style="display:block;border:0;margin-bottom:12px" />
+                          <span style="display:block;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-.3px">AutoCo</span>
+                          <span style="display:block;font-size:12px;color:rgba(255,255,255,.5);margin-top:3px">Avaluació entre iguals</span>
                         </td>
                       </tr>
                       <tr>
@@ -304,7 +302,17 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
     {
         try
         {
-            var builder = new BodyBuilder { HtmlBody = html, TextBody = plain };
+            var builder = new BodyBuilder { TextBody = plain };
+
+            if (File.Exists(_logoPath))
+            {
+                var logo = await builder.LinkedResources.AddAsync(_logoPath);
+                logo.ContentId = "autoco-logo";
+                logo.ContentDisposition = new MimeKit.ContentDisposition(MimeKit.ContentDisposition.Inline);
+            }
+
+            builder.HtmlBody = html;
+
             var message = new MimeMessage();
             message.From.Add(new MailboxAddress(_fromName, _fromAddress));
             message.To.Add(new MailboxAddress(toName, toEmail));
