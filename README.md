@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.14
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.15
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -344,6 +344,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.15
+- **Fix build**: `MudExpansionPanel` a MudBlazor 8.x no exposa `IsExpanded`/`IsExpandedChanged`; corregit a `@bind-Expanded` + `@bind-Expanded:after` per als 4 panells exteriors i `Expanded`/`ExpandedChanged` amb tipus explícit `(bool v)` per als panells interns d'alumne
 
 ### v2.5.14
 - **Fix solapament text/etiqueta als MudSelect** de la pàgina de resultats — eliminat `Margin.Dense` als filtres de grup i nota; el valor seleccionat ja no es solapa amb l'etiqueta

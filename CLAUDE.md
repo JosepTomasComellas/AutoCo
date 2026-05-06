@@ -183,3 +183,4 @@ PUT  /api/admin/log-level                    # Canviar nivell de log en calent (
 - Temps real: Redis pub/sub → `ParticipationNotificationService` → Blazor
 - Nivell de log en calent: `LogLevelHolder` singleton (api + web), `AddFilter` predicate, persistit a Redis `autoco:loglevel`
 - Estat de panels a `Resultats.razor`: `sessionStorage` clau `autoco:resultats:{ActivityId}`, carregat a `OnAfterRenderAsync(firstRender)`
+- `MudExpansionPanel` (MudBlazor 8.x): usar `@bind-Expanded` + `@bind-Expanded:after` — **no** `IsExpanded`/`IsExpandedChanged` (MUD0002)
