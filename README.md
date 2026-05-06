@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.12
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.13
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -343,6 +343,10 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.13
+- **DataProtection persistent a l'API** — claus guardades al volum Docker `api-dp-keys` (`/app/dp-keys`); elimina el warning d'efemeralitat (l'API usa JWT, però ASP.NET Core inicialitza el subsistema sempre)
+- **EF Core SplitQuery global** — `UseQuerySplittingBehavior(SplitQuery)` a `UseSqlServer`; les queries amb múltiples `Include` de col·leccions es divideixen en dues SQL en lloc d'un JOIN cartesià; elimina el `MultipleCollectionIncludeWarning`
 
 ### v2.5.12
 - **Nivell de log configurable des de la UI** — pàgina `/admin/sistema` (accessible des del tauler admin) amb selector de 5 nivells (Error, Warning, Information, Debug, Trace); el canvi s'aplica immediatament a l'API i al web sense reinici i persisteix entre reinicis via Redis (`autoco:loglevel`); tècnicament: `LogLevelHolder` singleton capturat per un filtre `AddFilter` en calent, inicialitzat des de Redis a l'arrencada

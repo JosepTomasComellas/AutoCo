@@ -4,6 +4,7 @@ using AutoCo.Api.Data;
 using AutoCo.Shared.DTOs;
 using AutoCo.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -24,7 +25,8 @@ builder.Logging.AddFilter((category, level) => level >= logHolder.Level);
 
 // ── Base de dades ─────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+           sql => sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
 // ── JWT ───────────────────────────────────────────────────────────────────────
@@ -86,6 +88,13 @@ builder.Services.AddRateLimiter(opt =>
 });
 
 builder.Services.AddOpenApi();
+
+// ── DataProtection (claus persistents) ───────────────────────────────────────
+// L'API usa JWT (no cookies), però ASP.NET Core inicialitza DataProtection de
+// totes formes. Persistim les claus al volum Docker per evitar el warning.
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new System.IO.DirectoryInfo("/app/dp-keys"))
+    .SetApplicationName("AutoCo.Api");
 
 var app = builder.Build();
 

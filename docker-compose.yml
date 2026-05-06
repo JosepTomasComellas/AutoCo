@@ -5,7 +5,8 @@ networks:
 volumes:
   db-data:      # Volum Docker per a SQL Server (NTFS via WSL2 no és compatible amb SQLPAL)
   redis-data:   # Volum per a Redis (persistència AOF)
-  dp-keys:      # Claus de DataProtection (antiforgery, ProtectedLocalStorage)
+  dp-keys:      # Claus de DataProtection del web (antiforgery, ProtectedLocalStorage)
+  api-dp-keys:  # Claus de DataProtection de l'API
   api-backups:  # Còpies de seguretat JSON (exportació/importació)
   fotos-data:   # Fotos d'alumnes i professors (compartit entre api i web)
 
@@ -87,6 +88,7 @@ services:
     expose:
       - "8080"
     volumes:
+      - api-dp-keys:/app/dp-keys
       - api-backups:/app/backups
       - fotos-data:/app/fotos
       - ./config/logging.json:/app/logging.json:ro
