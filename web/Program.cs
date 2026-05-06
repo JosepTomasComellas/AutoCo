@@ -16,14 +16,24 @@ var builder = WebApplication.CreateBuilder(args);
 // DOTNET_USE_POLLING_FILE_WATCHER=true al docker-compose garanteix la detecció en Docker.
 builder.Configuration.AddJsonFile("logging.json", optional: true, reloadOnChange: true);
 
-// L'antiforgery registra com a Error quan troba una cookie vella (clau caducada/canviada),
-// però ho gestiona internament emetent una nova cookie. Silenciem el log per evitar
-// alarmar en desplegaments normals.
-builder.Logging.AddFilter("Microsoft.AspNetCore.Antiforgery", LogLevel.Critical);
+// LogLevelHolder: singleton capturat pel filtre; el nivell es pot canviar en calent des de la UI.
+var logHolder = new AutoCo.Web.Services.LogLevelHolder();
+builder.Services.AddSingleton(logHolder);
+builder.Logging.AddFilter((category, level) =>
+{
+    if (category?.StartsWith("Microsoft.AspNetCore.Antiforgery") == true)
+        return level >= LogLevel.Critical;
+    return level >= logHolder.Level;
+});
 
 var redisConn = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
 var redis = await ConnectionMultiplexer.ConnectAsync(redisConn);
 builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
+
+// Restaurar el nivell de log guardat a Redis (persistent entre reinicis)
+var savedLogLevel = await redis.GetDatabase().StringGetAsync("autoco:loglevel");
+if (!savedLogLevel.IsNull && Enum.TryParse<LogLevel>(savedLogLevel.ToString(), out var savedLevel))
+    logHolder.Level = savedLevel;
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

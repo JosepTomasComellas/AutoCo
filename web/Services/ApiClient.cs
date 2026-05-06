@@ -333,6 +333,14 @@ public class ApiClient
         return (bytes, fileName.Trim('"'));
     }
 
+    // ── Nivell de log (admin) ─────────────────────────────────────────────────
+
+    public Task<LogLevelDto?> GetLogLevelAsync() =>
+        GetAsync<LogLevelDto>("/api/admin/log-level");
+
+    public Task<LogLevelDto?> SetLogLevelAsync(string level) =>
+        PutAsync<LogLevelDto>("/api/admin/log-level", new SetLogLevelRequest(level));
+
     // ── Estadístiques (admin) ─────────────────────────────────────────────────
 
     public Task<AdminStatsDto?> GetAdminStatsAsync() =>

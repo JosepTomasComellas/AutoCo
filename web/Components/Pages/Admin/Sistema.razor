@@ -1,0 +1,145 @@
+@page "/admin/sistema"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject AutoCo.Web.Services.LogLevelHolder LogHolder
+@inject StackExchange.Redis.IConnectionMultiplexer Redis
+
+<PageTitle>Sistema – AutoCo</PageTitle>
+@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+
+<!-- Capçalera -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">Configuració del sistema</MudText>
+</MudStack>
+
+<MudGrid>
+    <!-- Nivell de log -->
+    <MudItem xs="12" md="6">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Primary" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.Terminal" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Nivell de log</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        S'aplica immediatament a l'API i al web sense reinici
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_loading)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                }
+                else
+                {
+                    <MudSelect T="string" @bind-Value="_selectedLevel" Label="Nivell"
+                               Variant="Variant.Outlined" FullWidth="true" Class="mb-3">
+                        @foreach (var opt in _logOptions)
+                        {
+                            <MudSelectItem Value="@opt.Value">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudIcon Icon="@opt.Icon" Size="Size.Small" Color="@opt.Color" />
+                                    <MudText>@opt.Label</MudText>
+                                </MudStack>
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudAlert Severity="@CurrentSeverity" Dense="true" Class="mb-4">
+                        @CurrentDescription
+                    </MudAlert>
+                }
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Save"
+                           OnClick="ApplyAsync" Disabled="_saving || _loading">
+                    @if (_saving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                    }
+                    Aplicar
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private bool   _loading = true;
+    private bool   _saving  = false;
+    private string _selectedLevel = "Warning";
+
+    private record LogOption(string Value, string Label, string Icon, Color Color);
+
+    private static readonly LogOption[] _logOptions =
+    [
+        new("Error",       "Error — només errors greus",         Icons.Material.Filled.Error,       Color.Error),
+        new("Warning",     "Warning — avisos i errors (normal)", Icons.Material.Filled.Warning,     Color.Warning),
+        new("Information", "Information — logs de l'aplicació",  Icons.Material.Filled.Info,        Color.Info),
+        new("Debug",       "Debug — diagnosi detallada",         Icons.Material.Filled.BugReport,   Color.Secondary),
+        new("Trace",       "Trace — tot (molt sorollós)",        Icons.Material.Filled.AllInclusive, Color.Default),
+    ];
+
+    private Severity CurrentSeverity => _selectedLevel switch
+    {
+        "Error"       => Severity.Error,
+        "Warning"     => Severity.Warning,
+        "Information" => Severity.Info,
+        _             => Severity.Normal
+    };
+
+    private string CurrentDescription => _selectedLevel switch
+    {
+        "Error"       => "Silencia Warning i Info. Ideal per a producció estable.",
+        "Warning"     => "Oculta missatges informatius de sistema. Recomanat en ús normal.",
+        "Information" => "Mostra els logs de l'aplicació. Útil per seguir l'activitat.",
+        "Debug"       => "Activa logs detallats. Pot generar molt de volum.",
+        "Trace"       => "Registra absolutament tot. Usar només per a diagnosi puntual.",
+        _             => ""
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Llegir el nivell actual directament del Redis (és la font de veritat)
+        var db = Redis.GetDatabase();
+        var saved = await db.StringGetAsync("autoco:loglevel");
+        _selectedLevel = saved.IsNull ? "Warning" : saved.ToString();
+        _loading = false;
+    }
+
+    private async Task ApplyAsync()
+    {
+        _saving = true;
+        try
+        {
+            // Actualitzar l'API (guarda a Redis i actualitza el seu filtre)
+            var result = await Api.SetLogLevelAsync(_selectedLevel);
+            if (result is null)
+            {
+                Snackbar.Add("Error aplicant el nivell al servidor API", Severity.Error);
+                return;
+            }
+
+            // Actualitzar el filtre del web immediatament
+            if (Enum.TryParse<LogLevel>(_selectedLevel, out var level))
+                LogHolder.Level = level;
+
+            Snackbar.Add($"Nivell de log canviat a {_selectedLevel}", Severity.Success);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

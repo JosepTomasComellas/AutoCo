@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.11
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.12
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -343,6 +343,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.12
+- **Nivell de log configurable des de la UI** — pàgina `/admin/sistema` (accessible des del tauler admin) amb selector de 5 nivells (Error, Warning, Information, Debug, Trace); el canvi s'aplica immediatament a l'API i al web sense reinici i persisteix entre reinicis via Redis (`autoco:loglevel`); tècnicament: `LogLevelHolder` singleton capturat per un filtre `AddFilter` en calent, inicialitzat des de Redis a l'arrencada
 
 ### v2.5.11
 - **Nivell de log configurable sense reinici** — `config/logging.json` muntat com a volum Docker (`:ro`) a `/app/logging.json` en els contenidors `api` i `web`; editar el fitxer al servidor propaga el canvi en pocs segons gràcies a `reloadOnChange: true` i `DOTNET_USE_POLLING_FILE_WATCHER=true`; per defecte silencia els espais de noms sorollosos (`System.Net.Http`, `Microsoft.AspNetCore`, EF Core, SignalR, Redis) i manté `Information` per als logs d'AutoCo

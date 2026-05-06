@@ -230,3 +230,7 @@ public record StudentDashboardDto(List<StudentActivityDto> Activities);
 public record StudentActivityDto(
     int Id, string Name, string? Description, bool IsOpen,
     string GroupName, int GroupId, int TotalToEvaluate, int AlreadyEvaluated);
+
+// ─── Nivell de log (admin) ────────────────────────────────────────────────────
+public record LogLevelDto(string Level);
+public record SetLogLevelRequest(string Level);

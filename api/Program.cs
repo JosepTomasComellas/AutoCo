@@ -17,6 +17,11 @@ var builder = WebApplication.CreateBuilder(args);
 // logging.json muntat com a volum Docker — recarrega automàticament sense reinici.
 builder.Configuration.AddJsonFile("logging.json", optional: true, reloadOnChange: true);
 
+// LogLevelHolder: singleton capturat pel filtre; el nivell es pot canviar en calent des de la UI.
+var logHolder = new AutoCo.Api.Services.LogLevelHolder();
+builder.Services.AddSingleton(logHolder);
+builder.Logging.AddFilter((category, level) => level >= logHolder.Level);
+
 // ── Base de dades ─────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
@@ -189,6 +194,14 @@ using (var scope = app.Services.CreateScope())
     }
     catch { /* ignora si no té permisos o si ja està desactivat */ }
     await SeedData.InitializeAsync(db, config);
+}
+
+// Restaurar el nivell de log guardat a Redis (persistent entre reinicis)
+{
+    var cache = app.Services.GetRequiredService<IDistributedCache>();
+    var saved = await cache.GetStringAsync("autoco:loglevel");
+    if (saved is not null && Enum.TryParse<LogLevel>(saved, out var savedLevel))
+        logHolder.Level = savedLevel;
 }
 
 if (app.Environment.IsDevelopment())
@@ -1377,6 +1390,22 @@ app.MapDelete("/api/professors/{id:int}/foto",
     if (!exists) return Results.NotFound();
     photos.DeleteProfessorFoto(id);
     return Results.NoContent();
+}).RequireAuthorization();
+
+// ── Nivell de log (admin) ─────────────────────────────────────────────────────
+app.MapGet("/api/admin/log-level", (LogLevelHolder h) =>
+    Results.Ok(new LogLevelDto(h.Level.ToString())))
+    .RequireAuthorization();
+
+app.MapPut("/api/admin/log-level", async (
+    SetLogLevelRequest req, LogLevelHolder h, IDistributedCache cache, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    if (!Enum.TryParse<LogLevel>(req.Level, out var newLevel) || newLevel == LogLevel.None)
+        return Results.BadRequest(new { error = "Nivell invàlid" });
+    await cache.SetStringAsync("autoco:loglevel", newLevel.ToString());
+    h.Level = newLevel;
+    return Results.Ok(new LogLevelDto(newLevel.ToString()));
 }).RequireAuthorization();
 
 app.Run();
