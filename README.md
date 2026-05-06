@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.7
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.8
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -219,7 +219,7 @@ rm -rf AutoCo && mv AutoCo-git AutoCo
 bash /docker/AutoCo/deploy/server-update.sh
 ```
 
-El script fa `git pull`, reconstrueix les imatges i mostra la versió desplegada.
+El script fa `git pull`, **valida la configuració del `.env`** (variables obligatòries, formats, SMTP) i reconstrueix les imatges. Si la validació falla, els contenidors actuals no s'aturen.
 
 ### Opció C — Actualització del servidor des de Windows
 
@@ -343,6 +343,10 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.8
+- **Validació de `.env` a l'script de desplegament** — `server-update.sh` comprova ara que totes les variables obligatòries (`MSSQL_SA_PASSWORD`, `JWT_SECRET`, `ADMIN_*`) estiguin personalitzades, que `JWT_SECRET` tingui mínim 32 caràcters, que `ADMIN_EMAIL` sigui vàlid, i que `BACKUP_DAILY_HOUR`/`BACKUP_WEEKLY_DAY` estiguin en rang; avisa si SMTP no és configurat o si `APP_WEB_URL` és `localhost`; en cas d'error, atura el desplegament **sense** aturar els contenidors actuals
+- **Fix `.env.example`** — eliminada la variable `ADMIN_USERNAME` (no usada); comentari de `BACKUP_DAILY_HOUR` corregit a "hora local Europe/Madrid"
 
 ### v2.5.7
 - **Fix zona horària** — contenidors `api` i `web` configurats amb `TZ=Europe/Madrid`; EF Core ara retorna tots els `DateTime` amb `Kind=Utc` (value converter) perquè `ToLocalTime()` converteixi correctament a CET/CEST en tots els registres i timestamps de l'aplicació
