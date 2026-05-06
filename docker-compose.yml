@@ -58,6 +58,7 @@ services:
       dockerfile: api/Dockerfile
     container_name: autoco-api
     environment:
+      TZ:                              Europe/Madrid
       ASPNETCORE_ENVIRONMENT:          Production
       ConnectionStrings__DefaultConnection: >
         Server=db;Database=AutoCoAvaluacio;
@@ -102,6 +103,7 @@ services:
       dockerfile: web/Dockerfile
     container_name: autoco-web
     environment:
+      TZ:                      Europe/Madrid
       ASPNETCORE_ENVIRONMENT:  Production
       ApiSettings__BaseUrl:    "http://api:8080"
       Redis__ConnectionString: "redis:6379"

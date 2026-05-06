@@ -141,7 +141,7 @@
                                         else
                                         {
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                                @Loc["Classes_Created", c.CreatedAt.ToString("dd/MM/yyyy")]
+                                                @Loc["Classes_Created", c.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy")]
                                             </MudText>
                                         }
                                     </MudItem>

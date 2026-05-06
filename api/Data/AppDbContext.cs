@@ -1,5 +1,6 @@
 using AutoCo.Api.Data.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace AutoCo.Api.Data;
 
@@ -166,5 +167,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(l => l.ProfessorId);
             e.HasIndex(l => l.CreatedAt);
         });
+
+        // Tots els DateTime llegits de la BD es marquen com a UTC perquè
+        // ToLocalTime() pugui convertir correctament a la zona horària del contenidor.
+        var utcConv = new ValueConverter<DateTime, DateTime>(v => v, v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+        foreach (var entity in b.Model.GetEntityTypes())
+            foreach (var prop in entity.GetProperties().Where(p => p.ClrType == typeof(DateTime)))
+                prop.SetValueConverter(utcConv);
     }
 }
