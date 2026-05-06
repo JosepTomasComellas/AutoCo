@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ActivityTemplate>    ActivityTemplates    => Set<ActivityTemplate>();
     public DbSet<ActivityLog>         ActivityLogs         => Set<ActivityLog>();
     public DbSet<ProfessorLogin>      ProfessorLogins      => Set<ProfessorLogin>();
+    public DbSet<AdminAuditLog>       AdminAuditLogs       => Set<AdminAuditLog>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -165,6 +166,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
              .HasForeignKey(l => l.ProfessorId)
              .OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(l => l.ProfessorId);
+            e.HasIndex(l => l.CreatedAt);
+        });
+
+        b.Entity<AdminAuditLog>(e => {
+            e.Property(l => l.Action).HasMaxLength(100);
+            e.Property(l => l.ActorName).HasMaxLength(300);
             e.HasIndex(l => l.CreatedAt);
         });
 

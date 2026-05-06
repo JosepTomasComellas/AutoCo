@@ -193,3 +193,6 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - JWT refresh tokens: `StoreRefreshTokenAsync` genera base64url segur, desa a Redis `autoco:refresh:{token}` (TTL 7 dies); rotació en cada refresh; `RefreshFromTokenAsync` a `ApiClient` per a `MainLayout`; `TryRefreshAsync` privat per a reintentar peticions 401
 - Paginació del servidor: `PagedResult<T>` als DTOs; paràmetres `?page=1&size=N`; `ApiClient` desempaqueta a `List<T>` (size=500 per defecte = compatible amb codi existent)
 - Tests (29): `ResultsServiceTests` (15), `AuthServiceTests` (8), `ActivityServiceTests` (6); pattern `file sealed class FakePhotoService : IPhotoService` per no usar mocking library
+- Rate limiting: SlidingWindow `auth` (5/min), SlidingWindow `remind` (2/min, mass-send), FixedWindow `admin` (20/min); `RejectionStatusCode = 429`
+- Compressió fotos: `SixLabors.ImageSharp` a l'API; `SaveImageAsync` redimensiona a 400×400 crop centrat, JPEG Q85; valida content-type (jpeg/png/webp/gif)
+- Audit log: model `AdminAuditLog` (sense FK, preservat si s'esborren altres entitats); helper `AuditAsync()` a `Program.cs`; `GET /api/admin/audit` paginat; pàgina `/admin/auditoria` amb colors per tipus d'acció

@@ -375,6 +375,15 @@ public class ApiClient
     public Task<bool> DeleteAdminLoginsAsync() =>
         DeleteAsync("/api/admin/stats/logins");
 
+    // ── Auditoria (admin) ─────────────────────────────────────────────────────
+
+    public async Task<(List<AdminAuditLogDto> Items, int Total)?> GetAuditLogsAsync(int page = 1, int size = 50)
+    {
+        var r = await GetAsync<PagedResult<AdminAuditLogDto>>(
+            $"/api/admin/audit?page={page}&size={size}");
+        return r is null ? null : (r.Items, r.Total);
+    }
+
     // ── Backup / Restore (admin) ──────────────────────────────────────────────
 
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()

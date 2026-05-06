@@ -79,9 +79,25 @@ builder.Services.AddStackExchangeRedisCache(opt =>
 // ── Rate limiting (protecció contra força bruta) ───────────────────────────
 builder.Services.AddRateLimiter(opt =>
 {
-    opt.AddFixedWindowLimiter("auth", o =>
+    opt.AddSlidingWindowLimiter("auth", o =>
     {
-        o.PermitLimit         = 10;
+        o.PermitLimit         = 5;
+        o.Window              = TimeSpan.FromMinutes(1);
+        o.SegmentsPerWindow   = 3;
+        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        o.QueueLimit          = 0;
+    });
+    opt.AddSlidingWindowLimiter("remind", o =>
+    {
+        o.PermitLimit         = 2;
+        o.Window              = TimeSpan.FromMinutes(1);
+        o.SegmentsPerWindow   = 2;
+        o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        o.QueueLimit          = 0;
+    });
+    opt.AddFixedWindowLimiter("admin", o =>
+    {
+        o.PermitLimit         = 20;
         o.Window              = TimeSpan.FromMinutes(1);
         o.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         o.QueueLimit          = 0;
@@ -193,6 +209,21 @@ using (var scope = app.Services.CreateScope())
             CREATE INDEX [IX_ProfessorLogins_CreatedAt]
                 ON [ProfessorLogins] ([CreatedAt]);
         END
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AdminAuditLogs')
+        BEGIN
+            CREATE TABLE [AdminAuditLogs] (
+                [Id]        INT           NOT NULL IDENTITY(1,1),
+                [Action]    NVARCHAR(100) NOT NULL,
+                [ActorId]   INT           NULL,
+                [ActorName] NVARCHAR(300) NULL,
+                [Details]   NVARCHAR(MAX) NULL,
+                [CreatedAt] DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                CONSTRAINT [PK_AdminAuditLogs] PRIMARY KEY ([Id])
+            );
+            CREATE INDEX [IX_AdminAuditLogs_CreatedAt]
+                ON [AdminAuditLogs] ([CreatedAt]);
+        END
         """);
 
     // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
@@ -246,6 +277,24 @@ static IResult? Validate<T>(T req) where T : class
         : Results.ValidationProblem(results
             .GroupBy(r => r.MemberNames.FirstOrDefault() ?? "")
             .ToDictionary(g => g.Key, g => g.Select(r => r.ErrorMessage!).ToArray()));
+}
+
+// Registra una acció al log d'auditoria (fire-and-forget, no llança).
+static async Task AuditAsync(AppDbContext db, string action, int? actorId, string? actorName, string? details = null)
+{
+    try
+    {
+        db.AdminAuditLogs.Add(new AutoCo.Api.Data.Models.AdminAuditLog
+        {
+            Action    = action,
+            ActorId   = actorId,
+            ActorName = actorName,
+            Details   = details,
+            CreatedAt = DateTime.UtcNow
+        });
+        await db.SaveChangesAsync();
+    }
+    catch { /* ignora errors de log per no trencar el flux principal */ }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -331,11 +380,14 @@ app.MapGet("/api/professors/{id:int}", async (int id, IProfessorService svc) =>
 }).RequireAuthorization();
 
 app.MapPost("/api/professors", async (CreateProfessorRequest req, IProfessorService svc,
-    ClaimsPrincipal user) =>
+    AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
     if (Validate(req) is { } err) return err;
     var p = await svc.CreateAsync(req);
+    await AuditAsync(db, "professor.created", GetUserId(user),
+        user.FindFirstValue(ClaimTypes.Name),
+        $"Id:{p.Id} Email:{p.Email}");
     return Results.Created($"/api/professors/{p.Id}", p);
 }).RequireAuthorization();
 
@@ -349,12 +401,16 @@ app.MapPut("/api/professors/{id:int}", async (int id, UpdateProfessorRequest req
 }).RequireAuthorization();
 
 app.MapDelete("/api/professors/{id:int}", async (int id, IProfessorService svc,
-    ClaimsPrincipal user) =>
+    AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    var target = await db.Professors.FindAsync(id);
     try
     {
         var ok = await svc.DeleteAsync(id);
+        if (ok) await AuditAsync(db, "professor.deleted", GetUserId(user),
+            user.FindFirstValue(ClaimTypes.Name),
+            $"Id:{id} Email:{target?.Email}");
         return ok ? Results.NoContent() : Results.NotFound();
     }
     catch (InvalidOperationException ex)
@@ -402,7 +458,7 @@ app.MapPost("/api/professors/{professorId:int}/send-credentials", async (
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.SendCredentialsAsync(professorId);
     return Results.Ok(result);
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("remind");
 
 app.MapPost("/api/professors/send-all-credentials", async (
     IProfessorService svc, ClaimsPrincipal user) =>
@@ -410,7 +466,7 @@ app.MapPost("/api/professors/send-all-credentials", async (
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.SendAllCredentialsAsync();
     return Results.Ok(result);
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("remind");
 
 // ════════════════════════════════════════════════════════════════════════════
 // CLASSES  (lectura per a tots els professors; escriptura admin only)
@@ -448,10 +504,14 @@ app.MapPut("/api/classes/{id:int}", async (int id, UpdateClassRequest req,
 }).RequireAuthorization();
 
 app.MapDelete("/api/classes/{id:int}", async (int id, IClassService svc,
-    ClaimsPrincipal user) =>
+    AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    var target = await db.Classes.FindAsync(id);
     var ok = await svc.DeleteAsync(id);
+    if (ok) await AuditAsync(db, "class.deleted", GetUserId(user),
+        user.FindFirstValue(ClaimTypes.Name),
+        $"Id:{id} Name:{target?.Name}");
     return ok ? Results.NoContent() : Results.NotFound();
 }).RequireAuthorization();
 
@@ -515,7 +575,7 @@ app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/send-password",
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.SendPasswordAsync(classId, studentId);
     return Results.Ok(result);
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("remind");
 
 app.MapPost("/api/classes/{classId:int}/students/send-all-passwords", async (
     int classId, IClassService svc, ClaimsPrincipal user) =>
@@ -523,7 +583,7 @@ app.MapPost("/api/classes/{classId:int}/students/send-all-passwords", async (
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.SendAllPasswordsAsync(classId);
     return Results.Ok(result);
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("remind");
 
 app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/move", async (
     int classId, int studentId, MoveStudentRequest req, IClassService svc, ClaimsPrincipal user) =>
@@ -694,7 +754,7 @@ app.MapPost("/api/activities/{id:int}/remind", async (int id, IActivityService s
     if (!IsProfessor(user)) return Results.Forbid();
     var result = await svc.SendRemindersAsync(id, GetUserId(user), IsAdmin(user), email);
     return Results.Ok(result);
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("remind");
 
 app.MapGet("/api/activities/{id:int}/remind-targets", async (
     int id, AppDbContext db, ClaimsPrincipal user) =>
@@ -1121,14 +1181,14 @@ app.MapGet("/api/admin/stats", async (AppDbContext db, ClaimsPrincipal user) =>
     }).ToList();
 
     return Results.Ok(new AdminStatsDto(stats, monthlyLogins, monthlyActivities));
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("admin");
 
 app.MapDelete("/api/admin/stats/logins", async (AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
     await db.ProfessorLogins.ExecuteDeleteAsync();
     return Results.NoContent();
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("admin");
 
 // ════════════════════════════════════════════════════════════════════════════
 // BACKUP / RESTORE (admin only)
@@ -1146,12 +1206,16 @@ app.MapGet("/api/admin/backup/export", async (IBackupService svc, ClaimsPrincipa
 }).RequireAuthorization();
 
 app.MapPost("/api/admin/backup/import", async (
-    BackupDto backup, IBackupService svc, ClaimsPrincipal user) =>
+    BackupDto backup, IBackupService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.ImportAsync(backup);
+    if (result.Success)
+        await AuditAsync(db, "backup.imported", GetUserId(user),
+            user.FindFirstValue(ClaimTypes.Name),
+            $"Professors:{result.Professors} Classes:{result.Classes} Students:{result.Students}");
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("admin");
 
 app.MapGet("/api/admin/backup/files", async (IBackupService svc, ClaimsPrincipal user) =>
 {
@@ -1183,12 +1247,16 @@ app.MapDelete("/api/admin/backup/files/{name}", async (
 }).RequireAuthorization();
 
 app.MapPost("/api/admin/backup/files/{name}/restore", async (
-    string name, IBackupService svc, ClaimsPrincipal user) =>
+    string name, IBackupService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.RestoreFileAsync(name);
+    if (result.Success)
+        await AuditAsync(db, "backup.restored", GetUserId(user),
+            user.FindFirstValue(ClaimTypes.Name),
+            $"File:{name}");
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("admin");
 
 // ════════════════════════════════════════════════════════════════════════════
 // NOTES DEL PROFESSOR PER ALUMNE
@@ -1450,14 +1518,32 @@ app.MapGet("/api/admin/log-level", (LogLevelHolder h) =>
     .RequireAuthorization();
 
 app.MapPut("/api/admin/log-level", async (
-    SetLogLevelRequest req, LogLevelHolder h, IDistributedCache cache, ClaimsPrincipal user) =>
+    SetLogLevelRequest req, LogLevelHolder h, IDistributedCache cache,
+    AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
     if (!Enum.TryParse<LogLevel>(req.Level, out var newLevel) || newLevel == LogLevel.None)
         return Results.BadRequest(new { error = "Nivell invàlid" });
+    var prev = h.Level;
     await cache.SetStringAsync("autoco:loglevel", newLevel.ToString());
     h.Level = newLevel;
+    await AuditAsync(db, "log_level.changed", GetUserId(user),
+        user.FindFirstValue(ClaimTypes.Name),
+        $"{prev}→{newLevel}");
     return Results.Ok(new LogLevelDto(newLevel.ToString()));
-}).RequireAuthorization();
+}).RequireAuthorization().RequireRateLimiting("admin");
+
+// ── Auditoria d'accions admin ─────────────────────────────────────────────────
+app.MapGet("/api/admin/audit", async (AppDbContext db, ClaimsPrincipal user,
+    int page = 1, int size = 50) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var q     = db.AdminAuditLogs.OrderByDescending(l => l.CreatedAt);
+    var total = await q.CountAsync();
+    var items = await q.Skip((page - 1) * size).Take(size)
+        .Select(l => new AdminAuditLogDto(l.Id, l.Action, l.ActorName, l.Details, l.CreatedAt))
+        .ToListAsync();
+    return Results.Ok(new PagedResult<AdminAuditLogDto>(items, total, page, size));
+}).RequireAuthorization().RequireRateLimiting("admin");
 
 app.Run();

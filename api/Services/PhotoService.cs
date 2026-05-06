@@ -1,3 +1,7 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
+
 namespace AutoCo.Api.Services;
 
 public interface IPhotoService
@@ -117,10 +121,18 @@ public class PhotoService : IPhotoService
 
     private static async Task<bool> SaveImageAsync(Stream data, string contentType, string destPath)
     {
+        if (contentType is not ("image/jpeg" or "image/png" or "image/webp" or "image/gif"))
+            return false;
         try
         {
-            using var fs = System.IO.File.Create(destPath);
-            await data.CopyToAsync(fs);
+            using var image = await Image.LoadAsync(data);
+            image.Mutate(ctx => ctx.Resize(new ResizeOptions
+            {
+                Size     = new Size(400, 400),
+                Mode     = ResizeMode.Crop,
+                Position = AnchorPositionMode.Center
+            }));
+            await image.SaveAsJpegAsync(destPath, new JpegEncoder { Quality = 85 });
             return true;
         }
         catch { return false; }

@@ -269,3 +269,6 @@ public record StudentActivityDto(
 // ─── Nivell de log (admin) ────────────────────────────────────────────────────
 public record LogLevelDto(string Level);
 public record SetLogLevelRequest(string Level);
+
+// ─── Auditoria d'accions admin ────────────────────────────────────────────────
+public record AdminAuditLogDto(int Id, string Action, string? ActorName, string? Details, DateTime CreatedAt);

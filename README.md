@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.17
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.18
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -74,6 +74,9 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **JWT refresh tokens**: tokens rotatius desats a Redis (7 dies); renovació automàtica transparent al client; `POST /api/auth/refresh` i `POST /api/auth/logout`
 - **Paginació del costat del servidor**: `PagedResult<T>` a l'API amb paràmetres `?page=1&size=N`; `ApiClient` desempaqueta transparentment per compatibilitat amb el codi existent
 - **Tests unitaris** ampliats a 29 casos (xUnit + EF Core InMemory): `ResultsService` (15), `AuthService` (8), `ActivityService` (6)
+- **Rate limiting millorat**: SlidingWindow per auth (5 req/min) i remind (2 req/min); FixedWindow per admin (20 req/min); 429 automàtic
+- **Compressió de fotos automàtica**: redimensionament a 400×400px + JPEG 85% (SixLabors.ImageSharp) en pujar; validació de content-type
+- **Audit log d'accions admin**: registre persistent de les accions sensibles (crear/eliminar professor, eliminar classe, importar/restaurar backup, canviar nivell de log); pàgina `/admin/auditoria` filtrable i paginada
 - **Validació CSV millorada**: format d'email, NumLlista duplicat, visualització completa d'errors inline
 
 ### Alumne
