@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using AutoCo.Api.Data;
@@ -88,6 +89,7 @@ builder.Services.AddRateLimiter(opt =>
     opt.RejectionStatusCode = 429;
 });
 
+builder.Services.AddProblemDetails();
 builder.Services.AddOpenApi();
 
 // ── DataProtection (claus persistents) ───────────────────────────────────────
@@ -219,6 +221,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi(); // disponible a /openapi/v1.json
 }
 
+app.UseExceptionHandler();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
@@ -232,6 +235,18 @@ static bool IsAdmin(ClaimsPrincipal user) =>
 
 static bool IsProfessor(ClaimsPrincipal user) =>
     user.IsInRole("Professor") || user.IsInRole("Admin");
+
+// Valida DataAnnotations d'un request DTO; retorna 422 si hi ha errors.
+static IResult? Validate<T>(T req) where T : class
+{
+    var ctx     = new ValidationContext(req);
+    var results = new List<ValidationResult>();
+    return Validator.TryValidateObject(req, ctx, results, true)
+        ? null
+        : Results.ValidationProblem(results
+            .GroupBy(r => r.MemberNames.FirstOrDefault() ?? "")
+            .ToDictionary(g => g.Key, g => g.Select(r => r.ErrorMessage!).ToArray()));
+}
 
 // ════════════════════════════════════════════════════════════════════════════
 // AUTENTICACIÓ
@@ -248,6 +263,20 @@ app.MapPost("/api/auth/student", async (StudentLoginRequest req, IAuthService sv
     var result = await svc.StudentLoginAsync(req);
     return result is null ? Results.Unauthorized() : Results.Ok(result);
 }).RequireRateLimiting("auth");
+
+app.MapPost("/api/auth/refresh", async (RefreshRequest req, IAuthService svc) =>
+{
+    if (string.IsNullOrWhiteSpace(req.Token)) return Results.Unauthorized();
+    var result = await svc.RefreshAsync(req.Token);
+    return result is null ? Results.Unauthorized() : Results.Ok(result);
+}).RequireRateLimiting("auth");
+
+app.MapPost("/api/auth/logout", async (LogoutRequest req, IAuthService svc) =>
+{
+    if (!string.IsNullOrWhiteSpace(req.Token))
+        await svc.LogoutAsync(req.Token);
+    return Results.NoContent();
+});
 
 app.MapPost("/api/auth/request-reset", async (
     PasswordResetRequestDto req, AppDbContext db, IEmailService email,
@@ -305,6 +334,7 @@ app.MapPost("/api/professors", async (CreateProfessorRequest req, IProfessorServ
     ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var p = await svc.CreateAsync(req);
     return Results.Created($"/api/professors/{p.Id}", p);
 }).RequireAuthorization();
@@ -313,6 +343,7 @@ app.MapPut("/api/professors/{id:int}", async (int id, UpdateProfessorRequest req
     IProfessorService svc, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var p = await svc.UpdateAsync(id, req);
     return p is null ? Results.NotFound() : Results.Ok(p);
 }).RequireAuthorization();
@@ -402,6 +433,7 @@ app.MapPost("/api/classes", async (CreateClassRequest req, IClassService svc,
     ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var c = await svc.CreateAsync(req);
     return Results.Created($"/api/classes/{c.Id}", c);
 }).RequireAuthorization();
@@ -410,6 +442,7 @@ app.MapPut("/api/classes/{id:int}", async (int id, UpdateClassRequest req,
     IClassService svc, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var c = await svc.UpdateAsync(id, req);
     return c is null ? Results.NotFound() : Results.Ok(c);
 }).RequireAuthorization();
@@ -424,18 +457,20 @@ app.MapDelete("/api/classes/{id:int}", async (int id, IClassService svc,
 
 // ── Alumnes dins d'una classe ─────────────────────────────────────────────────
 
-app.MapGet("/api/classes/{classId:int}/students", async (int classId,
-    IClassService svc, ClaimsPrincipal user) =>
+app.MapGet("/api/classes/{classId:int}/students", async (
+    int classId, IClassService svc, ClaimsPrincipal user,
+    int page = 1, int size = 500) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var list = await svc.GetStudentsAsync(classId);
-    return Results.Ok(list);
+    var (items, total) = await svc.GetStudentsPagedAsync(classId, page, size);
+    return Results.Ok(new PagedResult<StudentDto>(items, total, page, size));
 }).RequireAuthorization();
 
 app.MapPost("/api/classes/{classId:int}/students", async (int classId,
     CreateStudentRequest req, IClassService svc, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var s = await svc.AddStudentAsync(classId, req);
     return Results.Created($"/api/classes/{classId}/students/{s.Id}", s);
 }).RequireAuthorization();
@@ -445,6 +480,7 @@ app.MapPut("/api/classes/{classId:int}/students/{studentId:int}", async (
     IClassService svc, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var s = await svc.UpdateStudentAsync(classId, studentId, req);
     return s is null ? Results.NotFound() : Results.Ok(s);
 }).RequireAuthorization();
@@ -521,6 +557,7 @@ app.MapPost("/api/classes/{classId:int}/modules", async (int classId,
     CreateModuleRequest req, IModuleService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     try
     {
         var m = await svc.CreateAsync(classId, GetUserId(user), req);
@@ -536,6 +573,7 @@ app.MapPut("/api/classes/{classId:int}/modules/{id:int}", async (int classId, in
     UpdateModuleRequest req, IModuleService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var m = await svc.UpdateAsync(id, GetUserId(user), IsAdmin(user), req);
     return m is null ? Results.NotFound() : Results.Ok(m);
 }).RequireAuthorization();
@@ -578,11 +616,13 @@ app.MapDelete("/api/modules/{moduleId:int}/exclusions/{studentId:int}", async (
 // ACTIVITATS
 // ════════════════════════════════════════════════════════════════════════════
 
-app.MapGet("/api/activities", async (IActivityService svc, ClaimsPrincipal user) =>
+app.MapGet("/api/activities", async (IActivityService svc, ClaimsPrincipal user,
+    int page = 1, int size = 500) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
-    return Results.Ok(await svc.GetAllAsync(profId));
+    var (items, total) = await svc.GetAllPagedAsync(profId, page, size);
+    return Results.Ok(new PagedResult<ActivityDto>(items, total, page, size));
 }).RequireAuthorization();
 
 app.MapGet("/api/activities/{id:int}", async (int id, IActivityService svc,
@@ -598,6 +638,7 @@ app.MapPost("/api/activities", async (CreateActivityRequest req, IActivityServic
     ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     try
     {
         var a = await svc.CreateAsync(GetUserId(user), IsAdmin(user), req);
@@ -786,8 +827,9 @@ app.MapPut("/api/activities/{id:int}", async (int id, UpdateActivityRequest req,
     IActivityService svc, IResultsService results, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
     var a = await svc.UpdateAsync(id, GetUserId(user), IsAdmin(user), req);
-    if (a is not null) await results.InvalidateCacheAsync(id); // nom/descripció canviats → caché stale
+    if (a is not null) await results.InvalidateCacheAsync(id);
     return a is null ? Results.NotFound() : Results.Ok(a);
 }).RequireAuthorization();
 

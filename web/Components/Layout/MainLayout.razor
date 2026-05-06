@@ -5,6 +5,7 @@
 @inject ProtectedLocalStorage LocalStorage
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> Loc
+@inject ApiClient Api
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
@@ -233,9 +234,27 @@
                 if (stored.Success && stored.Value is not null)
                 {
                     if (IsTokenExpired(stored.Value.Token))
-                        await LocalStorage.DeleteAsync("autoco_session"); // token caducat → neteja
+                    {
+                        if (stored.Value.RefreshToken is not null)
+                        {
+                            var refreshed = await Api.RefreshFromTokenAsync(stored.Value.RefreshToken);
+                            if (refreshed is not null)
+                            {
+                                await LocalStorage.SetAsync("autoco_session", refreshed);
+                                UserState.SetLogin(refreshed);
+                                Api.SetToken(refreshed.Token);
+                            }
+                            else
+                                await LocalStorage.DeleteAsync("autoco_session");
+                        }
+                        else
+                            await LocalStorage.DeleteAsync("autoco_session");
+                    }
                     else
+                    {
                         UserState.SetLogin(stored.Value);
+                        Api.SetToken(stored.Value.Token);
+                    }
                 }
             }
         }
@@ -303,6 +322,7 @@
 
     private async Task Logout()
     {
+        try { await Api.LogoutAsync(); } catch { }
         try { await LocalStorage.DeleteAsync("autoco_session"); } catch { }
         UserState.Logout();
         Nav.NavigateTo("/", forceLoad: false);

@@ -113,7 +113,7 @@ public class ResultsServiceTests
     public async Task GetResults_ActivityNotFound_ReturnsNull()
     {
         var db  = CreateDb(nameof(GetResults_ActivityNotFound_ReturnsNull));
-        var svc = new ResultsService(db, CreateCache());
+        var svc = new ResultsService(db, CreateCache(), new FakePhotoSvc());
 
         var result = await svc.GetResultsAsync(activityId: 999, professorId: 1, isAdmin: false);
 
@@ -124,7 +124,7 @@ public class ResultsServiceTests
     public async Task GetResults_OtherProfessor_ReturnsNull()
     {
         var (db, _, actId, _) = SeedBase(nameof(GetResults_OtherProfessor_ReturnsNull));
-        var svc = new ResultsService(db, CreateCache());
+        var svc = new ResultsService(db, CreateCache(), new FakePhotoSvc());
 
         // El professor amb Id=2 no és el propietari del mòdul
         var result = await svc.GetResultsAsync(actId, professorId: 2, isAdmin: false);
@@ -136,7 +136,7 @@ public class ResultsServiceTests
     public async Task GetResults_Admin_CanAccessAnyActivity()
     {
         var (db, _, actId, _) = SeedBase(nameof(GetResults_Admin_CanAccessAnyActivity));
-        var svc = new ResultsService(db, CreateCache());
+        var svc = new ResultsService(db, CreateCache(), new FakePhotoSvc());
 
         // isAdmin=true: bypassa la comprovació de propietat
         var result = await svc.GetResultsAsync(actId, professorId: 99, isAdmin: true);
@@ -150,7 +150,7 @@ public class ResultsServiceTests
     public async Task GetResults_NoEvaluations_BothAveragesNull()
     {
         var (db, profId, actId, _) = SeedBase(nameof(GetResults_NoEvaluations_BothAveragesNull));
-        var svc = new ResultsService(db, CreateCache());
+        var svc = new ResultsService(db, CreateCache(), new FakePhotoSvc());
 
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
@@ -169,7 +169,7 @@ public class ResultsServiceTests
         // S1 s'autoavalua amb 7.5 en tots els criteris
         AddSelfEval(db, actId, s1Id, score: 7.5);
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         var s1 = result!.Students.Single(s => s.StudentId == s1Id);
@@ -184,7 +184,7 @@ public class ResultsServiceTests
         // S2 (id=2) coavalua S1 (id=1) amb 5.0
         AddPeerEval(db, actId, evaluatorId: 2, evaluatedId: s1Id, score: 5.0, evalId: 50);
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         var s1 = result!.Students.Single(s => s.StudentId == s1Id);
@@ -199,7 +199,7 @@ public class ResultsServiceTests
         AddSelfEval(db, actId, s1Id, score: 10.0);
         AddPeerEval(db, actId, evaluatorId: 2, evaluatedId: s1Id, score: 5.0, evalId: 51);
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         var s1 = result!.Students.Single(s => s.StudentId == s1Id);
@@ -227,7 +227,7 @@ public class ResultsServiceTests
         AddPeerEval(db, actId, evaluatorId: 2, evaluatedId: s1Id, score: 5.0,  evalId: 60);
         AddPeerEval(db, actId, evaluatorId: 3, evaluatedId: s1Id, score: 10.0, evalId: 61);
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         var s1 = result!.Students.Single(s => s.StudentId == s1Id);
@@ -257,7 +257,7 @@ public class ResultsServiceTests
             { EvaluationId = 70, CriteriaKey = "qualitat", Score = 8.5 });
         db.SaveChanges();
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         var s1 = result!.Students.Single(s => s.StudentId == s1Id);
@@ -282,7 +282,7 @@ public class ResultsServiceTests
         AddPeerEval(db, actId, evaluatorId: 2, evaluatedId: s1Id, score: 7.5, evalId: 80);
         AddPeerEval(db, actId, evaluatorId: 3, evaluatedId: s1Id, score: 7.5, evalId: 81);
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         var s1 = result!.Students.Single(s => s.StudentId == s1Id);
@@ -333,7 +333,7 @@ public class ResultsServiceTests
         );
         db.SaveChanges();
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(1, professorId: 1, isAdmin: false);
 
         // Ordre esperat: Alpha/NumLlista1, Alpha/NumLlista2, Beta/NumLlista1
@@ -348,7 +348,7 @@ public class ResultsServiceTests
     public async Task GetResults_ReturnsCriteria_GlobalWhenNoCustom()
     {
         var (db, profId, actId, _) = SeedBase(nameof(GetResults_ReturnsCriteria_GlobalWhenNoCustom));
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         // Sense criteris personalitzats → retorna els 5 globals
@@ -368,7 +368,7 @@ public class ResultsServiceTests
         );
         db.SaveChanges();
 
-        var svc    = new ResultsService(db, CreateCache());
+        var svc    = new ResultsService(db, CreateCache(), new FakePhotoSvc());
         var result = await svc.GetResultsAsync(actId, profId, isAdmin: false);
 
         Assert.Equal(2, result!.Criteria.Count);
@@ -385,7 +385,7 @@ public class ResultsServiceTests
         AddSelfEval(db, actId, s1Id, score: 5.0);
 
         var cache = CreateCache();
-        var svc   = new ResultsService(db, cache);
+        var svc   = new ResultsService(db, cache, new FakePhotoSvc());
 
         // Primera crida — escriu a caché
         var first = await svc.GetResultsAsync(actId, profId, isAdmin: false);
@@ -410,7 +410,7 @@ public class ResultsServiceTests
         AddSelfEval(db, actId, s1Id, score: 5.0);
 
         var cache = CreateCache();
-        var svc   = new ResultsService(db, cache);
+        var svc   = new ResultsService(db, cache, new FakePhotoSvc());
 
         // Primera crida — escriu a caché
         await svc.GetResultsAsync(actId, profId, isAdmin: false);
@@ -425,4 +425,19 @@ public class ResultsServiceTests
         var s1 = fresh!.Students.Single(s => s.StudentId == s1Id);
         Assert.Equal(10.0, s1.AvgGlobal!.Value, precision: 5);
     }
+}
+
+// ── Fake de IPhotoService per a tests de ResultsService ──────────────────────
+
+file sealed class FakePhotoSvc : AutoCo.Api.Services.IPhotoService
+{
+    public string? GetStudentFotoUrl(int studentId)   => null;
+    public string? GetProfessorFotoUrl(int professorId) => null;
+    public Task<bool> SaveStudentFotoAsync(int studentId, Stream data, string contentType) => Task.FromResult(false);
+    public Task<bool> SaveProfessorFotoAsync(int professorId, Stream data, string contentType) => Task.FromResult(false);
+    public Task<(int Imported, List<string> NotFound, List<string> Errors)> ImportZipFotosAsync(
+        Stream zipStream, IReadOnlyDictionary<string, int> dniToStudentId) =>
+        Task.FromResult((0, new List<string>(), new List<string>()));
+    public bool DeleteStudentFoto(int studentId) => false;
+    public bool DeleteProfessorFoto(int professorId) => false;
 }

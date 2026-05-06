@@ -9,6 +9,7 @@ namespace AutoCo.Api.Services;
 public interface IActivityService
 {
     Task<List<ActivityDto>> GetAllAsync(int? professorId);
+    Task<(List<ActivityDto> Items, int Total)> GetAllPagedAsync(int? professorId, int page, int size);
     Task<ActivityDto?>      GetByIdAsync(int id, int? professorId);
     Task<ActivityDto>       CreateAsync(int professorId, bool isAdmin, CreateActivityRequest req);
     Task<ActivityDto?>      UpdateAsync(int id, int professorId, bool isAdmin, UpdateActivityRequest req);
@@ -53,6 +54,25 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         return await q.OrderByDescending(a => a.CreatedAt)
             .Select(a => ToDto(a))
             .ToListAsync();
+    }
+
+    public async Task<(List<ActivityDto> Items, int Total)> GetAllPagedAsync(int? professorId, int page, int size)
+    {
+        var q = db.Activities
+            .Include(a => a.Module).ThenInclude(m => m.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class)
+            .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .AsQueryable();
+
+        if (professorId.HasValue)
+            q = q.Where(a => a.Module.ProfessorId == professorId.Value);
+
+        var total = await q.CountAsync();
+        var items = await q.OrderByDescending(a => a.CreatedAt)
+            .Skip((page - 1) * size).Take(size)
+            .Select(a => ToDto(a))
+            .ToListAsync();
+        return (items, total);
     }
 
     public async Task<ActivityDto?> GetByIdAsync(int id, int? professorId)

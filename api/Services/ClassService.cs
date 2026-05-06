@@ -14,6 +14,7 @@ public interface IClassService
     Task<bool>            DeleteAsync(int id);
 
     Task<List<StudentDto>>  GetStudentsAsync(int classId);
+    Task<(List<StudentDto> Items, int Total)> GetStudentsPagedAsync(int classId, int page, int size);
     Task<StudentDto>        AddStudentAsync(int classId, CreateStudentRequest req);
     Task<StudentDto?>       UpdateStudentAsync(int classId, int studentId, UpdateStudentRequest req);
     Task<bool>              DeleteStudentAsync(int classId, int studentId);
@@ -80,6 +81,14 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
         var list = await db.Students.Where(s => s.ClassId == classId)
             .OrderBy(s => s.NumLlista).ToListAsync();
         return list.Select(ToStudentDto).ToList();
+    }
+
+    public async Task<(List<StudentDto> Items, int Total)> GetStudentsPagedAsync(int classId, int page, int size)
+    {
+        var q     = db.Students.Where(s => s.ClassId == classId).OrderBy(s => s.NumLlista);
+        var total = await q.CountAsync();
+        var list  = await q.Skip((page - 1) * size).Take(size).ToListAsync();
+        return (list.Select(ToStudentDto).ToList(), total);
     }
 
     public async Task<StudentDto> AddStudentAsync(int classId, CreateStudentRequest req)

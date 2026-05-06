@@ -1,9 +1,18 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace AutoCo.Shared.DTOs;
+
+// ─── Paginació ───────────────────────────────────────────────────────────────
+public record PagedResult<T>(List<T> Items, int Total, int Page, int PageSize);
 
 // ─── Autenticació ────────────────────────────────────────────────────────────
 public record ProfessorLoginRequest(string Email, string Password);
 public record StudentLoginRequest(string Email, string Password);
-public record LoginResponse(string Token, string NomComplet, string Role, int UserId, string? FotoUrl = null);
+public record LoginResponse(
+    string Token, string NomComplet, string Role, int UserId,
+    string? FotoUrl = null, string? RefreshToken = null);
+public record RefreshRequest(string Token);
+public record LogoutRequest(string Token);
 
 // ─── Professors ──────────────────────────────────────────────────────────────
 public record ProfessorDto(
@@ -11,10 +20,16 @@ public record ProfessorDto(
     bool IsAdmin, DateTime CreatedAt, string? FotoUrl = null);
 
 public record CreateProfessorRequest(
-    string Email, string Nom, string Cognoms, bool IsAdmin);
+    [Required][MaxLength(200)][EmailAddress] string Email,
+    [Required][MaxLength(100)] string Nom,
+    [Required][MaxLength(200)] string Cognoms,
+    bool IsAdmin);
 
 public record UpdateProfessorRequest(
-    string Email, string Nom, string Cognoms, bool IsAdmin, string? NewPassword);
+    [Required][MaxLength(200)][EmailAddress] string Email,
+    [Required][MaxLength(100)] string Nom,
+    [Required][MaxLength(200)] string Cognoms,
+    bool IsAdmin, string? NewPassword);
 
 public record SendCredentialsResult(bool Sent, string? Reason);
 public record SendAllResult(int Sent, int Skipped, List<string> Details);
@@ -23,8 +38,8 @@ public record SendAllResult(int Sent, int Skipped, List<string> Details);
 public record ClassDto(
     int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents);
 
-public record CreateClassRequest(string Name, string? AcademicYear);
-public record UpdateClassRequest(string Name, string? AcademicYear);
+public record CreateClassRequest([Required][MaxLength(200)] string Name, [MaxLength(20)] string? AcademicYear);
+public record UpdateClassRequest([Required][MaxLength(200)] string Name, [MaxLength(20)] string? AcademicYear);
 
 // ─── Alumnes ─────────────────────────────────────────────────────────────────
 public record StudentDto(
@@ -33,10 +48,18 @@ public record StudentDto(
     string? Dni = null, string? FotoUrl = null);
 
 public record CreateStudentRequest(
-    string Nom, string Cognoms, int NumLlista, string Email, string? Dni = null);
+    [Required][MaxLength(100)] string Nom,
+    [Required][MaxLength(200)] string Cognoms,
+    [Range(1, 999)] int NumLlista,
+    [Required][MaxLength(200)][EmailAddress] string Email,
+    [MaxLength(30)] string? Dni = null);
 
 public record UpdateStudentRequest(
-    string Nom, string Cognoms, int NumLlista, string Email, string? Dni = null);
+    [Required][MaxLength(100)] string Nom,
+    [Required][MaxLength(200)] string Cognoms,
+    [Range(1, 999)] int NumLlista,
+    [Required][MaxLength(200)][EmailAddress] string Email,
+    [MaxLength(30)] string? Dni = null);
 
 public record MoveStudentRequest(int TargetClassId);
 public record BulkMoveStudentsRequest(List<int> StudentIds, int TargetClassId);
@@ -59,8 +82,12 @@ public record ModuleDto(
     int ProfessorId, string ProfessorName,
     string Code, string Name, int ActivityCount, int NumExclusions);
 
-public record CreateModuleRequest(string Code, string Name);
-public record UpdateModuleRequest(string Code, string Name);
+public record CreateModuleRequest(
+    [Required][MaxLength(4)] string Code,
+    [Required][MaxLength(200)] string Name);
+public record UpdateModuleRequest(
+    [Required][MaxLength(4)] string Code,
+    [Required][MaxLength(200)] string Name);
 
 public record ModuleExclusionDto(int StudentId, string StudentName, string Email);
 
@@ -73,9 +100,14 @@ public record ActivityDto(
     DateTime CreatedAt, int NumGroups, int NumStudents,
     DateTime? OpenAt = null, DateTime? CloseAt = null);
 
-public record CreateActivityRequest(int ModuleId, string Name, string? Description,
+public record CreateActivityRequest(
+    [Range(1, int.MaxValue)] int ModuleId,
+    [Required][MaxLength(300)] string Name,
+    string? Description,
     DateTime? OpenAt = null, DateTime? CloseAt = null);
-public record UpdateActivityRequest(string Name, string? Description,
+public record UpdateActivityRequest(
+    [Required][MaxLength(300)] string Name,
+    string? Description,
     DateTime? OpenAt = null, DateTime? CloseAt = null);
 public record DuplicateActivityRequest(string Name, string? Description);
 public record DuplicateCrossRequest(int TargetModuleId, string Name, string? Description);

@@ -169,6 +169,9 @@ GET  /api/health                             # Estat DB + Redis (públic, sense 
 
 GET  /api/admin/log-level                    # Llegir nivell de log actual (admin)
 PUT  /api/admin/log-level                    # Canviar nivell de log en calent (admin)
+
+POST /api/auth/refresh                       # Renovar JWT amb refresh token (rotació)
+POST /api/auth/logout                        # Invalidar refresh token a Redis
 ```
 
 ## Convencions
@@ -186,3 +189,7 @@ PUT  /api/admin/log-level                    # Canviar nivell de log en calent (
 - Estat de panels a `Resultats.razor`: `sessionStorage` clau `autoco:resultats:{ActivityId}`, carregat a `OnAfterRenderAsync(firstRender)`
 - `MudExpansionPanel` (MudBlazor 8.x): usar `@bind-Expanded` + `@bind-Expanded:after` — **no** `IsExpanded`/`IsExpandedChanged` (MUD0002)
 - Programació d'activitats: `OpenAt`/`CloseAt` en UTC; `ActivitySchedulerService` comprova cada minut i neteja el camp usat; `ToggleOpenAsync` neteja dates passades; UTC→local per a display, local→UTC en desar
+- Validació de requests: DataAnnotations als DTOs (`[Required]`, `[MaxLength]`, `[EmailAddress]`, `[Range]`); helper `Validate<T>()` a `Program.cs` retorna `Results.ValidationProblem` (RFC 9457)
+- JWT refresh tokens: `StoreRefreshTokenAsync` genera base64url segur, desa a Redis `autoco:refresh:{token}` (TTL 7 dies); rotació en cada refresh; `RefreshFromTokenAsync` a `ApiClient` per a `MainLayout`; `TryRefreshAsync` privat per a reintentar peticions 401
+- Paginació del servidor: `PagedResult<T>` als DTOs; paràmetres `?page=1&size=N`; `ApiClient` desempaqueta a `List<T>` (size=500 per defecte = compatible amb codi existent)
+- Tests (29): `ResultsServiceTests` (15), `AuthServiceTests` (8), `ActivityServiceTests` (6); pattern `file sealed class FakePhotoService : IPhotoService` per no usar mocking library

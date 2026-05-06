@@ -8,12 +8,13 @@ namespace AutoCo.Web.Services;
 /// </summary>
 public class UserStateService
 {
-    public string? Token      { get; private set; }
-    public string? NomComplet { get; private set; }
-    public string? Role       { get; private set; }
-    public int?    UserId     { get; private set; }
-    public string? FotoUrl    { get; private set; }
-    public int     FotoVersion { get; private set; } = 0;
+    public string? Token        { get; private set; }
+    public string? NomComplet   { get; private set; }
+    public string? Role         { get; private set; }
+    public int?    UserId       { get; private set; }
+    public string? FotoUrl      { get; private set; }
+    public string? RefreshToken { get; private set; }
+    public int     FotoVersion  { get; private set; } = 0;
 
     public bool IsLoggedIn   => Token is not null;
     public bool IsProfessor  => Role is "Professor" or "Admin";
@@ -26,11 +27,12 @@ public class UserStateService
 
     public void SetLogin(LoginResponse login)
     {
-        Token      = login.Token;
-        NomComplet = login.NomComplet;
-        Role       = login.Role;
-        UserId     = login.UserId;
-        FotoUrl    = login.FotoUrl;
+        Token        = login.Token;
+        NomComplet   = login.NomComplet;
+        Role         = login.Role;
+        UserId       = login.UserId;
+        FotoUrl      = login.FotoUrl;
+        RefreshToken = login.RefreshToken;
         OnChange?.Invoke();
     }
 
@@ -43,12 +45,13 @@ public class UserStateService
 
     public void Logout()
     {
-        Token      = null;
-        NomComplet = null;
-        Role       = null;
-        UserId     = null;
-        FotoUrl    = null;
-        FotoVersion = 0;
+        Token        = null;
+        NomComplet   = null;
+        Role         = null;
+        UserId       = null;
+        FotoUrl      = null;
+        RefreshToken = null;
+        FotoVersion  = 0;
         OnChange?.Invoke();
     }
 

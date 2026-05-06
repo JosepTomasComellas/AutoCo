@@ -38,6 +38,24 @@ public class ApiClient
 
     // ── Classes ───────────────────────────────────────────────────────────────
 
+    // ── Auth (refresh / logout) ───────────────────────────────────────────────
+
+    public async Task<LoginResponse?> RefreshFromTokenAsync(string refreshToken)
+    {
+        var resp = await _http.PostAsync("/api/auth/refresh",
+            Json(new RefreshRequest(refreshToken)));
+        if (!resp.IsSuccessStatusCode) return null;
+        return await resp.Content.ReadFromJsonAsync<LoginResponse>(_json);
+    }
+
+    public async Task LogoutAsync()
+    {
+        if (_userState.RefreshToken is not null)
+            await _http.PostAsync("/api/auth/logout", Json(new LogoutRequest(_userState.RefreshToken)));
+    }
+
+    // ── Classes ───────────────────────────────────────────────────────────────
+
     public Task<List<ClassDto>?> GetClassesAsync() =>
         GetAsync<List<ClassDto>>("/api/classes");
 
@@ -55,8 +73,12 @@ public class ApiClient
 
     // ── Alumnes ───────────────────────────────────────────────────────────────
 
-    public Task<List<StudentDto>?> GetStudentsAsync(int classId) =>
-        GetAsync<List<StudentDto>>($"/api/classes/{classId}/students");
+    public async Task<List<StudentDto>?> GetStudentsAsync(int classId, int page = 1, int size = 500)
+    {
+        var r = await GetAsync<PagedResult<StudentDto>>(
+            $"/api/classes/{classId}/students?page={page}&size={size}");
+        return r?.Items;
+    }
 
     public Task<StudentDto?> AddStudentAsync(int classId, CreateStudentRequest req) =>
         PostAsync<StudentDto>($"/api/classes/{classId}/students", req);
@@ -114,8 +136,12 @@ public class ApiClient
 
     // ── Activitats ────────────────────────────────────────────────────────────
 
-    public Task<List<ActivityDto>?> GetActivitiesAsync() =>
-        GetAsync<List<ActivityDto>>("/api/activities");
+    public async Task<List<ActivityDto>?> GetActivitiesAsync(int page = 1, int size = 500)
+    {
+        var r = await GetAsync<PagedResult<ActivityDto>>(
+            $"/api/activities?page={page}&size={size}");
+        return r?.Items;
+    }
 
     public Task<ActivityDto?> GetActivityAsync(int id) =>
         GetAsync<ActivityDto>($"/api/activities/{id}");
@@ -173,7 +199,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> ExportGroupsAsync(int activityId)
     {
         var resp = await _http.GetAsync($"/api/activities/{activityId}/groups/export");
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         var bytes    = await resp.Content.ReadAsByteArrayAsync();
         var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
             ?? resp.Content.Headers.ContentDisposition?.FileName
@@ -232,7 +258,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> ExportCsvAsync(int activityId)
     {
         var resp = await _http.GetAsync($"/api/results/{activityId}/csv");
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         var bytes = await resp.Content.ReadAsByteArrayAsync();
         var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
             ?? resp.Content.Headers.ContentDisposition?.FileName
@@ -325,7 +351,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> ExportExcelAsync(int activityId)
     {
         var resp = await _http.GetAsync($"/api/results/{activityId}/excel");
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         var bytes = await resp.Content.ReadAsByteArrayAsync();
         var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
             ?? resp.Content.Headers.ContentDisposition?.FileName
@@ -354,7 +380,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> ExportBackupAsync()
     {
         var resp = await _http.GetAsync("/api/admin/backup/export");
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         var bytes    = await resp.Content.ReadAsByteArrayAsync();
         var fileName = resp.Content.Headers.ContentDisposition?.FileNameStar
             ?? resp.Content.Headers.ContentDisposition?.FileName
@@ -374,7 +400,7 @@ public class ApiClient
     public async Task<(byte[] Content, string FileName)?> DownloadBackupFileAsync(string name)
     {
         var resp = await _http.GetAsync($"/api/admin/backup/files/{Uri.EscapeDataString(name)}");
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         var bytes = await resp.Content.ReadAsByteArrayAsync();
         return (bytes, name);
     }
@@ -394,7 +420,7 @@ public class ApiClient
         content.Add(new StreamContent(stream), "file", file.Name);
         var resp = await _http.PostAsync(
             $"/api/classes/{classId}/students/{studentId}/foto", content);
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         using var doc = System.Text.Json.JsonDocument.Parse(
             await resp.Content.ReadAsStringAsync());
         return doc.RootElement.TryGetProperty("fotoUrl", out var u) ? u.GetString() : null;
@@ -404,7 +430,7 @@ public class ApiClient
     {
         var resp = await _http.DeleteAsync(
             $"/api/classes/{classId}/students/{studentId}/foto");
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return false; }
         return true;
     }
 
@@ -415,7 +441,7 @@ public class ApiClient
         content.Add(new StreamContent(stream), "file", file.Name);
         var resp = await _http.PostAsync(
             $"/api/classes/{classId}/students/fotos/zip", content);
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         return await resp.Content.ReadFromJsonAsync<ImportFotosResult>(_json);
     }
 
@@ -425,7 +451,7 @@ public class ApiClient
         var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
         content.Add(new StreamContent(stream), "file", file.Name);
         var resp = await _http.PostAsync($"/api/professors/{professorId}/foto", content);
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return null; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         using var doc = System.Text.Json.JsonDocument.Parse(
             await resp.Content.ReadAsStringAsync());
         return doc.RootElement.TryGetProperty("fotoUrl", out var u) ? u.GetString() : null;
@@ -434,15 +460,27 @@ public class ApiClient
     public async Task<bool> DeleteProfessorFotoAsync(int professorId)
     {
         var resp = await _http.DeleteAsync($"/api/professors/{professorId}/foto");
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return false; }
         return true;
     }
 
     // ── Privats ───────────────────────────────────────────────────────────────
 
-    private void CheckUnauthorized(HttpResponseMessage resp)
+    // Intenta renovar el JWT usant el refresh token; retorna true si ha tingut èxit.
+    private async Task<bool> TryRefreshAsync()
     {
-        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        var rt = _userState.RefreshToken;
+        if (rt is null) return false;
+        var refreshed = await RefreshFromTokenAsync(rt);
+        if (refreshed is null) return false;
+        _userState.SetLogin(refreshed);
+        SetToken(refreshed.Token);
+        return true;
+    }
+
+    private async Task HandleUnauthorized()
+    {
+        if (!await TryRefreshAsync())
             _userState.SessionExpired();
     }
 
@@ -457,49 +495,84 @@ public class ApiClient
     private async Task<T?> GetAsync<T>(string url)
     {
         var resp = await _http.GetAsync(url);
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return default; }
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            if (!await TryRefreshAsync()) { _userState.SessionExpired(); return default; }
+            resp = await _http.GetAsync(url);
+            if (!resp.IsSuccessStatusCode) return default;
+        }
+        else if (!resp.IsSuccessStatusCode) return default;
         return await resp.Content.ReadFromJsonAsync<T>(_json);
     }
 
     private async Task<T?> PostAsync<T>(string url, object? body)
     {
-        var resp = await _http.PostAsync(url, Json(body));
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return default; }
+        var json = Json(body);
+        var resp = await _http.PostAsync(url, json);
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            if (!await TryRefreshAsync()) { _userState.SessionExpired(); return default; }
+            resp = await _http.PostAsync(url, Json(body));
+            if (!resp.IsSuccessStatusCode) return default;
+        }
+        else if (!resp.IsSuccessStatusCode) return default;
         return await resp.Content.ReadFromJsonAsync<T>(_json);
     }
 
     private async Task PostVoidAsync(string url, object? body)
     {
         var resp = await _http.PostAsync(url, Json(body));
-        CheckUnauthorized(resp);
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            if (!await TryRefreshAsync()) _userState.SessionExpired();
+            else await _http.PostAsync(url, Json(body));
+        }
     }
 
     private async Task<bool> PostNoContentAsync(string url, object? body)
     {
         var resp = await _http.PostAsync(url, Json(body));
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
-        return true;
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            if (!await TryRefreshAsync()) { _userState.SessionExpired(); return false; }
+            resp = await _http.PostAsync(url, Json(body));
+        }
+        return resp.IsSuccessStatusCode;
     }
 
     private async Task<T?> PutAsync<T>(string url, object? body)
     {
         var resp = await _http.PutAsync(url, Json(body));
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return default; }
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            if (!await TryRefreshAsync()) { _userState.SessionExpired(); return default; }
+            resp = await _http.PutAsync(url, Json(body));
+            if (!resp.IsSuccessStatusCode) return default;
+        }
+        else if (!resp.IsSuccessStatusCode) return default;
         return await resp.Content.ReadFromJsonAsync<T>(_json);
     }
 
     private async Task<bool> PutNoContentAsync(string url, object? body)
     {
         var resp = await _http.PutAsync(url, Json(body));
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
-        return true;
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            if (!await TryRefreshAsync()) { _userState.SessionExpired(); return false; }
+            resp = await _http.PutAsync(url, Json(body));
+        }
+        return resp.IsSuccessStatusCode;
     }
 
     private async Task<bool> DeleteAsync(string url)
     {
         var resp = await _http.DeleteAsync(url);
-        if (!resp.IsSuccessStatusCode) { CheckUnauthorized(resp); return false; }
-        return true;
+        if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            if (!await TryRefreshAsync()) { _userState.SessionExpired(); return false; }
+            resp = await _http.DeleteAsync(url);
+        }
+        return resp.IsSuccessStatusCode;
     }
 
     private static StringContent Json(object? body) =>
