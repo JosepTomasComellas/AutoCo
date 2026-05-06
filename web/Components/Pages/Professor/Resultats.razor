@@ -78,7 +78,7 @@ else
 
         <!-- Bloc 1: Filtres avançats -->
         <MudExpansionPanel Text="@Loc["Results_AdvancedFilters"]" Icon="@Icons.Material.Filled.FilterList"
-                           IsExpanded="@_panelFilters" IsExpandedChanged="@(async v => { _panelFilters = v; await SavePanelStateAsync(); })">
+                           @bind-Expanded="_panelFilters" @bind-Expanded:after="SavePanelStateAsync">
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="6" md="3">
                     <MudTextField @bind-Value="_filterStudent" Label="@Loc["Results_FilterStudent"]"
@@ -121,7 +121,7 @@ else
 
         <!-- Bloc 2: Taula de resultats -->
         <MudExpansionPanel Icon="@Icons.Material.Filled.TableChart"
-                           IsExpanded="@_panelTable" IsExpandedChanged="@(async v => { _panelTable = v; await SavePanelStateAsync(); })">
+                           @bind-Expanded="_panelTable" @bind-Expanded:after="SavePanelStateAsync">
             <TitleContent>
                 <MudText Typo="Typo.body1">
                     @Loc["Results_TableTitle"] — <strong>@_filteredStudents.Count</strong> @Loc["Results_Students"]
@@ -270,13 +270,13 @@ else
 
         <!-- Bloc 3: Detall coavaluacions -->
         <MudExpansionPanel Text="@Loc["Results_DetailCoeval"]" Icon="@Icons.Material.Filled.Groups"
-                           IsExpanded="@_panelDetail" IsExpandedChanged="@(async v => { _panelDetail = v; await SavePanelStateAsync(); })">
+                           @bind-Expanded="_panelDetail" @bind-Expanded:after="SavePanelStateAsync">
             @foreach (var s in _filteredStudents.Where(x => x.PeerEvaluations.Any()))
             {
                 var sid = s.StudentId;
                 <MudExpansionPanel Class="mb-1"
-                                   IsExpanded="@_expandedStudents.Contains(sid)"
-                                   IsExpandedChanged="@(async v => { if (v) _expandedStudents.Add(sid); else _expandedStudents.Remove(sid); await SavePanelStateAsync(); })">
+                                   Expanded="@_expandedStudents.Contains(sid)"
+                                   ExpandedChanged="@(async (bool v) => { if (v) _expandedStudents.Add(sid); else _expandedStudents.Remove(sid); await SavePanelStateAsync(); })">
                     <TitleContent>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%" Spacing="2">
                             @if (s.FotoUrl is not null)
@@ -323,7 +323,7 @@ else
         @if (_log.Any())
         {
             <MudExpansionPanel Text="@Loc["Results_ActivityLog"]" Icon="@Icons.Material.Filled.History"
-                               IsExpanded="@_panelLog" IsExpandedChanged="@(async v => { _panelLog = v; await SavePanelStateAsync(); })">
+                               @bind-Expanded="_panelLog" @bind-Expanded:after="SavePanelStateAsync">
                 <MudSimpleTable Dense="true" Hover="true" Style="background:transparent;max-height:300px;overflow-y:auto">
                     <thead>
                         <tr>
