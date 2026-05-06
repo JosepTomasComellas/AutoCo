@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.13
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.14
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -343,6 +343,10 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.14
+- **Fix solapament text/etiqueta als MudSelect** de la pàgina de resultats — eliminat `Margin.Dense` als filtres de grup i nota; el valor seleccionat ja no es solapa amb l'etiqueta
+- **Persistència de l'estat dels panels** a `Resultats.razor` — els 4 blocs col·lapsables (filtres, taula, detall, registre) i les fitxes individuals de coavaluació recorden si estaven oberts en recarregar la pàgina (via `sessionStorage`, clau per activitat)
 
 ### v2.5.13
 - **DataProtection persistent a l'API** — claus guardades al volum Docker `api-dp-keys` (`/app/dp-keys`); elimina el warning d'efemeralitat (l'API usa JWT, però ASP.NET Core inicialitza el subsistema sempre)

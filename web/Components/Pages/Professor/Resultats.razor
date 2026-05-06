@@ -77,7 +77,8 @@ else
     <MudExpansionPanels MultiExpansion="true" Class="mb-2">
 
         <!-- Bloc 1: Filtres avançats -->
-        <MudExpansionPanel Text="@Loc["Results_AdvancedFilters"]" Icon="@Icons.Material.Filled.FilterList">
+        <MudExpansionPanel Text="@Loc["Results_AdvancedFilters"]" Icon="@Icons.Material.Filled.FilterList"
+                           IsExpanded="@_panelFilters" IsExpandedChanged="@(async v => { _panelFilters = v; await SavePanelStateAsync(); })">
             <MudGrid Spacing="2">
                 <MudItem xs="12" sm="6" md="3">
                     <MudTextField @bind-Value="_filterStudent" Label="@Loc["Results_FilterStudent"]"
@@ -88,7 +89,7 @@ else
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string" @bind-Value="_filterGroup" Label="@Loc["Results_ColGroup"]" Variant="Variant.Outlined"
-                               Margin="Margin.Dense" Clearable="true">
+                               Clearable="true">
                         <MudSelectItem T="string" Value='""'>@Loc["Results_AllGroups"]</MudSelectItem>
                         @foreach (var g in _results.Students.Select(s => s.GroupName).Distinct().Order())
                         {
@@ -98,7 +99,7 @@ else
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string" @bind-Value="_filterGrade" Label="@Loc["Results_GradeRange"]"
-                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
+                               Variant="Variant.Outlined" Clearable="true">
                         <MudSelectItem T="string" Value='""'>@Loc["Results_AllRanges"]</MudSelectItem>
                         <MudSelectItem T="string" Value='"high"'>@Loc["Results_HighGrade"]</MudSelectItem>
                         <MudSelectItem T="string" Value='"mid"'>@Loc["Results_MidGrade"]</MudSelectItem>
@@ -119,7 +120,8 @@ else
         </MudExpansionPanel>
 
         <!-- Bloc 2: Taula de resultats -->
-        <MudExpansionPanel Icon="@Icons.Material.Filled.TableChart">
+        <MudExpansionPanel Icon="@Icons.Material.Filled.TableChart"
+                           IsExpanded="@_panelTable" IsExpandedChanged="@(async v => { _panelTable = v; await SavePanelStateAsync(); })">
             <TitleContent>
                 <MudText Typo="Typo.body1">
                     @Loc["Results_TableTitle"] — <strong>@_filteredStudents.Count</strong> @Loc["Results_Students"]
@@ -267,11 +269,14 @@ else
         </MudExpansionPanel>
 
         <!-- Bloc 3: Detall coavaluacions -->
-        <MudExpansionPanel Text="@Loc["Results_DetailCoeval"]" Icon="@Icons.Material.Filled.Groups">
+        <MudExpansionPanel Text="@Loc["Results_DetailCoeval"]" Icon="@Icons.Material.Filled.Groups"
+                           IsExpanded="@_panelDetail" IsExpandedChanged="@(async v => { _panelDetail = v; await SavePanelStateAsync(); })">
             @foreach (var s in _filteredStudents.Where(x => x.PeerEvaluations.Any()))
             {
                 var sid = s.StudentId;
-                <MudExpansionPanel Class="mb-1">
+                <MudExpansionPanel Class="mb-1"
+                                   IsExpanded="@_expandedStudents.Contains(sid)"
+                                   IsExpandedChanged="@(async v => { if (v) _expandedStudents.Add(sid); else _expandedStudents.Remove(sid); await SavePanelStateAsync(); })">
                     <TitleContent>
                         <MudStack Row="true" AlignItems="AlignItems.Center" Style="width:100%" Spacing="2">
                             @if (s.FotoUrl is not null)
@@ -317,7 +322,8 @@ else
         <!-- Bloc 4: Registre d'activitat -->
         @if (_log.Any())
         {
-            <MudExpansionPanel Text="@Loc["Results_ActivityLog"]" Icon="@Icons.Material.Filled.History">
+            <MudExpansionPanel Text="@Loc["Results_ActivityLog"]" Icon="@Icons.Material.Filled.History"
+                               IsExpanded="@_panelLog" IsExpandedChanged="@(async v => { _panelLog = v; await SavePanelStateAsync(); })">
                 <MudSimpleTable Dense="true" Hover="true" Style="background:transparent;max-height:300px;overflow-y:auto">
                     <thead>
                         <tr>
@@ -363,6 +369,14 @@ else
     private string _filterStudent = "";
     private bool   _showNotes     = false;
 
+    // Panels (persistits a sessionStorage)
+    private bool         _panelFilters;
+    private bool         _panelTable;
+    private bool         _panelDetail;
+    private bool         _panelLog;
+    private HashSet<int> _expandedStudents = [];
+    private bool         _panelStateLoaded;
+
     // Edició de notes
     private int    _editingNote  = -1;
     private string _editNoteText = "";
@@ -382,6 +396,46 @@ else
                 _      => true
             }))
         .ToList() ?? [];
+
+    private record PanelState(bool Filters, bool Table, bool Detail, bool Log, int[] Students);
+    private string SessionKey => $"autoco:resultats:{ActivityId}";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _panelStateLoaded) return;
+        await LoadPanelStateAsync();
+        StateHasChanged();
+    }
+
+    private async Task LoadPanelStateAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("sessionStorage.getItem", SessionKey);
+            if (json is not null)
+            {
+                var state = System.Text.Json.JsonSerializer.Deserialize<PanelState>(json);
+                if (state is not null)
+                {
+                    _panelFilters     = state.Filters;
+                    _panelTable       = state.Table;
+                    _panelDetail      = state.Detail;
+                    _panelLog         = state.Log;
+                    _expandedStudents = [..state.Students];
+                }
+            }
+        }
+        catch { }
+        _panelStateLoaded = true;
+    }
+
+    private async Task SavePanelStateAsync()
+    {
+        if (!_panelStateLoaded) return;
+        var state = new PanelState(_panelFilters, _panelTable, _panelDetail, _panelLog, [.._expandedStudents]);
+        var json  = System.Text.Json.JsonSerializer.Serialize(state);
+        await JS.InvokeVoidAsync("sessionStorage.setItem", SessionKey, json);
+    }
 
     protected override async Task OnInitializedAsync() => await LoadAsync();
 
