@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCo — Guia del Professor</title>
+<style>
+  :root { --primary:#CC0000; --dark:#1e293b; --light:#f1f5f9; --border:#e2e8f0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; font-size:15px; line-height:1.6; color:#1e293b; background:#fff; }
+
+  /* Barra superior */
+  .topbar { position:fixed; top:0; left:0; right:0; background:var(--dark); color:#fff; display:flex; align-items:center; padding:10px 24px; gap:16px; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .topbar h1 { font-size:1.1rem; font-weight:600; flex:1; }
+  .topbar .version { font-size:.75rem; opacity:.6; }
+  .btn-print { background:var(--primary); color:#fff; border:none; padding:6px 16px; border-radius:4px; cursor:pointer; font-size:.85rem; font-weight:600; }
+  .btn-print:hover { background:#a30000; }
+
+  /* Layout */
+  .container { max-width:960px; margin:0 auto; padding:80px 24px 60px; }
+
+  /* Taula de continguts */
+  .toc { background:var(--light); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:40px; }
+  .toc h2 { font-size:1rem; text-transform:uppercase; letter-spacing:.05em; color:var(--primary); margin-bottom:12px; }
+  .toc ol { padding-left:20px; }
+  .toc li { margin:4px 0; }
+  .toc a { color:var(--dark); text-decoration:none; }
+  .toc a:hover { color:var(--primary); text-decoration:underline; }
+
+  /* Seccions */
+  .section { margin-bottom:48px; scroll-margin-top:72px; }
+  h2.section-title { font-size:1.4rem; font-weight:700; color:var(--primary); border-bottom:2px solid var(--primary); padding-bottom:6px; margin-bottom:20px; }
+  h3 { font-size:1.1rem; font-weight:600; color:var(--dark); margin:24px 0 10px; }
+  h4 { font-size:.95rem; font-weight:600; color:#475569; margin:16px 0 8px; }
+  p { margin-bottom:12px; }
+  ul, ol { padding-left:22px; margin-bottom:12px; }
+  li { margin-bottom:4px; }
+
+  /* Capses */
+  .box { border-radius:6px; padding:12px 16px; margin:16px 0; }
+  .box-info { background:#eff6ff; border-left:4px solid #3b82f6; }
+  .box-warn { background:#fffbeb; border-left:4px solid #f59e0b; }
+  .box-tip  { background:#f0fdf4; border-left:4px solid #22c55e; }
+  .box strong { display:block; margin-bottom:4px; }
+
+  /* Taules */
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:.9rem; }
+  th { background:var(--dark); color:#fff; padding:8px 12px; text-align:left; }
+  td { padding:8px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:nth-child(even) td { background:var(--light); }
+
+  /* Badge estat */
+  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:.78rem; font-weight:600; }
+  .badge-green  { background:#dcfce7; color:#166534; }
+  .badge-gray   { background:#f1f5f9; color:#475569; }
+  .badge-red    { background:#fee2e2; color:#991b1b; }
+  .badge-blue   { background:#dbeafe; color:#1d4ed8; }
+
+  /* Escala */
+  .scale { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .scale-item { background:var(--light); border:1px solid var(--border); border-radius:6px; padding:6px 12px; text-align:center; min-width:70px; }
+  .scale-item .letter { font-size:1.3rem; font-weight:700; color:var(--primary); }
+  .scale-item .stars  { font-size:.75rem; color:#94a3b8; }
+  .scale-item .value  { font-size:.8rem; font-weight:600; }
+
+  /* Impressió */
+  @media print {
+    .topbar, .btn-print { display:none !important; }
+    .container { padding-top:20px; }
+    .section { page-break-inside:avoid; }
+    h2.section-title { page-break-after:avoid; }
+    a { color:inherit; text-decoration:none; }
+    .toc { border:1px solid #ccc; }
+  }
+  @media (max-width:640px) {
+    .topbar { flex-wrap:wrap; }
+    .container { padding:70px 16px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar no-print">
+  <h1>📋 AutoCo — Guia del Professor</h1>
+  <span class="version">v2.5.22 · Salesians de Sarrià, Dept. d'Informàtica</span>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="container">
+
+  <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:32px">Sistema d'avaluació entre iguals · Guia del professor · v2.5.22</p>
+
+  <!-- TAULA DE CONTINGUTS -->
+  <nav class="toc">
+    <h2>📑 Índex</h2>
+    <ol>
+      <li><a href="#introduccio">Introducció</a></li>
+      <li><a href="#acces">Primer accés i login</a></li>
+      <li><a href="#navbar">La barra de navegació</a></li>
+      <li><a href="#dashboard">El tauler principal</a></li>
+      <li><a href="#classes">Gestió de classes</a></li>
+      <li><a href="#alumnes">Gestió d'alumnes</a></li>
+      <li><a href="#moduls">Gestió de mòduls (UF/MP)</a></li>
+      <li><a href="#activitats">Activitats</a></li>
+      <li><a href="#grups">Configuració de grups i criteris</a></li>
+      <li><a href="#resultats">Resultats</a></li>
+      <li><a href="#grafiques">Gràfiques comparatives</a></li>
+      <li><a href="#informes">Informes PDF</a></li>
+      <li><a href="#evolucio">Evolució de l'alumne</a></li>
+      <li><a href="#perfil">Perfil del professor</a></li>
+      <li><a href="#alumne-flux">El flux de l'alumne</a></li>
+      <li><a href="#faq">Preguntes freqüents</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1. INTRODUCCIÓ -->
+  <section class="section" id="introduccio">
+    <h2 class="section-title">1. Introducció</h2>
+    <p><strong>AutoCo</strong> és una aplicació web per gestionar l'<strong>autoavaluació</strong> i la <strong>coavaluació</strong> entre alumnes en activitats de grup. Permet que cada alumne avaluï tots els membres del seu grup —inclòs ell mateix— de forma individual i confidencial.</p>
+    <p>Dissenyada per a centres educatius de cicles formatius i batxillerat, AutoCo centralitza la creació d'activitats, la gestió de grups, la recollida d'avaluacions i la generació d'informes.</p>
+
+    <h3>Per a qui és aquesta guia</h3>
+    <p>Aquesta guia és per a professors en mode usuari estàndard. Les funcions exclusives d'administrador (gestió de professors, còpies de seguretat, auditoria) es descriuen en un document separat.</p>
+
+    <h3>L'escala de puntuació</h3>
+    <p>Totes les avaluacions utilitzen una escala de cinc nivells representats per lletres:</p>
+    <div class="scale">
+      <div class="scale-item"><div class="letter">E</div><div class="stars">★☆☆☆☆</div><div class="value">1 punt</div></div>
+      <div class="scale-item"><div class="letter">D</div><div class="stars">★★☆☆☆</div><div class="value">3,5 pts</div></div>
+      <div class="scale-item"><div class="letter">C</div><div class="stars">★★★☆☆</div><div class="value">5 pts</div></div>
+      <div class="scale-item"><div class="letter">B</div><div class="stars">★★★★☆</div><div class="value">7,5 pts</div></div>
+      <div class="scale-item"><div class="letter">A</div><div class="stars">★★★★★</div><div class="value">10 pts</div></div>
+    </div>
+    <p>La nota final de cada alumne és la mitjana ponderada de les puntuacions rebudes pels companys (coavaluació) i la seva pròpia (autoavaluació), aplicant els pesos definits per a cada criteri.</p>
+  </section>
+
+  <!-- 2. PRIMER ACCÉS -->
+  <section class="section" id="acces">
+    <h2 class="section-title">2. Primer accés i login</h2>
+    <p>Accedeix a l'aplicació amb el navegador. A la pàgina d'inici selecciona <strong>"Sóc professor"</strong>.</p>
+
+    <h3>Camps del formulari de login</h3>
+    <table>
+      <tr><th>Camp</th><th>Descripció</th></tr>
+      <tr><td><strong>Correu electrònic</strong></td><td>La teva adreça de correu proporcionada per l'administrador</td></tr>
+      <tr><td><strong>Contrasenya</strong></td><td>La contrasenya assignada inicialment (canviable des del perfil)</td></tr>
+    </table>
+
+    <h3>Restabliment de contrasenya</h3>
+    <p>Si has oblidat la contrasenya, fes clic a <strong>"He oblidat la contrasenya"</strong> a la pàgina de login:</p>
+    <ol>
+      <li>Introdueix el teu correu electrònic i fes clic a <strong>"Enviar codi"</strong>.</li>
+      <li>Rebràs un codi OTP de 6 dígits per correu electrònic, vàlid durant <strong>15 minuts</strong>.</li>
+      <li>Introdueix el codi i la nova contrasenya.</li>
+      <li>Un cop restablerta, tornes automàticament al login.</li>
+    </ol>
+    <div class="box box-warn">
+      <strong>⚠️ El codi caduca als 15 minuts.</strong>
+      Si ha caducat, torna a sol·licitar-ne un de nou des del principi.
+    </div>
+  </section>
+
+  <!-- 3. NAVBAR -->
+  <section class="section" id="navbar">
+    <h2 class="section-title">3. La barra de navegació</h2>
+    <p>La barra superior és sempre visible a totes les pàgines de l'aplicació.</p>
+    <table>
+      <tr><th>Element</th><th>Funció</th></tr>
+      <tr><td>🏠 <strong>Logo AutoCo</strong></td><td>Clica per tornar al tauler principal des de qualsevol pàgina</td></tr>
+      <tr><td>🔔 <strong>Campana</strong></td><td>Notificacions in-app: t'avisa quan el 100% d'una activitat s'ha completat. Fes clic per veure la llista; pots esborrar-les totes amb "Esborrar totes"</td></tr>
+      <tr><td>🌐 <strong>Selector d'idioma</strong></td><td>Canvia entre <strong>Català</strong> i <strong>Castellà</strong>. La marca de verificació indica l'idioma actiu</td></tr>
+      <tr><td>🎨 <strong>Paleta de colors</strong></td><td>Canvia el color primari de la interfície: Vermell (per defecte), Blau, Verd, Taronja, Violeta o Gris</td></tr>
+      <tr><td>☀️/🌙 <strong>Mode clar/fosc</strong></td><td>Alterna entre tema clar i fosc. La preferència es desa automàticament</td></tr>
+      <tr><td>❓ <strong>Ajuda</strong></td><td>Obre aquesta guia en una nova pestanya</td></tr>
+      <tr><td>👤 <strong>Perfil</strong></td><td>Accedeix a la teva pàgina de perfil (foto, nom, contrasenya)</td></tr>
+      <tr><td>🚪 <strong>Tancar sessió</strong></td><td>Tanca la sessió de forma segura</td></tr>
+    </table>
+    <div class="box box-info">
+      <strong>💡 Persistència de preferències</strong>
+      L'idioma, el tema de color i el mode clar/fosc es desen al navegador i es restauren automàticament en el proper accés.
+    </div>
+  </section>
+
+  <!-- 4. DASHBOARD -->
+  <section class="section" id="dashboard">
+    <h2 class="section-title">4. El tauler principal</h2>
+    <p>El tauler és la pàgina central des d'on gestiones totes les activitats. S'hi accedeix fent clic al logo o navegant a <code>/professor/dashboard</code>.</p>
+
+    <h3>Estadístiques ràpides</h3>
+    <p>A la part superior trobaràs sis comptadors en temps real:</p>
+    <table>
+      <tr><th>Comptador</th><th>Descripció</th></tr>
+      <tr><td><strong>Classes</strong></td><td>Nombre total de classes assignades al teu compte</td></tr>
+      <tr><td><strong>Mòduls</strong></td><td>Total de mòduls (UF/MP) creats</td></tr>
+      <tr><td><strong>Alumnes</strong></td><td>Total d'alumnes de totes les teves classes</td></tr>
+      <tr><td><strong>Activitats</strong></td><td>Total d'activitats creades (obertes + tancades)</td></tr>
+      <tr><td><strong>Obertes ara</strong></td><td>Activitats en estat obert en aquest moment</td></tr>
+      <tr><td><strong>Grups</strong></td><td>Total de grups de treball configurats</td></tr>
+    </table>
+
+    <h3>Filtres del tauler</h3>
+    <table>
+      <tr><th>Filtre</th><th>Funció</th></tr>
+      <tr><td><strong>Cerca</strong></td><td>Filtra per nom o descripció de l'activitat (cerca instantània)</td></tr>
+      <tr><td><strong>Classe</strong></td><td>Mostra només les activitats d'una classe concreta</td></tr>
+      <tr><td><strong>Mòdul</strong></td><td>Mostra només les activitats d'un mòdul concret</td></tr>
+      <tr><td><strong>Només obertes</strong></td><td>Commutador per veure únicament les activitats en curs</td></tr>
+    </table>
+    <p>El comptador inferior mostra quantes activitats coincideixen amb els filtres actuals del total disponible.</p>
+
+    <h3>Seccions d'activitats</h3>
+    <p>Les activitats es mostren en dues seccions diferenciades:</p>
+    <ul>
+      <li><span class="badge badge-green">Obertes</span> — Activitats en curs, visibles als alumnes per avaluar</li>
+      <li><span class="badge badge-gray">Tancades</span> — Activitats finalitzades o no iniciades</li>
+    </ul>
+
+    <h3>Botons principals</h3>
+    <ul>
+      <li><strong>Gestió de classes</strong> — Accés directe a la pàgina de classes</li>
+      <li><strong>+ Nova activitat</strong> — Crea una nova activitat d'avaluació</li>
+    </ul>
+  </section>
+
+  <!-- 5. CLASSES -->
+  <section class="section" id="classes">
+    <h2 class="section-title">5. Gestió de classes</h2>
+    <p>Accedeix des del botó <strong>"Gestió de classes"</strong> del tauler o des del menú de navegació.</p>
+    <p>Cada classe representa un grup d'alumnes (per exemple: "DAW1", "ASIX2"). Una classe pot tenir un <strong>any acadèmic</strong> associat (p.ex. "2025-2026") per diferenciar edicions del mateix grup.</p>
+
+    <h3>Llistat de classes</h3>
+    <p>Les classes es mostren com a panells expandibles. En expandir una classe, veus directament la llista de mòduls i un resum dels alumnes. Cada classe mostra:</p>
+    <ul>
+      <li>Nom de la classe i any acadèmic</li>
+      <li>Nombre d'alumnes</li>
+      <li>Botons d'acció: <strong>Mòduls</strong>, <strong>Alumnes</strong></li>
+    </ul>
+
+    <h3>Botons de la pàgina</h3>
+    <table>
+      <tr><th>Botó</th><th>Funció</th></tr>
+      <tr><td><strong>Codis QR</strong></td><td>Genera un codi QR per a cada classe que dirigeix directament al login de l'alumne. Útil per projectar o imprimir per als alumnes</td></tr>
+      <tr><td><strong>Exportar alumnes</strong></td><td>Descarrega un CSV amb tots els alumnes de totes les classes (nom, cognoms, email, classe...)</td></tr>
+    </table>
+
+    <div class="box box-info">
+      <strong>💡 Creació de classes</strong>
+      La creació de noves classes és una funció exclusiva d'administrador. Si necessites una nova classe, contacta amb l'administrador del sistema.
+    </div>
+  </section>
+
+  <!-- 6. ALUMNES -->
+  <section class="section" id="alumnes">
+    <h2 class="section-title">6. Gestió d'alumnes</h2>
+    <p>Accedeix fent clic a <strong>"Alumnes"</strong> dins de qualsevol classe. Veuràs la llista completa amb taula i eines de gestió.</p>
+
+    <h3>Informació de cada alumne</h3>
+    <table>
+      <tr><th>Camp</th><th>Descripció</th></tr>
+      <tr><td><strong>Núm. llista</strong></td><td>Número d'ordre a la llista de classe (1–99)</td></tr>
+      <tr><td><strong>Foto / Avatar</strong></td><td>Foto de l'alumne si n'hi ha; si no, avatar amb inicials i color únic per número de llista</td></tr>
+      <tr><td><strong>Nom i cognoms</strong></td><td>Nom complet de l'alumne</td></tr>
+      <tr><td><strong>DNI</strong></td><td>Document d'identitat (opcional, usat per a importació de fotos)</td></tr>
+      <tr><td><strong>Correu electrònic</strong></td><td>Identificador únic d'accés a l'aplicació</td></tr>
+    </table>
+
+    <h3>Afegir un alumne individual</h3>
+    <p>Omple el formulari lateral amb els camps:</p>
+    <ul>
+      <li><strong>Nom</strong> i <strong>Cognoms</strong> (obligatoris)</li>
+      <li><strong>Núm. de llista</strong> (obligatori, 1–99)</li>
+      <li><strong>Correu electrònic</strong> (obligatori, ha de ser únic a la classe)</li>
+      <li><strong>DNI</strong> (opcional)</li>
+      <li><strong>Contrasenya</strong> (opcional; si es deixa en blanc, el sistema n'assigna una d'automàtica)</li>
+    </ul>
+
+    <h3>Importació massiva per CSV</h3>
+    <p>Pots importar alumnes des d'un fitxer CSV amb el format de l'EPSS:</p>
+    <ul>
+      <li>Si el correu ja existeix a la classe, <strong>actualitza</strong> les dades (nom, cognoms, núm. llista, DNI) sense modificar la contrasenya.</li>
+      <li>Si el correu és nou, crea l'alumne.</li>
+    </ul>
+    <div class="box box-tip">
+      <strong>💡 Format CSV</strong>
+      Descarrega la plantilla des del botó "Descarregar plantilla CSV" per assegurar-te del format correcte.
+    </div>
+
+    <h3>Importació massiva de fotos en ZIP</h3>
+    <p>Pots importar les fotos de tots els alumnes d'una vegada preparant un fitxer ZIP:</p>
+    <ul>
+      <li>Cada foto ha de estar nomenada amb el <strong>DNI de l'alumne</strong> (p.ex. <code>12345678A.jpg</code>).</li>
+      <li>Formats acceptats: JPG, PNG, WEBP, GIF.</li>
+      <li>Les imatges es redimensionen automàticament a 400×400 píxels (retall centrat).</li>
+    </ul>
+
+    <h3>Foto individual</h3>
+    <p>Fes clic a la icona de càmera a la taula o a la fitxa d'edició de l'alumne per pujar o canviar la seva foto manualment.</p>
+
+    <h3>Accions sobre cada alumne</h3>
+    <table>
+      <tr><th>Acció</th><th>Descripció</th></tr>
+      <tr><td><strong>Editar</strong></td><td>Modifica les dades de l'alumne (nom, cognoms, email, DNI, núm. llista)</td></tr>
+      <tr><td><strong>Moure a una altra classe</strong></td><td>Reassigna l'alumne a una classe diferent. Les participacions anteriors a activitats d'avaluació s'eliminen</td></tr>
+      <tr><td><strong>Enviar credencials</strong></td><td>Envia un correu a l'alumne amb el seu email i contrasenya inicial</td></tr>
+      <tr><td><strong>Eliminar</strong></td><td>Elimina l'alumne. Tens <strong>5 segons</strong> per desfer l'acció amb el botó "Desfer" que apareix a la cantonada inferior</td></tr>
+    </table>
+
+    <h3>Codis QR per classe</h3>
+    <p>Des de la pàgina de classes, el botó <strong>"Codis QR"</strong> genera un codi QR per a cada classe que dirigeix directament a la pàgina de login de l'alumne. Pots projectar-lo a classe o imprimir-lo perquè els alumnes hi accedeixin fàcilment amb el mòbil.</p>
+  </section>
+
+  <!-- 7. MÒDULS -->
+  <section class="section" id="moduls">
+    <h2 class="section-title">7. Gestió de mòduls (UF/MP)</h2>
+    <p>Els mòduls organitzen les activitats dins de cada classe. Cada mòdul representa una unitat formativa (UF) o mòdul professional (MP). Accedeix fent clic a <strong>"Mòduls"</strong> dins de la classe.</p>
+
+    <h3>Crear un mòdul</h3>
+    <table>
+      <tr><th>Camp</th><th>Descripció</th></tr>
+      <tr><td><strong>Codi</strong></td><td>Identificador curt del mòdul (p.ex. "MP02", "UF3")</td></tr>
+      <tr><td><strong>Nom</strong></td><td>Nom complet del mòdul (p.ex. "Bases de dades")</td></tr>
+    </table>
+
+    <h3>Exclusions per mòdul</h3>
+    <p>Pots marcar alumnes que <strong>no participen</strong> en un mòdul concret. Aquests alumnes no apareixeran com a membres disponibles quan creïs grups per a activitats d'aquell mòdul.</p>
+    <p>Exemples d'ús: alumnes amb adaptació curricular, baixes temporals, alumnes que cursen una optativa diferent.</p>
+    <div class="box box-info">
+      <strong>💡 Les exclusions no eliminen l'alumne de la classe.</strong>
+      Simplement l'oculten en el context d'aquell mòdul específic.
+    </div>
+  </section>
+
+  <!-- 8. ACTIVITATS -->
+  <section class="section" id="activitats">
+    <h2 class="section-title">8. Activitats</h2>
+    <p>Les activitats són el nucli d'AutoCo. Cada activitat és una avaluació entre iguals associada a un mòdul i a una classe, amb els seus grups de treball i criteris d'avaluació.</p>
+
+    <h3>Crear una nova activitat</h3>
+    <p>Des del tauler, fes clic a <strong>"+ Nova activitat"</strong>. Omple els camps:</p>
+    <table>
+      <tr><th>Camp</th><th>Descripció</th></tr>
+      <tr><td><strong>Plantilla (opcional)</strong></td><td>Si tens plantilles guardades, pots partir-ne una per pre-emplenar nom, descripció i criteris</td></tr>
+      <tr><td><strong>Classe</strong></td><td>Classe a la qual pertany l'activitat (obligatori)</td></tr>
+      <tr><td><strong>Mòdul</strong></td><td>Mòdul dins de la classe (obligatori; s'activa un cop seleccionada la classe)</td></tr>
+      <tr><td><strong>Nom de l'activitat</strong></td><td>Títol descriptiu (p.ex. "Projecte Integrador M3")</td></tr>
+      <tr><td><strong>Descripció</strong></td><td>Descripció breu de l'activitat (opcional)</td></tr>
+    </table>
+    <p>Un cop creada, l'activitat apareix al tauler en estat <span class="badge badge-gray">Tancada</span>. Pots configurar-ne els grups i criteris abans d'obrir-la.</p>
+
+    <h3>Plantilles d'activitat</h3>
+    <p>Les plantilles permeten desar la configuració d'una activitat (nom, descripció, criteris personalitzats) per reutilitzar-la en futures activitats. Es gestionen des de la pàgina de grups de l'activitat.</p>
+
+    <h3>La targeta d'activitat</h3>
+    <p>Cada activitat al tauler es mostra com una targeta amb les seves eines principals:</p>
+    <table>
+      <tr><th>Element</th><th>Descripció</th></tr>
+      <tr><td><strong>Títol i descripció</strong></td><td>Nom de l'activitat i text descriptiu</td></tr>
+      <tr><td><strong>Classe i mòdul</strong></td><td>Identificació de la classe i el mòdul associats</td></tr>
+      <tr><td><strong>Estat</strong></td><td><span class="badge badge-green">Oberta</span> o <span class="badge badge-gray">Tancada</span></td></tr>
+      <tr><td><strong>Indicador de participació</strong></td><td>Mostra quants alumnes han avaluat del total (p.ex. "8/12"). S'actualitza en temps real sense recarregar la pàgina</td></tr>
+      <tr><td><strong>Xip de programació</strong></td><td>Si l'activitat té data programada, mostra quan s'obrirà o tancarà automàticament</td></tr>
+    </table>
+
+    <h4>Botons de la targeta</h4>
+    <table>
+      <tr><th>Botó</th><th>Descripció</th></tr>
+      <tr><td>▶️ / ⏹️ <strong>Obrir / Tancar</strong></td><td>Obre o tanca l'activitat manualment. Si hi ha dates de programació passades, es netegen automàticament</td></tr>
+      <tr><td>✉️ <strong>Convidar a participar</strong></td><td>Visible quan l'activitat és oberta. Envia un correu a tots els alumnes del grup amb un enllaç directe. Mostra una barra de progrés en temps real durant l'enviament</td></tr>
+      <tr><td>🔔 <strong>Recordatoris</strong></td><td>Envia un recordatori per correu als alumnes que encara no han omplert l'avaluació</td></tr>
+      <tr><td>📋 <strong>Resultats</strong></td><td>Accedeix a la pàgina de resultats de l'activitat</td></tr>
+      <tr><td>👥 <strong>Grups</strong></td><td>Configura els grups i criteris de l'activitat</td></tr>
+      <tr><td>📄 <strong>Duplicar</strong></td><td>Crea una còpia de l'activitat a la mateixa classe i mòdul</td></tr>
+      <tr><td>🔄 <strong>Duplicar a una altra classe</strong></td><td>Crea una còpia a una classe i mòdul diferent (útil per a grups paral·lels)</td></tr>
+      <tr><td>📜 <strong>Registre</strong></td><td>Historial d'accions: qui ha obert, tancat o enviat avaluació i en quin moment</td></tr>
+      <tr><td>🗑️ <strong>Eliminar</strong></td><td>Elimina l'activitat. Tens <strong>5 segons</strong> per desfer l'acció</td></tr>
+    </table>
+
+    <h3>Programació automàtica d'obertura i tancament</h3>
+    <p>Des de la pàgina de grups de l'activitat, pots definir dates i hores d'obertura i tancament automàtics:</p>
+    <ul>
+      <li><strong>Obre el</strong>: data i hora en la qual el sistema obrirà l'activitat automàticament.</li>
+      <li><strong>Tanca el</strong>: data i hora en la qual el sistema tancarà l'activitat automàticament.</li>
+    </ul>
+    <p>El sistema comprova cada minut si hi ha activitats programades i les obre o tanca. Un xip informatiu a la targeta del tauler mostra el compte enrere.</p>
+    <div class="box box-info">
+      <strong>💡 Les dates es gestionen en hora UTC internament.</strong>
+      A la interfície es mostren i s'introdueixen en hora local del teu navegador. El sistema fa la conversió automàticament.
+    </div>
+
+    <h3>Indicador de participació en temps real</h3>
+    <p>L'indicador "X/Y han avaluat" de cada targeta s'actualitza instantàniament quan un alumne envia la seva avaluació, sense necessitat de recarregar la pàgina. Utilitza tecnologia de comunicació en temps real (Redis pub/sub).</p>
+
+    <h3>Notificació de completat</h3>
+    <p>Quan el <strong>100% dels alumnes</strong> d'una activitat han completat l'avaluació, rebràs automàticament una notificació a la campana del navbar. Fes clic per accedir directament als resultats.</p>
+  </section>
+
+  <!-- 9. GRUPS I CRITERIS -->
+  <section class="section" id="grups">
+    <h2 class="section-title">9. Configuració de grups i criteris</h2>
+    <p>Accedeix des del botó <strong>"Grups"</strong> de la targeta d'activitat. Aquí defineixes qui avalua qui i amb quins criteris.</p>
+
+    <h3>Gestió de grups</h3>
+    <ul>
+      <li><strong>Crear grup</strong>: botó "+" per afegir un nou grup buit.</li>
+      <li><strong>Renomenar grup</strong>: fes clic a la icona de llapis a la capçalera del grup per editar el nom directament (inline).</li>
+      <li><strong>Eliminar grup</strong>: botó de paperera a la capçalera del grup (els alumnes tornen al pool sense assignar).</li>
+      <li><strong>Reordenar grups</strong>: botons ▲▼ per canviar l'ordre dels grups. L'ordre es desa i es manté a les pàgines de resultats i informes.</li>
+    </ul>
+
+    <h3>Drag &amp; Drop d'alumnes</h3>
+    <p>Arrossega i deixa anar els alumnes entre grups per assignar-los. Pots arrossegar:</p>
+    <ul>
+      <li>Des del pool d'alumnes sense assignar cap a qualsevol grup.</li>
+      <li>D'un grup a un altre per reorganitzar.</li>
+      <li>Des d'un grup cap al pool per deixar-los sense assignar.</li>
+    </ul>
+
+    <h3>Importar / exportar grups per CSV</h3>
+    <p>Si vols reutilitzar la mateixa organització de grups en una altra activitat:</p>
+    <ul>
+      <li><strong>Exportar CSV</strong>: descarrega la distribució actual de grups en format CSV.</li>
+      <li><strong>Importar CSV</strong>: carrega una distribució prèviament exportada.</li>
+    </ul>
+
+    <h3>Criteris d'avaluació</h3>
+    <p>Cada activitat pot usar els <strong>criteris globals</strong> per defecte o tenir criteris <strong>personalitzats</strong>:</p>
+
+    <h4>Criteris globals per defecte</h4>
+    <table>
+      <tr><th>Criteri</th><th>Descripció</th></tr>
+      <tr><td>Probitat</td><td>Honestedat i integritat en el treball</td></tr>
+      <tr><td>Autonomia</td><td>Capacitat de treballar de forma independent</td></tr>
+      <tr><td>Responsabilitat i Treball de qualitat</td><td>Compromís amb les tasques i qualitat del resultat</td></tr>
+      <tr><td>Col·laboració i treball en equip</td><td>Contribució al grup i suport als companys</td></tr>
+      <tr><td>Comunicació</td><td>Claredat i efectivitat en la comunicació</td></tr>
+    </table>
+
+    <h4>Criteris personalitzats</h4>
+    <p>Pots modificar els criteris de l'activitat des de la pàgina de grups:</p>
+    <ul>
+      <li><strong>Afegir criteri</strong>: escriu el nom i confirma.</li>
+      <li><strong>Reordenar</strong>: arrossega els criteris per canviar-ne l'ordre de presentació.</li>
+      <li><strong>Eliminar</strong>: botó de paperera al costat de cada criteri.</li>
+      <li><strong>Pes</strong>: cada criteri té un pes (valor enter, per defecte 1). Un criteri amb pes 2 compta el doble que un criteri amb pes 1 en el càlcul de la nota global.</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>⚠️ Modifica els criteris ABANS d'obrir l'activitat.</strong>
+      Si canvies els criteris amb avaluacions ja enviades, les puntuacions existents podrien quedar inconsistents.
+    </div>
+
+    <h3>Plantilles d'activitat</h3>
+    <p>Des d'aquesta pàgina pots desar la configuració actual (nom, descripció i criteris) com a plantilla per a futures activitats. Les plantilles es poden seleccionar al crear una nova activitat.</p>
+  </section>
+
+  <!-- 10. RESULTATS -->
+  <section class="section" id="resultats">
+    <h2 class="section-title">10. Resultats</h2>
+    <p>Accedeix des del botó <strong>"Resultats"</strong> de la targeta d'activitat. La pàgina mostra les puntuacions de tots els alumnes i s'organitza en quatre blocs col·lapsables.</p>
+
+    <h3>Barra de progrés</h3>
+    <p>A la part superior, una barra mostra el percentatge de participació: quants alumnes han enviat l'avaluació del total possible.</p>
+
+    <h3>Bloc 1: Filtres avançats</h3>
+    <table>
+      <tr><th>Filtre</th><th>Descripció</th></tr>
+      <tr><td><strong>Cerca per alumne</strong></td><td>Escriu nom o cognoms per filtrar la taula en temps real</td></tr>
+      <tr><td><strong>Filtre per grup</strong></td><td>Mostra només els alumnes d'un grup concret</td></tr>
+      <tr><td><strong>Rang de nota</strong></td><td>Alta (≥8), Mitjana (5–7,9), Baixa (&lt;5), Sense coavaluació</td></tr>
+      <tr><td><strong>Mostrar notes</strong></td><td>Activa/desactiva la columna de notes del professor a la taula</td></tr>
+    </table>
+
+    <h3>Bloc 2: Taula de resultats</h3>
+    <p>La taula mostra un alumne per fila amb les columnes:</p>
+    <ul>
+      <li><strong>Alumne</strong>: nom, cognoms i grup</li>
+      <li><strong>Per cada criteri</strong>: puntuació d'Autoavaluació (Auto) i Coavaluació (Co)</li>
+      <li><strong>Nota global</strong>: mitjana ponderada de totes les puntuacions, amb codi de colors:
+        <span class="badge badge-green">Alta ≥8</span>
+        <span class="badge" style="background:#fef9c3;color:#854d0e">Mitjana 5–7,9</span>
+        <span class="badge badge-red">Baixa &lt;5</span>
+      </li>
+      <li><strong>Nota del professor</strong> (si "Mostrar notes" és actiu): camp editable directament a la taula. Fes clic per editar, prem Enter o fes clic fora per desar</li>
+    </ul>
+    <p>La taula té <strong>capçalera fixa</strong> i es mostra paginada (25 files per pàgina).</p>
+
+    <h3>Bloc 3: Detall de coavaluacions</h3>
+    <p>Per a cada alumne, veus exactament qui l'ha avaluat i amb quina puntuació per a cada criteri. Això permet identificar anomalies o avaluacions poc coherents.</p>
+
+    <h3>Bloc 4: Registre d'activitat</h3>
+    <p>Historial cronològic de totes les accions sobre l'activitat: qui ha obert/tancat l'activitat i en quin moment, i quins alumnes han enviat l'avaluació.</p>
+
+    <div class="box box-info">
+      <strong>💡 Estat persistent entre sessions</strong>
+      L'estat d'expansió dels quatre blocs (obert/tancat) es desa automàticament per a cada activitat i es restaura quan tornes a la pàgina.
+    </div>
+
+    <h3>Exportació de dades</h3>
+    <table>
+      <tr><th>Format</th><th>Contingut</th></tr>
+      <tr><td><strong>CSV</strong></td><td>Resultats en text pla, importable a qualsevol full de càlcul</td></tr>
+      <tr><td><strong>Excel (.xlsx)</strong></td><td>Full de càlcul amb format, color per rang de nota i columna de comentaris (autoavaluació)</td></tr>
+    </table>
+
+    <h3>Resultats visibles a l'alumne</h3>
+    <p>El commutador <strong>"Resultats visibles a l'alumne"</strong> permet que els alumnes vegin les seves pròpies puntuacions. Condicions:</p>
+    <ul>
+      <li>L'activitat ha d'estar <span class="badge badge-gray">Tancada</span>.</li>
+      <li>L'alumne veu únicament les seves pròpies notes, no les dels companys.</li>
+    </ul>
+  </section>
+
+  <!-- 11. GRÀFIQUES -->
+  <section class="section" id="grafiques">
+    <h2 class="section-title">11. Gràfiques comparatives</h2>
+    <p>Accedeix des del botó <strong>"Gràfica"</strong> a la pàgina de resultats.</p>
+    <p>La pàgina de gràfiques mostra representacions visuals de les dades d'avaluació:</p>
+    <ul>
+      <li><strong>Comparativa Auto vs. Co per grup</strong>: veus si hi ha diferències significatives entre com s'autovaloren els alumnes i com els valoren els companys.</li>
+      <li><strong>Desglossament per criteri</strong>: gràfica de barres amb la puntuació mitjana de cada criteri per grup, diferenciant autoavaluació i coavaluació.</li>
+    </ul>
+    <p>Les gràfiques es generen amb Chart.js i es poden descarregar com a imatge PNG fent clic dret sobre la gràfica.</p>
+  </section>
+
+  <!-- 12. INFORMES PDF -->
+  <section class="section" id="informes">
+    <h2 class="section-title">12. Informes PDF</h2>
+    <p>AutoCo ofereix dos tipus d'informes optimitzats per a impressió i generació de PDF des del navegador (<strong>Ctrl+P</strong> → Desa com a PDF).</p>
+
+    <h3>Informe individual per alumne</h3>
+    <p>Accedeix fent clic a la icona d'informe al costat de cada alumne a la taula de resultats. Conté:</p>
+    <ul>
+      <li>Dades de l'alumne (nom, grup, activitat, data)</li>
+      <li>Notes globals (autoavaluació i coavaluació)</li>
+      <li>Detall per criteri amb puntuació Auto i Co</li>
+      <li>Comentaris afegits per l'alumne en la seva autoavaluació</li>
+      <li>Nota i observacions del professor (si n'hi ha)</li>
+    </ul>
+
+    <h3>Informe complet per activitat</h3>
+    <p>Accedeix des del botó <strong>"PDF"</strong> a la pàgina de resultats. Conté:</p>
+    <ul>
+      <li>Capçalera amb el nom de l'activitat, classe, mòdul i data</li>
+      <li>Taula resum per grup amb les notes globals de tots els alumnes</li>
+      <li>Estadístiques per criteri: distribució de puntuacions per nivell (A, B, C, D, E) amb percentatges</li>
+      <li>Opció de detall individual per alumne amb salt de pàgina entre alumnes</li>
+    </ul>
+    <div class="box box-tip">
+      <strong>💡 Selector de grup</strong>
+      Si l'activitat té més d'un grup, apareix un selector per filtrar l'informe a un sol grup.
+    </div>
+  </section>
+
+  <!-- 13. EVOLUCIÓ -->
+  <section class="section" id="evolucio">
+    <h2 class="section-title">13. Evolució de l'alumne per mòdul</h2>
+    <p>Accedeix des de la pàgina de resultats, fent clic al nom d'un alumne. Mostra l'evolució de les notes d'un alumne concret al llarg de totes les activitats d'un mòdul.</p>
+    <p>Útil per veure si l'alumne millora, empitjora o es manté estable en les seves puntuacions al llarg del curs. La gràfica mostra:</p>
+    <ul>
+      <li>Eix horitzontal: activitats en ordre cronològic</li>
+      <li>Eix vertical: puntuació (0–10)</li>
+      <li>Línia d'autoavaluació vs. línia de coavaluació</li>
+    </ul>
+  </section>
+
+  <!-- 14. PERFIL -->
+  <section class="section" id="perfil">
+    <h2 class="section-title">14. Perfil del professor</h2>
+    <p>Accedeix fent clic a la icona del teu avatar/usuari a la barra de navegació.</p>
+
+    <h3>Dades personals</h3>
+    <ul>
+      <li><strong>Nom</strong> i <strong>Cognoms</strong>: editables directament. Fes clic a "Desar" per confirmar els canvis.</li>
+    </ul>
+
+    <h3>Canvi de contrasenya</h3>
+    <p>Omple els tres camps:</p>
+    <ol>
+      <li>Contrasenya actual</li>
+      <li>Nova contrasenya</li>
+      <li>Confirma la nova contrasenya</li>
+    </ol>
+    <p>La nova contrasenya ha de tenir un mínim de 6 caràcters.</p>
+
+    <h3>Foto de perfil</h3>
+    <p>Puja o canvia la teva foto de perfil fent clic al botó de càmera. La foto apareixerà a la barra de navegació en lloc de la icona genèrica. Formats acceptats: JPG, PNG, WEBP. La imatge es redimensiona automàticament.</p>
+  </section>
+
+  <!-- 15. FLUX DE L'ALUMNE -->
+  <section class="section" id="alumne-flux">
+    <h2 class="section-title">15. El flux de l'alumne</h2>
+    <p>Aquesta secció descriu l'experiència de l'alumne, útil per guiar-los i resoldre dubtes.</p>
+
+    <h3>Accés</h3>
+    <p>Els alumnes accedeixen a <code>/alumne/login</code> (o via el codi QR de la classe) amb el seu <strong>correu electrònic</strong> i <strong>contrasenya</strong>. No necessiten instal·lar cap aplicació; funciona des de qualsevol navegador, incloent el mòbil.</p>
+
+    <h3>Dashboard de l'alumne</h3>
+    <p>Un cop identificat, l'alumne veu la llista de les activitats:</p>
+    <ul>
+      <li><strong>Obertes</strong>: activitats que pot avaluar en aquest moment. Hi apareix el temps restant si hi ha data de tancament.</li>
+      <li><strong>Tancades</strong>: activitats finalitzades (pot veure'n els resultats si el professor ho ha activat).</li>
+    </ul>
+
+    <h3>Formulari d'avaluació</h3>
+    <p>Quan l'alumne accedeix a una activitat oberta, veu la llista dels membres del seu grup (incloent-hi ell mateix). Per a cada membre ha de valorar <strong>cada criteri</strong> amb l'escala E/D/C/B/A.</p>
+    <ul>
+      <li>L'avaluació pròpia (autoavaluació) es marca clarament com a "Tu mateix".</li>
+      <li>Hi ha un camp de comentari opcional per a l'autoavaluació.</li>
+      <li>Pot desar l'avaluació parcialment i continuar-la més tard mentre l'activitat estigui oberta.</li>
+      <li>Un cop enviada, no es pot modificar.</li>
+    </ul>
+
+    <h3>Resultats propis</h3>
+    <p>Si el professor ha activat "Resultats visibles a l'alumne" i l'activitat és tancada, l'alumne pot veure les seves pròpies puntuacions (no les dels companys). Accedeix des del tauler de l'alumne fent clic a l'activitat tancada.</p>
+  </section>
+
+  <!-- 16. FAQ -->
+  <section class="section" id="faq">
+    <h2 class="section-title">16. Preguntes freqüents</h2>
+
+    <h3>❓ Un alumne diu que no pot enviar l'avaluació, que no troba la seva activitat</h3>
+    <p>Comprova que: (1) l'activitat estigui en estat <span class="badge badge-green">Oberta</span>, (2) l'alumne estigui assignat a un grup d'aquella activitat i (3) l'alumne iniciï sessió amb el correu correcte.</p>
+
+    <h3>❓ L'indicador de participació no coincideix amb el que espero</h3>
+    <p>L'indicador compta alumnes que han completat i enviat l'avaluació. Si un alumne ha obert el formulari però no l'ha enviat, no compta. Verifica-ho a la pàgina de resultats al bloc "Registre d'activitat".</p>
+
+    <h3>❓ Vull canviar els grups però l'activitat ja té avaluacions</h3>
+    <p>Es pot fer tècnicament, però les avaluacions existents queden associades als membres originals. Es recomana <strong>no modificar els grups</strong> un cop l'activitat és oberta i hi ha avaluacions enviades.</p>
+
+    <h3>❓ He tancat l'activitat per error, puc tornar-la a obrir?</h3>
+    <p>Sí. Des de la targeta de l'activitat, fes clic al botó d'obrir (triangle verd). L'activitat tornarà a estar oberta i els alumnes podran continuar avaluant.</p>
+
+    <h3>❓ Un alumne ha enviat l'avaluació amb errors, pot repetir-la?</h3>
+    <p>No. Un cop enviada, l'avaluació no es pot modificar des de la interfície de l'alumne. Com a professor, pots eliminar l'avaluació des de l'apartat d'administració si és estrictament necessari.</p>
+
+    <h3>❓ Puc reutilitzar els grups d'una activitat en una altra?</h3>
+    <p>Sí. Des de la pàgina de grups, exporta els grups en CSV i importa'ls a la nova activitat. Alternativament, usa el botó "Duplicar" a la targeta d'activitat per crear una còpia completa amb els mateixos grups i criteris.</p>
+
+    <h3>❓ Quin és el límit de temps per desfer una eliminació?</h3>
+    <p>Tens exactament <strong>5 segons</strong> per fer clic a "Desfer" quan apareix la notificació a la part inferior de la pantalla. Passat aquest temps, l'eliminació és permanent.</p>
+
+    <h3>❓ Les dates de programació automàtica s'introdueixen en hora local?</h3>
+    <p>Sí. Introdueix sempre les dates i hores en <strong>hora local</strong> del teu navegador. El sistema les converteix a UTC internament i fa la conversió inversa per mostrar-les correctament.</p>
+  </section>
+
+  <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
+    AutoCo v2.5.22 · Salesians de Sarrià, Departament d'Informàtica · 2026
+  </footer>
+
+</div>
+</body>
+</html>

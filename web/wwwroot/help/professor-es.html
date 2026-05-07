@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCo — Guía del Profesor</title>
+<style>
+  :root { --primary:#CC0000; --dark:#1e293b; --light:#f1f5f9; --border:#e2e8f0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; font-size:15px; line-height:1.6; color:#1e293b; background:#fff; }
+  .topbar { position:fixed; top:0; left:0; right:0; background:var(--dark); color:#fff; display:flex; align-items:center; padding:10px 24px; gap:16px; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .topbar h1 { font-size:1.1rem; font-weight:600; flex:1; }
+  .topbar .version { font-size:.75rem; opacity:.6; }
+  .btn-print { background:var(--primary); color:#fff; border:none; padding:6px 16px; border-radius:4px; cursor:pointer; font-size:.85rem; font-weight:600; }
+  .btn-print:hover { background:#a30000; }
+  .container { max-width:960px; margin:0 auto; padding:80px 24px 60px; }
+  .toc { background:var(--light); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:40px; }
+  .toc h2 { font-size:1rem; text-transform:uppercase; letter-spacing:.05em; color:var(--primary); margin-bottom:12px; }
+  .toc ol { padding-left:20px; }
+  .toc li { margin:4px 0; }
+  .toc a { color:var(--dark); text-decoration:none; }
+  .toc a:hover { color:var(--primary); text-decoration:underline; }
+  .section { margin-bottom:48px; scroll-margin-top:72px; }
+  h2.section-title { font-size:1.4rem; font-weight:700; color:var(--primary); border-bottom:2px solid var(--primary); padding-bottom:6px; margin-bottom:20px; }
+  h3 { font-size:1.1rem; font-weight:600; color:var(--dark); margin:24px 0 10px; }
+  h4 { font-size:.95rem; font-weight:600; color:#475569; margin:16px 0 8px; }
+  p { margin-bottom:12px; }
+  ul, ol { padding-left:22px; margin-bottom:12px; }
+  li { margin-bottom:4px; }
+  .box { border-radius:6px; padding:12px 16px; margin:16px 0; }
+  .box-info { background:#eff6ff; border-left:4px solid #3b82f6; }
+  .box-warn { background:#fffbeb; border-left:4px solid #f59e0b; }
+  .box-tip  { background:#f0fdf4; border-left:4px solid #22c55e; }
+  .box strong { display:block; margin-bottom:4px; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:.9rem; }
+  th { background:var(--dark); color:#fff; padding:8px 12px; text-align:left; }
+  td { padding:8px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:nth-child(even) td { background:var(--light); }
+  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:.78rem; font-weight:600; }
+  .badge-green { background:#dcfce7; color:#166534; }
+  .badge-gray  { background:#f1f5f9; color:#475569; }
+  .badge-red   { background:#fee2e2; color:#991b1b; }
+  .scale { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+  .scale-item { background:var(--light); border:1px solid var(--border); border-radius:6px; padding:6px 12px; text-align:center; min-width:70px; }
+  .scale-item .letter { font-size:1.3rem; font-weight:700; color:var(--primary); }
+  .scale-item .stars  { font-size:.75rem; color:#94a3b8; }
+  .scale-item .value  { font-size:.8rem; font-weight:600; }
+  @media print {
+    .topbar, .btn-print { display:none !important; }
+    .container { padding-top:20px; }
+    .section { page-break-inside:avoid; }
+    h2.section-title { page-break-after:avoid; }
+    a { color:inherit; text-decoration:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>📋 AutoCo — Guía del Profesor</h1>
+  <span class="version">v2.5.22 · Salesians de Sarrià, Dept. de Informática</span>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="container">
+
+  <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:32px">Sistema de evaluación entre iguales · Guía del profesor · v2.5.22</p>
+
+  <nav class="toc">
+    <h2>📑 Índice</h2>
+    <ol>
+      <li><a href="#introduccion">Introducción</a></li>
+      <li><a href="#acceso">Primer acceso y login</a></li>
+      <li><a href="#navbar">La barra de navegación</a></li>
+      <li><a href="#dashboard">El panel principal</a></li>
+      <li><a href="#clases">Gestión de clases</a></li>
+      <li><a href="#alumnos">Gestión de alumnos</a></li>
+      <li><a href="#modulos">Gestión de módulos (UF/MP)</a></li>
+      <li><a href="#actividades">Actividades</a></li>
+      <li><a href="#grupos">Configuración de grupos y criterios</a></li>
+      <li><a href="#resultados">Resultados</a></li>
+      <li><a href="#graficas">Gráficas comparativas</a></li>
+      <li><a href="#informes">Informes PDF</a></li>
+      <li><a href="#evolucion">Evolución del alumno</a></li>
+      <li><a href="#perfil">Perfil del profesor</a></li>
+      <li><a href="#flujo-alumno">El flujo del alumno</a></li>
+      <li><a href="#faq">Preguntas frecuentes</a></li>
+    </ol>
+  </nav>
+
+  <section class="section" id="introduccion">
+    <h2 class="section-title">1. Introducción</h2>
+    <p><strong>AutoCo</strong> es una aplicación web para gestionar la <strong>autoevaluación</strong> y la <strong>coevaluación</strong> entre alumnos en actividades de grupo. Permite que cada alumno evalúe a todos los miembros de su grupo —incluido él mismo— de forma individual y confidencial.</p>
+    <p>Diseñada para centros educativos de ciclos formativos y bachillerato, AutoCo centraliza la creación de actividades, la gestión de grupos, la recogida de evaluaciones y la generación de informes.</p>
+
+    <h3>La escala de puntuación</h3>
+    <div class="scale">
+      <div class="scale-item"><div class="letter">E</div><div class="stars">★☆☆☆☆</div><div class="value">1 pto</div></div>
+      <div class="scale-item"><div class="letter">D</div><div class="stars">★★☆☆☆</div><div class="value">3,5 pts</div></div>
+      <div class="scale-item"><div class="letter">C</div><div class="stars">★★★☆☆</div><div class="value">5 pts</div></div>
+      <div class="scale-item"><div class="letter">B</div><div class="stars">★★★★☆</div><div class="value">7,5 pts</div></div>
+      <div class="scale-item"><div class="letter">A</div><div class="stars">★★★★★</div><div class="value">10 pts</div></div>
+    </div>
+    <p>La nota final de cada alumno es la media ponderada de las puntuaciones recibidas por los compañeros (coevaluación) y la propia (autoevaluación), aplicando los pesos definidos para cada criterio.</p>
+  </section>
+
+  <section class="section" id="acceso">
+    <h2 class="section-title">2. Primer acceso y login</h2>
+    <p>Accede a la aplicación con el navegador. En la página de inicio selecciona <strong>"Soy profesor"</strong>.</p>
+    <table>
+      <tr><th>Campo</th><th>Descripción</th></tr>
+      <tr><td><strong>Correo electrónico</strong></td><td>Tu dirección de correo proporcionada por el administrador</td></tr>
+      <tr><td><strong>Contraseña</strong></td><td>La contraseña asignada inicialmente (modificable desde el perfil)</td></tr>
+    </table>
+    <h3>Restablecimiento de contraseña</h3>
+    <ol>
+      <li>Haz clic en <strong>"He olvidado la contraseña"</strong> en la página de login.</li>
+      <li>Introduce tu correo y pulsa <strong>"Enviar código"</strong>.</li>
+      <li>Recibirás un código OTP de 6 dígitos por correo, válido durante <strong>15 minutos</strong>.</li>
+      <li>Introduce el código y la nueva contraseña.</li>
+    </ol>
+    <div class="box box-warn">
+      <strong>⚠️ El código caduca a los 15 minutos.</strong>
+      Si ha caducado, solicita uno nuevo desde el principio.
+    </div>
+  </section>
+
+  <section class="section" id="navbar">
+    <h2 class="section-title">3. La barra de navegación</h2>
+    <table>
+      <tr><th>Elemento</th><th>Función</th></tr>
+      <tr><td>🏠 <strong>Logo AutoCo</strong></td><td>Vuelve al panel principal desde cualquier página</td></tr>
+      <tr><td>🔔 <strong>Campana</strong></td><td>Notificaciones in-app: avisa cuando el 100% de una actividad se ha completado</td></tr>
+      <tr><td>🌐 <strong>Selector de idioma</strong></td><td>Cambia entre <strong>Catalán</strong> y <strong>Castellano</strong></td></tr>
+      <tr><td>🎨 <strong>Paleta de colores</strong></td><td>Cambia el color primario de la interfície: Rojo, Azul, Verde, Naranja, Violeta o Gris</td></tr>
+      <tr><td>☀️/🌙 <strong>Modo claro/oscuro</strong></td><td>Alterna entre tema claro y oscuro. La preferencia se guarda automáticamente</td></tr>
+      <tr><td>❓ <strong>Ayuda</strong></td><td>Abre esta guía en una nueva pestaña</td></tr>
+      <tr><td>👤 <strong>Perfil</strong></td><td>Accede a tu página de perfil (foto, nombre, contraseña)</td></tr>
+      <tr><td>🚪 <strong>Cerrar sesión</strong></td><td>Cierra la sesión de forma segura</td></tr>
+    </table>
+  </section>
+
+  <section class="section" id="dashboard">
+    <h2 class="section-title">4. El panel principal</h2>
+    <p>El panel es la página central desde donde gestionas todas las actividades.</p>
+    <h3>Estadísticas rápidas</h3>
+    <table>
+      <tr><th>Contador</th><th>Descripción</th></tr>
+      <tr><td><strong>Clases</strong></td><td>Número total de clases asignadas a tu cuenta</td></tr>
+      <tr><td><strong>Módulos</strong></td><td>Total de módulos (UF/MP) creados</td></tr>
+      <tr><td><strong>Alumnos</strong></td><td>Total de alumnos de todas tus clases</td></tr>
+      <tr><td><strong>Actividades</strong></td><td>Total de actividades creadas (abiertas + cerradas)</td></tr>
+      <tr><td><strong>Abiertas ahora</strong></td><td>Actividades en estado abierto en este momento</td></tr>
+      <tr><td><strong>Grupos</strong></td><td>Total de grupos de trabajo configurados</td></tr>
+    </table>
+    <h3>Filtros</h3>
+    <table>
+      <tr><th>Filtro</th><th>Función</th></tr>
+      <tr><td><strong>Búsqueda</strong></td><td>Filtra por nombre o descripción (búsqueda instantánea)</td></tr>
+      <tr><td><strong>Clase</strong></td><td>Muestra solo actividades de una clase concreta</td></tr>
+      <tr><td><strong>Módulo</strong></td><td>Muestra solo actividades de un módulo concreto</td></tr>
+      <tr><td><strong>Solo abiertas</strong></td><td>Conmutador para ver únicamente las actividades en curso</td></tr>
+    </table>
+  </section>
+
+  <section class="section" id="clases">
+    <h2 class="section-title">5. Gestión de clases</h2>
+    <p>Las clases representan grupos de alumnos (p.ej. "DAW1", "ASIX2"). Cada clase puede tener un <strong>año académico</strong> asociado para diferenciar ediciones del mismo grupo.</p>
+    <table>
+      <tr><th>Botón</th><th>Función</th></tr>
+      <tr><td><strong>Códigos QR</strong></td><td>Genera un código QR por clase que dirige directamente al login del alumno</td></tr>
+      <tr><td><strong>Exportar alumnos</strong></td><td>Descarga un CSV con todos los alumnos de todas las clases</td></tr>
+    </table>
+    <div class="box box-info">
+      <strong>💡 Creación de clases</strong>
+      La creación de nuevas clases es una función exclusiva de administrador.
+    </div>
+  </section>
+
+  <section class="section" id="alumnos">
+    <h2 class="section-title">6. Gestión de alumnos</h2>
+    <h3>Información de cada alumno</h3>
+    <table>
+      <tr><th>Campo</th><th>Descripción</th></tr>
+      <tr><td><strong>Núm. lista</strong></td><td>Número de orden en la lista de clase (1–99)</td></tr>
+      <tr><td><strong>Foto / Avatar</strong></td><td>Foto del alumno si existe; si no, avatar con iniciales y color único por número de lista</td></tr>
+      <tr><td><strong>Nombre y apellidos</strong></td><td>Nombre completo del alumno</td></tr>
+      <tr><td><strong>DNI</strong></td><td>Documento de identidad (opcional, usado para importación de fotos)</td></tr>
+      <tr><td><strong>Correo electrónico</strong></td><td>Identificador único de acceso a la aplicación</td></tr>
+    </table>
+    <h3>Añadir un alumno individual</h3>
+    <ul>
+      <li><strong>Nombre</strong> y <strong>Apellidos</strong> (obligatorios)</li>
+      <li><strong>Núm. de lista</strong> (obligatorio, 1–99)</li>
+      <li><strong>Correo electrónico</strong> (obligatorio, debe ser único en la clase)</li>
+      <li><strong>DNI</strong> (opcional)</li>
+      <li><strong>Contraseña</strong> (opcional; si se deja en blanco, el sistema asigna una automática)</li>
+    </ul>
+    <h3>Importación masiva por CSV</h3>
+    <p>Si el correo ya existe en la clase, <strong>actualiza</strong> los datos sin modificar la contraseña. Si es nuevo, crea el alumno.</p>
+    <h3>Importación masiva de fotos en ZIP</h3>
+    <ul>
+      <li>Cada foto debe estar nombrada con el <strong>DNI del alumno</strong> (p.ej. <code>12345678A.jpg</code>).</li>
+      <li>Las imágenes se redimensionan automáticamente a 400×400 píxeles.</li>
+    </ul>
+    <h3>Acciones sobre cada alumno</h3>
+    <table>
+      <tr><th>Acción</th><th>Descripción</th></tr>
+      <tr><td><strong>Editar</strong></td><td>Modifica los datos del alumno</td></tr>
+      <tr><td><strong>Mover a otra clase</strong></td><td>Reasigna el alumno a una clase diferente. Las participaciones anteriores se eliminan</td></tr>
+      <tr><td><strong>Enviar credenciales</strong></td><td>Envía un correo al alumno con su email y contraseña inicial</td></tr>
+      <tr><td><strong>Eliminar</strong></td><td>Elimina el alumno. Tienes <strong>5 segundos</strong> para deshacer la acción</td></tr>
+    </table>
+  </section>
+
+  <section class="section" id="modulos">
+    <h2 class="section-title">7. Gestión de módulos (UF/MP)</h2>
+    <p>Los módulos organizan las actividades dentro de cada clase. Accede haciendo clic en <strong>"Módulos"</strong> dentro de la clase.</p>
+    <table>
+      <tr><th>Campo</th><th>Descripción</th></tr>
+      <tr><td><strong>Código</strong></td><td>Identificador corto (p.ej. "MP02", "UF3")</td></tr>
+      <tr><td><strong>Nombre</strong></td><td>Nombre completo del módulo (p.ej. "Bases de datos")</td></tr>
+    </table>
+    <h3>Exclusiones por módulo</h3>
+    <p>Puedes marcar alumnos que <strong>no participan</strong> en un módulo concreto. Estos alumnos no aparecerán al crear grupos para actividades de ese módulo.</p>
+  </section>
+
+  <section class="section" id="actividades">
+    <h2 class="section-title">8. Actividades</h2>
+    <h3>Crear una nueva actividad</h3>
+    <table>
+      <tr><th>Campo</th><th>Descripción</th></tr>
+      <tr><td><strong>Plantilla (opcional)</strong></td><td>Pre-rellena nombre, descripción y criterios desde una plantilla guardada</td></tr>
+      <tr><td><strong>Clase</strong></td><td>Clase a la que pertenece la actividad (obligatorio)</td></tr>
+      <tr><td><strong>Módulo</strong></td><td>Módulo dentro de la clase (obligatorio)</td></tr>
+      <tr><td><strong>Nombre de la actividad</strong></td><td>Título descriptivo</td></tr>
+      <tr><td><strong>Descripción</strong></td><td>Descripción breve (opcional)</td></tr>
+    </table>
+    <h3>La tarjeta de actividad</h3>
+    <table>
+      <tr><th>Elemento</th><th>Descripción</th></tr>
+      <tr><td><strong>Indicador de participación</strong></td><td>Muestra cuántos alumnos han evaluado del total. Se actualiza en tiempo real</td></tr>
+      <tr><td><strong>Chip de programación</strong></td><td>Si hay fecha programada, muestra cuándo se abrirá o cerrará automáticamente</td></tr>
+    </table>
+    <h4>Botones de la tarjeta</h4>
+    <table>
+      <tr><th>Botón</th><th>Descripción</th></tr>
+      <tr><td>▶️ / ⏹️ <strong>Abrir / Cerrar</strong></td><td>Abre o cierra la actividad manualmente</td></tr>
+      <tr><td>✉️ <strong>Invitar a participar</strong></td><td>Envía correo a todos los alumnos del grupo con enlace directo. Muestra barra de progreso en tiempo real</td></tr>
+      <tr><td>🔔 <strong>Recordatorios</strong></td><td>Envía recordatorio a los alumnos que no han completado la evaluación</td></tr>
+      <tr><td>📋 <strong>Resultados</strong></td><td>Accede a la página de resultados</td></tr>
+      <tr><td>👥 <strong>Grupos</strong></td><td>Configura grupos y criterios</td></tr>
+      <tr><td>📄 <strong>Duplicar</strong></td><td>Crea una copia en la misma clase y módulo</td></tr>
+      <tr><td>🔄 <strong>Duplicar a otra clase</strong></td><td>Crea una copia en una clase y módulo diferente</td></tr>
+      <tr><td>📜 <strong>Registro</strong></td><td>Historial de acciones sobre la actividad</td></tr>
+      <tr><td>🗑️ <strong>Eliminar</strong></td><td>Elimina la actividad. Tienes <strong>5 segundos</strong> para deshacer</td></tr>
+    </table>
+    <h3>Programación automática</h3>
+    <p>Define fechas y horas de apertura y cierre automáticos desde la página de grupos. El sistema comprueba cada minuto y abre o cierra las actividades programadas.</p>
+    <div class="box box-info">
+      <strong>💡 Las fechas se introducen en hora local del navegador.</strong>
+      El sistema hace la conversión a UTC internamente.
+    </div>
+    <h3>Notificación de completado</h3>
+    <p>Cuando el <strong>100% de los alumnos</strong> han completado la evaluación, recibirás una notificación automática en la campana del navbar.</p>
+  </section>
+
+  <section class="section" id="grupos">
+    <h2 class="section-title">9. Configuración de grupos y criterios</h2>
+    <h3>Gestión de grupos</h3>
+    <ul>
+      <li><strong>Crear grupo</strong>: botón "+" para añadir un nuevo grupo vacío.</li>
+      <li><strong>Renombrar grupo</strong>: haz clic en el icono de lápiz en la cabecera del grupo.</li>
+      <li><strong>Reordenar grupos</strong>: botones ▲▼ para cambiar el orden.</li>
+    </ul>
+    <h3>Drag &amp; Drop de alumnos</h3>
+    <p>Arrastra y suelta alumnos entre grupos para asignarlos. Puedes moverlos entre grupos o devolverlos al pool sin asignar.</p>
+    <h3>Criterios de evaluación</h3>
+    <h4>Criterios globales por defecto</h4>
+    <table>
+      <tr><th>Criterio</th><th>Descripción</th></tr>
+      <tr><td>Probidad</td><td>Honestidad e integridad en el trabajo</td></tr>
+      <tr><td>Autonomía</td><td>Capacidad de trabajar de forma independiente</td></tr>
+      <tr><td>Responsabilidad y Trabajo de calidad</td><td>Compromiso con las tareas y calidad del resultado</td></tr>
+      <tr><td>Colaboración y trabajo en equipo</td><td>Contribución al grupo y apoyo a los compañeros</td></tr>
+      <tr><td>Comunicación</td><td>Claridad y efectividad en la comunicación</td></tr>
+    </table>
+    <h4>Criterios personalizados</h4>
+    <ul>
+      <li><strong>Añadir criterio</strong>, <strong>reordenar</strong>, <strong>eliminar</strong>.</li>
+      <li><strong>Peso</strong>: valor entero (por defecto 1). Un criterio con peso 2 cuenta el doble en el cálculo de la nota global.</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>⚠️ Modifica los criterios ANTES de abrir la actividad.</strong>
+    </div>
+  </section>
+
+  <section class="section" id="resultados">
+    <h2 class="section-title">10. Resultados</h2>
+    <p>La página se organiza en cuatro bloques colapsables con estado persistente entre sesiones.</p>
+    <h3>Bloque 1: Filtros avanzados</h3>
+    <table>
+      <tr><th>Filtro</th><th>Descripción</th></tr>
+      <tr><td><strong>Buscar alumno</strong></td><td>Filtra por nombre o apellidos en tiempo real</td></tr>
+      <tr><td><strong>Grupo</strong></td><td>Muestra solo alumnos de un grupo concreto</td></tr>
+      <tr><td><strong>Rango de nota</strong></td><td>Alta (≥8), Media (5–7,9), Baja (&lt;5), Sin coevaluación</td></tr>
+      <tr><td><strong>Mostrar notas</strong></td><td>Activa/desactiva la columna de notas del profesor</td></tr>
+    </table>
+    <h3>Bloque 2: Tabla de resultados</h3>
+    <p>Por cada alumno: nombre, grupo, puntuación Auto y Co por criterio, nota global con código de colores (<span class="badge badge-green">Alta</span> <span class="badge" style="background:#fef9c3;color:#854d0e">Media</span> <span class="badge badge-red">Baja</span>) y nota del profesor editable inline.</p>
+    <h3>Bloque 3: Detalle de coevaluaciones</h3>
+    <p>Por cada alumno, quién le ha evaluado y con qué puntuación por criterio.</p>
+    <h3>Bloque 4: Registro de actividad</h3>
+    <p>Historial cronológico de todas las acciones sobre la actividad.</p>
+    <h3>Exportación</h3>
+    <table>
+      <tr><th>Formato</th><th>Contenido</th></tr>
+      <tr><td><strong>CSV</strong></td><td>Resultados en texto plano</td></tr>
+      <tr><td><strong>Excel (.xlsx)</strong></td><td>Hoja de cálculo con formato y color por rango de nota</td></tr>
+    </table>
+    <h3>Resultados visibles al alumno</h3>
+    <p>El conmutador permite que los alumnos vean sus propias puntuaciones cuando la actividad esté <span class="badge badge-gray">Cerrada</span>.</p>
+  </section>
+
+  <section class="section" id="graficas">
+    <h2 class="section-title">11. Gráficas comparativas</h2>
+    <p>Accede desde el botón <strong>"Gráfica"</strong> en la página de resultados. Muestra:</p>
+    <ul>
+      <li>Comparativa Auto vs. Co por grupo.</li>
+      <li>Desglose por criterio: puntuación media de cada criterio por grupo.</li>
+    </ul>
+    <p>Las gráficas se pueden descargar como imagen PNG haciendo clic derecho sobre ellas.</p>
+  </section>
+
+  <section class="section" id="informes">
+    <h2 class="section-title">12. Informes PDF</h2>
+    <p>Usa <strong>Ctrl+P → Guardar como PDF</strong> desde el navegador para generar el PDF.</p>
+    <h3>Informe individual por alumno</h3>
+    <ul>
+      <li>Datos del alumno, grupo, actividad y fecha</li>
+      <li>Notas globales (autoevaluación y coevaluación)</li>
+      <li>Detalle por criterio con puntuación Auto y Co</li>
+      <li>Comentarios de la autoevaluación</li>
+      <li>Nota y observaciones del profesor</li>
+    </ul>
+    <h3>Informe completo por actividad</h3>
+    <ul>
+      <li>Cabecera con nombre, clase, módulo y fecha</li>
+      <li>Tabla resumen por grupo</li>
+      <li>Estadísticas por criterio: distribución A–E con porcentajes</li>
+      <li>Detalle individual opcional por alumno con salto de página</li>
+    </ul>
+  </section>
+
+  <section class="section" id="evolucion">
+    <h2 class="section-title">13. Evolución del alumno por módulo</h2>
+    <p>Muestra la evolución de las notas de un alumno concreto a lo largo de todas las actividades de un módulo. Permite ver si el alumno mejora, empeora o se mantiene estable.</p>
+    <ul>
+      <li>Eje horizontal: actividades en orden cronológico</li>
+      <li>Eje vertical: puntuación (0–10)</li>
+      <li>Línea de autoevaluación vs. línea de coevaluación</li>
+    </ul>
+  </section>
+
+  <section class="section" id="perfil">
+    <h2 class="section-title">14. Perfil del profesor</h2>
+    <h3>Datos personales</h3>
+    <p>Nombre y apellidos editables. Haz clic en "Guardar" para confirmar.</p>
+    <h3>Cambio de contraseña</h3>
+    <ol>
+      <li>Contraseña actual</li>
+      <li>Nueva contraseña (mínimo 6 caracteres)</li>
+      <li>Confirmar nueva contraseña</li>
+    </ol>
+    <h3>Foto de perfil</h3>
+    <p>Sube o cambia tu foto de perfil. Aparecerá en la barra de navegación. Formatos aceptados: JPG, PNG, WEBP.</p>
+  </section>
+
+  <section class="section" id="flujo-alumno">
+    <h2 class="section-title">15. El flujo del alumno</h2>
+    <h3>Acceso</h3>
+    <p>Los alumnos acceden a <code>/alumne/login</code> (o vía código QR de la clase) con su <strong>correo electrónico</strong> y <strong>contraseña</strong>. Funciona desde cualquier navegador, incluyendo el móvil.</p>
+    <h3>Formulario de evaluación</h3>
+    <p>El alumno ve la lista de miembros de su grupo (incluido él mismo) y debe valorar <strong>cada criterio</strong> con la escala E/D/C/B/A para cada miembro.</p>
+    <ul>
+      <li>Puede guardar parcialmente y continuar más tarde mientras la actividad esté abierta.</li>
+      <li>Una vez enviada, no se puede modificar.</li>
+      <li>Hay un campo de comentario opcional en la autoevaluación.</li>
+    </ul>
+    <h3>Resultados propios</h3>
+    <p>Si el profesor ha activado "Resultados visibles al alumno" y la actividad está cerrada, el alumno puede ver sus propias puntuaciones (no las de los compañeros).</p>
+  </section>
+
+  <section class="section" id="faq">
+    <h2 class="section-title">16. Preguntas frecuentes</h2>
+
+    <h3>❓ Un alumno no encuentra su actividad</h3>
+    <p>Comprueba que: (1) la actividad esté <span class="badge badge-green">Abierta</span>, (2) el alumno esté asignado a un grupo y (3) inicie sesión con el correo correcto.</p>
+
+    <h3>❓ El indicador de participación no cuadra</h3>
+    <p>El indicador cuenta alumnos que han completado y enviado la evaluación. Abierto el formulario pero no enviado no cuenta. Verifica en el "Registro de actividad".</p>
+
+    <h3>❓ ¿Puedo reabrir una actividad cerrada por error?</h3>
+    <p>Sí. Desde la tarjeta, haz clic en el botón de abrir (triángulo verde). La actividad volverá a estar abierta.</p>
+
+    <h3>❓ Un alumno ha enviado la evaluación con errores, ¿puede repetirla?</h3>
+    <p>No. Una vez enviada, no se puede modificar desde la interfaz del alumno.</p>
+
+    <h3>❓ ¿Puedo reutilizar los grupos de una actividad en otra?</h3>
+    <p>Sí. Exporta los grupos en CSV e impórtalos en la nueva actividad. O usa el botón "Duplicar" para crear una copia completa con los mismos grupos y criterios.</p>
+
+    <h3>❓ ¿Cuánto tiempo tengo para deshacer una eliminación?</h3>
+    <p>Exactamente <strong>5 segundos</strong> desde que aparece la notificación en la parte inferior.</p>
+
+    <h3>❓ ¿Las fechas de programación se introducen en hora local?</h3>
+    <p>Sí. Introduce siempre las fechas en hora local de tu navegador. El sistema las convierte a UTC internamente.</p>
+  </section>
+
+  <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
+    AutoCo v2.5.22 · Salesians de Sarrià, Departament d'Informàtica · 2026
+  </footer>
+
+</div>
+</body>
+</html>

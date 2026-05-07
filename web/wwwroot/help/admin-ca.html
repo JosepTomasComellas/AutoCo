@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCo — Guia de l'Administrador</title>
+<style>
+  :root { --primary:#CC0000; --dark:#1e293b; --light:#f1f5f9; --border:#e2e8f0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; font-size:15px; line-height:1.6; color:#1e293b; background:#fff; }
+  .topbar { position:fixed; top:0; left:0; right:0; background:var(--dark); color:#fff; display:flex; align-items:center; padding:10px 24px; gap:16px; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .topbar h1 { font-size:1.1rem; font-weight:600; flex:1; }
+  .topbar .version { font-size:.75rem; opacity:.6; }
+  .btn-print { background:var(--primary); color:#fff; border:none; padding:6px 16px; border-radius:4px; cursor:pointer; font-size:.85rem; font-weight:600; }
+  .btn-print:hover { background:#a30000; }
+  .container { max-width:960px; margin:0 auto; padding:80px 24px 60px; }
+  .toc { background:var(--light); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:40px; }
+  .toc h2 { font-size:1rem; text-transform:uppercase; letter-spacing:.05em; color:var(--primary); margin-bottom:12px; }
+  .toc ol { padding-left:20px; }
+  .toc li { margin:4px 0; }
+  .toc a { color:var(--dark); text-decoration:none; }
+  .toc a:hover { color:var(--primary); text-decoration:underline; }
+  .section { margin-bottom:48px; scroll-margin-top:72px; }
+  h2.section-title { font-size:1.4rem; font-weight:700; color:var(--primary); border-bottom:2px solid var(--primary); padding-bottom:6px; margin-bottom:20px; }
+  h3 { font-size:1.1rem; font-weight:600; color:var(--dark); margin:24px 0 10px; }
+  h4 { font-size:.95rem; font-weight:600; color:#475569; margin:16px 0 8px; }
+  p { margin-bottom:12px; }
+  ul, ol { padding-left:22px; margin-bottom:12px; }
+  li { margin-bottom:4px; }
+  .box { border-radius:6px; padding:12px 16px; margin:16px 0; }
+  .box-info { background:#eff6ff; border-left:4px solid #3b82f6; }
+  .box-warn { background:#fffbeb; border-left:4px solid #f59e0b; }
+  .box-tip  { background:#f0fdf4; border-left:4px solid #22c55e; }
+  .box-admin { background:#fdf4ff; border-left:4px solid #a855f7; }
+  .box strong { display:block; margin-bottom:4px; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:.9rem; }
+  th { background:var(--dark); color:#fff; padding:8px 12px; text-align:left; }
+  td { padding:8px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:nth-child(even) td { background:var(--light); }
+  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:.78rem; font-weight:600; }
+  .badge-green { background:#dcfce7; color:#166534; }
+  .badge-purple { background:#f3e8ff; color:#6b21a8; }
+  @media print {
+    .topbar, .btn-print { display:none !important; }
+    .container { padding-top:20px; }
+    .section { page-break-inside:avoid; }
+    h2.section-title { page-break-after:avoid; }
+    a { color:inherit; text-decoration:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🔧 AutoCo — Guia de l'Administrador</h1>
+  <span class="version">v2.5.22 · Salesians de Sarrià, Dept. d'Informàtica</span>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="container">
+
+  <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema d'avaluació entre iguals · Guia de l'administrador · v2.5.22</p>
+
+  <div class="box box-admin" style="margin-bottom:32px">
+    <strong>🔧 Document complementari</strong>
+    Aquesta guia cobreix les funcions exclusives d'administrador. Com a administrador tens accés a <strong>totes les funcions del professor</strong> descrites a la guia de professor, més les funcions d'administració descrites aquí.
+  </div>
+
+  <nav class="toc">
+    <h2>📑 Índex</h2>
+    <ol>
+      <li><a href="#menu-admin">El menú d'administració</a></li>
+      <li><a href="#professors">Gestió de professors</a></li>
+      <li><a href="#classes-admin">Gestió de classes (rol admin)</a></li>
+      <li><a href="#backup">Còpies de seguretat</a></li>
+      <li><a href="#estadistiques">Estadístiques globals</a></li>
+      <li><a href="#sistema">Sistema</a></li>
+      <li><a href="#auditoria">Auditoria</a></li>
+    </ol>
+  </nav>
+
+  <!-- 1. MENÚ ADMIN -->
+  <section class="section" id="menu-admin">
+    <h2 class="section-title">1. El menú d'administració</h2>
+    <p>Com a administrador, a la barra de navegació trobaràs la icona d'<strong>engranatge</strong> <span class="badge badge-purple">Admin</span> que desplega el menú d'administració:</p>
+    <table>
+      <tr><th>Opció</th><th>Descripció</th></tr>
+      <tr><td>👨‍🏫 <strong>Professors</strong></td><td>Gestió de comptes de professors del sistema</td></tr>
+      <tr><td>💾 <strong>Còpies</strong></td><td>Còpies de seguretat: exportar i restaurar</td></tr>
+      <tr><td>📊 <strong>Estadístiques</strong></td><td>Estadístiques globals agregades de tot el sistema</td></tr>
+      <tr><td>⚙️ <strong>Sistema</strong></td><td>Configuració del sistema: nivell de log, renovació de curs</td></tr>
+      <tr><td>🔍 <strong>Auditoria</strong></td><td>Registre de totes les accions d'administració</td></tr>
+    </table>
+  </section>
+
+  <!-- 2. PROFESSORS -->
+  <section class="section" id="professors">
+    <h2 class="section-title">2. Gestió de professors</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Professors"</strong>. Aquí gestiones tots els comptes de professors del sistema.</p>
+
+    <h3>Llistat de professors</h3>
+    <p>La taula mostra tots els professors amb les seves dades: nom, cognoms, correu electrònic i rol (Professor / Administrador).</p>
+
+    <h3>Afegir un professor</h3>
+    <p>Omple el formulari amb:</p>
+    <ul>
+      <li><strong>Nom</strong> i <strong>Cognoms</strong> (obligatoris)</li>
+      <li><strong>Correu electrònic</strong> (obligatori, ha de ser únic al sistema)</li>
+      <li><strong>Contrasenya</strong> inicial (el professor podrà canviar-la des del seu perfil)</li>
+      <li><strong>Rol d'administrador</strong>: activa si vols que tingui permisos d'administrador</li>
+    </ul>
+
+    <h3>Editar un professor</h3>
+    <p>Fes clic a la icona d'edició al costat del professor. Pots modificar nom, cognoms, correu i el rol d'administrador.</p>
+
+    <h3>Activar / desactivar permisos d'administrador</h3>
+    <p>El commutador <strong>"Administrador"</strong> a la fitxa del professor activa o desactiva els permisos d'administrador sense eliminar el compte. Útil per a delegar temporalment tasques d'administració.</p>
+    <div class="box box-warn">
+      <strong>⚠️ Almenys un administrador ha d'estar actiu en tot moment.</strong>
+      El sistema no permet treure els permisos d'administrador a l'últim administrador.
+    </div>
+
+    <h3>Eliminar un professor</h3>
+    <p>L'eliminació és permanent. Les classes i activitats del professor eliminat <strong>es conserven</strong> al sistema i queden sense professor assignat (les pot gestionar un altre administrador).</p>
+  </section>
+
+  <!-- 3. CLASSES (ADMIN) -->
+  <section class="section" id="classes-admin">
+    <h2 class="section-title">3. Gestió de classes (rol admin)</h2>
+    <p>Com a administrador, a la pàgina de classes <strong>pots crear noves classes</strong> (els professors normals no poden). El formulari de creació apareix a la part esquerra de la pàgina:</p>
+    <table>
+      <tr><th>Camp</th><th>Descripció</th></tr>
+      <tr><td><strong>Nom de la classe</strong></td><td>Identificador de la classe (p.ex. "DAW1", "ASIX2")</td></tr>
+      <tr><td><strong>Any acadèmic</strong></td><td>Opcional. Permet diferenciar edicions (p.ex. "2025-2026")</td></tr>
+    </table>
+    <p>Les classes creades per l'administrador son visibles a tots els professors del sistema.</p>
+
+    <h3>Enviar credencials a tots els alumnes</h3>
+    <p>Des de la pàgina d'alumnes d'una classe, el botó <strong>"Enviar credencials a tots"</strong> (exclusiu d'admin) envia per correu les credencials d'accés a tots els alumnes de la classe en un sol clic.</p>
+  </section>
+
+  <!-- 4. CÒPIES -->
+  <section class="section" id="backup">
+    <h2 class="section-title">4. Còpies de seguretat</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Còpies"</strong>. Permet exportar totes les dades del sistema i restaurar-les en cas de necessitat.</p>
+
+    <h3>Exportar còpia de seguretat (ZIP)</h3>
+    <p>Fes clic a <strong>"Exportar còpia"</strong>. El sistema genera un fitxer ZIP que inclou:</p>
+    <ul>
+      <li>Totes les dades del sistema: professors, classes, alumnes, mòduls, activitats, grups, avaluacions i resultats en format JSON</li>
+      <li>Fotos dels alumnes (<code>fotos/alumnes/*.jpg</code>)</li>
+      <li>Fotos dels professors (<code>fotos/professors/*.jpg</code>)</li>
+    </ul>
+    <div class="box box-tip">
+      <strong>💡 Realitza còpies periòdiques</strong>, especialment abans de canvis importants (renovació de curs, eliminació de dades).
+    </div>
+
+    <h3>Restaurar una còpia</h3>
+    <p>Per restaurar, selecciona un fitxer ZIP (o JSON, per compatibilitat amb còpies antigues) i fes clic a <strong>"Restaurar"</strong>.</p>
+    <div class="box box-warn">
+      <strong>⚠️ La restauració sobreescriu totes les dades actuals del sistema.</strong>
+      Assegura't de fer una còpia prèvia si vols conservar les dades actuals. L'operació no és reversible.
+    </div>
+    <p>Durant la restauració, les fotos es reassignen als nous IDs generats automàticament per mantenir la coherència.</p>
+
+    <h3>Còpies disponibles al servidor</h3>
+    <p>La llista inferior mostra les còpies de seguretat emmagatzemades al servidor. Pots descarregar qualsevol d'elles per desar-la localment.</p>
+  </section>
+
+  <!-- 5. ESTADÍSTIQUES -->
+  <section class="section" id="estadistiques">
+    <h2 class="section-title">5. Estadístiques globals</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Estadístiques"</strong>. Mostra indicadors agregats de tot el sistema:</p>
+    <ul>
+      <li>Total de professors, classes, alumnes, mòduls i activitats al sistema</li>
+      <li>Nombre d'activitats obertes, tancades i amb avaluacions</li>
+      <li>Estadístiques d'ús: alumnes que han avaluat, taxa de participació global</li>
+    </ul>
+    <p>Útil per a tenir una visió de conjunt de l'ús de l'aplicació al centre.</p>
+  </section>
+
+  <!-- 6. SISTEMA -->
+  <section class="section" id="sistema">
+    <h2 class="section-title">6. Sistema</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Sistema"</strong>. Conté dues funcions de manteniment del sistema.</p>
+
+    <h3>Nivell de log en calent</h3>
+    <p>Permet canviar el nivell de detall dels registres de l'aplicació sense necessitat de reiniciar cap servei:</p>
+    <table>
+      <tr><th>Nivell</th><th>Descripció</th></tr>
+      <tr><td><strong>Information</strong></td><td>Nivell normal recomanat per a producció</td></tr>
+      <tr><td><strong>Warning</strong></td><td>Només advertències i errors</td></tr>
+      <tr><td><strong>Debug</strong></td><td>Molt detallat; útil per a diagnosi de problemes (impacte en rendiment)</td></tr>
+      <tr><td><strong>Error</strong></td><td>Únicament errors crítics</td></tr>
+    </table>
+    <div class="box box-info">
+      <strong>💡 El nivell de log es desa a Redis</strong> i es manté entre reinicis dels serveis.
+    </div>
+
+    <h3>Renovació de curs (nou any acadèmic)</h3>
+    <p>El botó <strong>"Nou any acadèmic"</strong> permet preparar el sistema per al curs següent sense eliminar les dades del curs actual:</p>
+    <ul>
+      <li>Crea còpies de totes les classes amb el nou any acadèmic indicat.</li>
+      <li>Duplica els mòduls de cada classe (sense alumnes ni activitats).</li>
+      <li>Les classes i dades del curs anterior es conserven intactes.</li>
+    </ul>
+    <p>Després de la renovació, cal afegir els alumnes a les noves classes (per importació CSV o manualment) i crear les activitats del nou curs.</p>
+    <div class="box box-warn">
+      <strong>⚠️ Fes una còpia de seguretat</strong> abans d'executar la renovació de curs.
+    </div>
+  </section>
+
+  <!-- 7. AUDITORIA -->
+  <section class="section" id="auditoria">
+    <h2 class="section-title">7. Auditoria</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Auditoria"</strong>. Registre de totes les accions d'administració realitzades al sistema.</p>
+
+    <h3>Informació de cada entrada</h3>
+    <table>
+      <tr><th>Camp</th><th>Descripció</th></tr>
+      <tr><td><strong>Data i hora</strong></td><td>Moment exacte de l'acció (hora local)</td></tr>
+      <tr><td><strong>Administrador</strong></td><td>Qui va realitzar l'acció</td></tr>
+      <tr><td><strong>Tipus d'acció</strong></td><td>Categoria de l'acció amb codi de colors per tipus</td></tr>
+      <tr><td><strong>Detall</strong></td><td>Descripció completa de l'acció realitzada</td></tr>
+    </table>
+
+    <h3>Característiques</h3>
+    <ul>
+      <li><strong>Paginat</strong>: es mostren les entrades més recents primer.</li>
+      <li><strong>Persistent</strong>: les entrades es conserven fins i tot si s'eliminen professors o classes relacionades (sense FK).</li>
+      <li><strong>Colors per tipus d'acció</strong>: facilita la identificació visual de les accions (creació, modificació, eliminació, etc.).</li>
+    </ul>
+    <div class="box box-info">
+      <strong>💡 L'auditoria no es pot eliminar des de la interfície.</strong>
+      El registre d'auditoria és permanent i no s'inclou a les còpies de seguretat exportables, de manera que es conserva independentment de les restauracions.
+    </div>
+  </section>
+
+  <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
+    AutoCo v2.5.22 · Salesians de Sarrià, Departament d'Informàtica · 2026
+  </footer>
+
+</div>
+</body>
+</html>

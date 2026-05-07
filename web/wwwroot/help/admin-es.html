@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCo — Guía del Administrador</title>
+<style>
+  :root { --primary:#CC0000; --dark:#1e293b; --light:#f1f5f9; --border:#e2e8f0; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; font-size:15px; line-height:1.6; color:#1e293b; background:#fff; }
+  .topbar { position:fixed; top:0; left:0; right:0; background:var(--dark); color:#fff; display:flex; align-items:center; padding:10px 24px; gap:16px; z-index:100; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .topbar h1 { font-size:1.1rem; font-weight:600; flex:1; }
+  .topbar .version { font-size:.75rem; opacity:.6; }
+  .btn-print { background:var(--primary); color:#fff; border:none; padding:6px 16px; border-radius:4px; cursor:pointer; font-size:.85rem; font-weight:600; }
+  .btn-print:hover { background:#a30000; }
+  .container { max-width:960px; margin:0 auto; padding:80px 24px 60px; }
+  .toc { background:var(--light); border:1px solid var(--border); border-radius:8px; padding:20px 24px; margin-bottom:40px; }
+  .toc h2 { font-size:1rem; text-transform:uppercase; letter-spacing:.05em; color:var(--primary); margin-bottom:12px; }
+  .toc ol { padding-left:20px; }
+  .toc li { margin:4px 0; }
+  .toc a { color:var(--dark); text-decoration:none; }
+  .toc a:hover { color:var(--primary); text-decoration:underline; }
+  .section { margin-bottom:48px; scroll-margin-top:72px; }
+  h2.section-title { font-size:1.4rem; font-weight:700; color:var(--primary); border-bottom:2px solid var(--primary); padding-bottom:6px; margin-bottom:20px; }
+  h3 { font-size:1.1rem; font-weight:600; color:var(--dark); margin:24px 0 10px; }
+  p { margin-bottom:12px; }
+  ul, ol { padding-left:22px; margin-bottom:12px; }
+  li { margin-bottom:4px; }
+  .box { border-radius:6px; padding:12px 16px; margin:16px 0; }
+  .box-info { background:#eff6ff; border-left:4px solid #3b82f6; }
+  .box-warn { background:#fffbeb; border-left:4px solid #f59e0b; }
+  .box-tip  { background:#f0fdf4; border-left:4px solid #22c55e; }
+  .box-admin { background:#fdf4ff; border-left:4px solid #a855f7; }
+  .box strong { display:block; margin-bottom:4px; }
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:.9rem; }
+  th { background:var(--dark); color:#fff; padding:8px 12px; text-align:left; }
+  td { padding:8px 12px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:nth-child(even) td { background:var(--light); }
+  .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:.78rem; font-weight:600; }
+  .badge-purple { background:#f3e8ff; color:#6b21a8; }
+  @media print {
+    .topbar, .btn-print { display:none !important; }
+    .container { padding-top:20px; }
+    .section { page-break-inside:avoid; }
+    h2.section-title { page-break-after:avoid; }
+    a { color:inherit; text-decoration:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>🔧 AutoCo — Guía del Administrador</h1>
+  <span class="version">v2.5.22 · Salesians de Sarrià, Dept. de Informática</span>
+  <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
+</div>
+
+<div class="container">
+
+  <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema de evaluación entre iguales · Guía del administrador · v2.5.22</p>
+
+  <div class="box box-admin" style="margin-bottom:32px">
+    <strong>🔧 Documento complementario</strong>
+    Esta guía cubre las funciones exclusivas de administrador. Como administrador tienes acceso a <strong>todas las funciones del profesor</strong> descritas en la guía de profesor, más las funciones de administración descritas aquí.
+  </div>
+
+  <nav class="toc">
+    <h2>📑 Índice</h2>
+    <ol>
+      <li><a href="#menu-admin">El menú de administración</a></li>
+      <li><a href="#profesores">Gestión de profesores</a></li>
+      <li><a href="#clases-admin">Gestión de clases (rol admin)</a></li>
+      <li><a href="#backup">Copias de seguridad</a></li>
+      <li><a href="#estadisticas">Estadísticas globales</a></li>
+      <li><a href="#sistema">Sistema</a></li>
+      <li><a href="#auditoria">Auditoría</a></li>
+    </ol>
+  </nav>
+
+  <section class="section" id="menu-admin">
+    <h2 class="section-title">1. El menú de administración</h2>
+    <p>Como administrador, en la barra de navegación encontrarás el icono de <strong>engranaje</strong> <span class="badge badge-purple">Admin</span> que despliega el menú de administración:</p>
+    <table>
+      <tr><th>Opción</th><th>Descripción</th></tr>
+      <tr><td>👨‍🏫 <strong>Profesores</strong></td><td>Gestión de cuentas de profesores del sistema</td></tr>
+      <tr><td>💾 <strong>Copias</strong></td><td>Copias de seguridad: exportar y restaurar</td></tr>
+      <tr><td>📊 <strong>Estadísticas</strong></td><td>Estadísticas globales agregadas de todo el sistema</td></tr>
+      <tr><td>⚙️ <strong>Sistema</strong></td><td>Configuración del sistema: nivel de log, renovación de curso</td></tr>
+      <tr><td>🔍 <strong>Auditoría</strong></td><td>Registro de todas las acciones de administración</td></tr>
+    </table>
+  </section>
+
+  <section class="section" id="profesores">
+    <h2 class="section-title">2. Gestión de profesores</h2>
+    <h3>Añadir un profesor</h3>
+    <ul>
+      <li><strong>Nombre</strong> y <strong>Apellidos</strong> (obligatorios)</li>
+      <li><strong>Correo electrónico</strong> (obligatorio, debe ser único en el sistema)</li>
+      <li><strong>Contraseña</strong> inicial</li>
+      <li><strong>Rol de administrador</strong>: activa si quieres que tenga permisos de administrador</li>
+    </ul>
+    <h3>Activar / desactivar permisos de administrador</h3>
+    <p>El conmutador <strong>"Administrador"</strong> activa o desactiva los permisos sin eliminar la cuenta. Útil para delegar temporalmente tareas de administración.</p>
+    <div class="box box-warn">
+      <strong>⚠️ Al menos un administrador debe estar activo en todo momento.</strong>
+    </div>
+    <h3>Eliminar un profesor</h3>
+    <p>La eliminación es permanente. Las clases y actividades del profesor eliminado <strong>se conservan</strong> en el sistema.</p>
+  </section>
+
+  <section class="section" id="clases-admin">
+    <h2 class="section-title">3. Gestión de clases (rol admin)</h2>
+    <p>Como administrador, en la página de clases <strong>puedes crear nuevas clases</strong> (los profesores normales no pueden):</p>
+    <table>
+      <tr><th>Campo</th><th>Descripción</th></tr>
+      <tr><td><strong>Nombre de la clase</strong></td><td>Identificador de la clase (p.ej. "DAW1", "ASIX2")</td></tr>
+      <tr><td><strong>Año académico</strong></td><td>Opcional. Permite diferenciar ediciones (p.ej. "2025-2026")</td></tr>
+    </table>
+    <h3>Enviar credenciales a todos los alumnos</h3>
+    <p>Desde la página de alumnos de una clase, el botón <strong>"Enviar credenciales a todos"</strong> (exclusivo de admin) envía por correo las credenciales a todos los alumnos de la clase en un solo clic.</p>
+  </section>
+
+  <section class="section" id="backup">
+    <h2 class="section-title">4. Copias de seguridad</h2>
+    <h3>Exportar copia de seguridad (ZIP)</h3>
+    <p>El sistema genera un fichero ZIP que incluye:</p>
+    <ul>
+      <li>Todos los datos del sistema en formato JSON</li>
+      <li>Fotos de los alumnos (<code>fotos/alumnes/*.jpg</code>)</li>
+      <li>Fotos de los profesores (<code>fotos/professors/*.jpg</code>)</li>
+    </ul>
+    <div class="box box-tip">
+      <strong>💡 Realiza copias periódicas</strong>, especialmente antes de cambios importantes.
+    </div>
+    <h3>Restaurar una copia</h3>
+    <p>Selecciona un fichero ZIP (o JSON para compatibilidad con copias antiguas) y haz clic en <strong>"Restaurar"</strong>.</p>
+    <div class="box box-warn">
+      <strong>⚠️ La restauración sobreescribe todos los datos actuales del sistema.</strong>
+      Asegúrate de hacer una copia previa. La operación no es reversible.
+    </div>
+  </section>
+
+  <section class="section" id="estadisticas">
+    <h2 class="section-title">5. Estadísticas globales</h2>
+    <p>Muestra indicadores agregados de todo el sistema: total de profesores, clases, alumnos, módulos y actividades; actividades abiertas y cerradas; tasa de participación global.</p>
+  </section>
+
+  <section class="section" id="sistema">
+    <h2 class="section-title">6. Sistema</h2>
+    <h3>Nivel de log en caliente</h3>
+    <p>Cambia el nivel de detalle de los registros sin reiniciar ningún servicio:</p>
+    <table>
+      <tr><th>Nivel</th><th>Descripción</th></tr>
+      <tr><td><strong>Information</strong></td><td>Nivel normal recomendado para producción</td></tr>
+      <tr><td><strong>Warning</strong></td><td>Solo advertencias y errores</td></tr>
+      <tr><td><strong>Debug</strong></td><td>Muy detallado; útil para diagnóstico de problemas</td></tr>
+      <tr><td><strong>Error</strong></td><td>Únicamente errores críticos</td></tr>
+    </table>
+    <h3>Renovación de curso (nuevo año académico)</h3>
+    <p>El botón <strong>"Nuevo año académico"</strong> prepara el sistema para el curso siguiente:</p>
+    <ul>
+      <li>Crea copias de todas las clases con el nuevo año académico.</li>
+      <li>Duplica los módulos de cada clase (sin alumnos ni actividades).</li>
+      <li>Las clases y datos del curso anterior se conservan intactos.</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>⚠️ Haz una copia de seguridad</strong> antes de ejecutar la renovación de curso.
+    </div>
+  </section>
+
+  <section class="section" id="auditoria">
+    <h2 class="section-title">7. Auditoría</h2>
+    <p>Registro de todas las acciones de administración realizadas en el sistema.</p>
+    <table>
+      <tr><th>Campo</th><th>Descripción</th></tr>
+      <tr><td><strong>Fecha y hora</strong></td><td>Momento exacto de la acción</td></tr>
+      <tr><td><strong>Administrador</strong></td><td>Quién realizó la acción</td></tr>
+      <tr><td><strong>Tipo de acción</strong></td><td>Categoría con código de colores</td></tr>
+      <tr><td><strong>Detalle</strong></td><td>Descripción completa de la acción</td></tr>
+    </table>
+    <div class="box box-info">
+      <strong>💡 La auditoría no se puede eliminar desde la interfaz.</strong>
+      El registro es permanente y no se incluye en las copias de seguridad exportables.
+    </div>
+  </section>
+
+  <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
+    AutoCo v2.5.22 · Salesians de Sarrià, Departament d'Informàtica · 2026
+  </footer>
+
+</div>
+</body>
+</html>

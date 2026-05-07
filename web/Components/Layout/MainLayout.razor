@@ -104,6 +104,13 @@
                             </ChildContent>
                         </MudMenu>
                     }
+                    <!-- Ajuda -->
+                    <MudTooltip Text="@Loc["Nav_Help"]" Placement="Placement.Bottom">
+                        <MudIconButton Icon="@Icons.Material.Filled.HelpOutline"
+                                       Color="Color.Inherit"
+                                       Href="@HelpUrl"
+                                       Target="_blank" />
+                    </MudTooltip>
                     <MudTooltip Text="@Loc["Nav_MyProfile"]" Placement="Placement.Bottom">
                         <MudIconButton Href="/professor/perfil" Style="padding:4px">
                             @if (UserState.FotoUrl is not null)
@@ -222,6 +229,17 @@
     private string LogoHref => UserState.IsStudent   ? "/alumne/dashboard"
                              : UserState.IsProfessor ? "/professor/dashboard"
                              : "/";
+
+    private string HelpUrl
+    {
+        get
+        {
+            var lang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            if (lang != "ca" && lang != "es") lang = "ca";
+            var role = UserState.IsAdmin ? "admin" : "professor";
+            return $"/help/{role}-{lang}.html";
+        }
+    }
 
     protected override void OnInitialized()
     {
