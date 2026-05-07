@@ -88,8 +88,8 @@ else
                                   AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="string" @bind-Value="_filterGroup" Label="@Loc["Results_ColGroup"]" Variant="Variant.Outlined"
-                               Clearable="true">
+                    <MudSelect T="string" @bind-Value="_filterGroup" Label="@Loc["Results_ColGroup"]"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                         <MudSelectItem T="string" Value='""'>@Loc["Results_AllGroups"]</MudSelectItem>
                         @foreach (var g in _results.Students.Select(s => s.GroupName).Distinct().Order())
                         {
@@ -99,7 +99,7 @@ else
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3">
                     <MudSelect T="string" @bind-Value="_filterGrade" Label="@Loc["Results_GradeRange"]"
-                               Variant="Variant.Outlined" Clearable="true">
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                         <MudSelectItem T="string" Value='""'>@Loc["Results_AllRanges"]</MudSelectItem>
                         <MudSelectItem T="string" Value='"high"'>@Loc["Results_HighGrade"]</MudSelectItem>
                         <MudSelectItem T="string" Value='"mid"'>@Loc["Results_MidGrade"]</MudSelectItem>
