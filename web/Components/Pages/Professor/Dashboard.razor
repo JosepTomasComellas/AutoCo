@@ -11,54 +11,17 @@
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
     <MudText Typo="Typo.h5">@Loc["Dash_Welcome", UserState.NomComplet ?? ""]</MudText>
     <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Class"
+               Href="/professor/classes">
+        @Loc["Dash_ManageClasses"]
+    </MudButton>
     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                StartIcon="@Icons.Material.Filled.Add"
                Href="/professor/nova-activitat">
         @Loc["Dash_NewActivity"]
     </MudButton>
 </MudStack>
-
-<!-- Bloc de gestió -->
-<MudPaper Elevation="1" Class="pa-3 mb-4">
-    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Wrap="Wrap.Wrap">
-        <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Secondary" Size="Size.Small" />
-        <MudText Typo="Typo.subtitle2" Color="Color.Secondary" Class="mr-2">@Loc["Dash_Management"]</MudText>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Class"
-                   Href="/professor/classes">
-            @Loc["Dash_ManageClasses"]
-        </MudButton>
-        @if (UserState.IsAdmin)
-        {
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.People"
-                       Href="/admin/professors">
-                @Loc["Dash_Teachers"]
-            </MudButton>
-            <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.CloudDone"
-                       Href="/admin/backup">
-                @Loc["Dash_Backups"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.BarChart"
-                       Href="/admin/estadistiques">
-                @Loc["Dash_Statistics"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.Tune"
-                       Href="/admin/sistema">
-                @Loc["Dash_System"]
-            </MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
-                       StartIcon="@Icons.Material.Filled.ManageSearch"
-                       Href="/admin/auditoria">
-                @Loc["Dash_Audit"]
-            </MudButton>
-        }
-    </MudStack>
-</MudPaper>
 
 @if (_loading)
 {

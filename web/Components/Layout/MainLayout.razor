@@ -76,6 +76,34 @@
                             }
                         </ChildContent>
                     </MudMenu>
+                    @if (UserState.IsAdmin)
+                    {
+                        <!-- Menú d'administració -->
+                        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                            <ActivatorContent>
+                                <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings"
+                                               Color="Color.Inherit" title="@Loc["Nav_AdminMenu"]" />
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Href="/admin/professors" Icon="@Icons.Material.Filled.People">
+                                    @Loc["Dash_Teachers"]
+                                </MudMenuItem>
+                                <MudDivider />
+                                <MudMenuItem Href="/admin/backup" Icon="@Icons.Material.Filled.CloudDone">
+                                    @Loc["Dash_Backups"]
+                                </MudMenuItem>
+                                <MudMenuItem Href="/admin/estadistiques" Icon="@Icons.Material.Filled.BarChart">
+                                    @Loc["Dash_Statistics"]
+                                </MudMenuItem>
+                                <MudMenuItem Href="/admin/sistema" Icon="@Icons.Material.Filled.Tune">
+                                    @Loc["Dash_System"]
+                                </MudMenuItem>
+                                <MudMenuItem Href="/admin/auditoria" Icon="@Icons.Material.Filled.ManageSearch">
+                                    @Loc["Dash_Audit"]
+                                </MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                    }
                     <MudTooltip Text="@Loc["Nav_MyProfile"]" Placement="Placement.Bottom">
                         <MudIconButton Href="/professor/perfil" Style="padding:4px">
                             @if (UserState.FotoUrl is not null)
