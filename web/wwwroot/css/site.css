@@ -96,6 +96,16 @@ html { scroll-behavior: smooth; }
     pointer-events: none !important;
 }
 
+/* ── Targetes compactes: truncament correcte en flex layout ─────────────── */
+/* mud-card-header-content té flex:1 però no min-width:0 → el fill no s'encongeix */
+.activity-card--compact .mud-card-header-content {
+    min-width: 0;
+    overflow: hidden;
+}
+.activity-card--compact {
+    overflow: hidden;
+}
+
 /* ── Barra de progrés enganxada (avaluació alumne) ──────────────────────── */
 .progress-sticky {
     position: sticky;

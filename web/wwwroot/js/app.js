@@ -9,13 +9,31 @@ document.addEventListener('dragover', function (e) {
     }
 });
 
-// Drag ghost: mostra només el chip arrossegat, no tot el grup
-document.addEventListener('dragstart', function (e) {
-    const chip = e.target.closest('.dnd-chip');
-    if (chip) {
-        e.dataTransfer.setDragImage(chip, chip.offsetWidth / 2, chip.offsetHeight / 2);
-    }
-}, true);
+// Drag ghost: mostra només el chip arrossegat, no tot el grup.
+// Usem un clon fora del contenidor scroll perquè alguns browsers capturen
+// tot el contenidor desbordable si l'element és dins d'overflow-y:auto.
+(function () {
+    var _ghost = null;
+
+    document.addEventListener('dragstart', function (e) {
+        var chip = e.target.closest && e.target.closest('.dnd-chip');
+        if (!chip) return;
+
+        if (_ghost) { _ghost.remove(); _ghost = null; }
+
+        var rect = chip.getBoundingClientRect();
+        _ghost = chip.cloneNode(true);
+        _ghost.style.cssText = 'position:fixed;top:-1000px;left:0;margin:0;'
+            + 'width:' + rect.width + 'px;opacity:1;pointer-events:none;z-index:9999;';
+        document.body.appendChild(_ghost);
+
+        e.dataTransfer.setDragImage(_ghost, rect.width / 2, rect.height / 2);
+    }, true);
+
+    document.addEventListener('dragend', function () {
+        if (_ghost) { _ghost.remove(); _ghost = null; }
+    }, true);
+}());
 
 // ── Canvi de cultura (i18n) ───────────────────────────────────────────────────
 // Escriu la cookie .AspNetCore.Culture i recarrega la pàgina per aplicar-la.
