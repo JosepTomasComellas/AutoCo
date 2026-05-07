@@ -83,7 +83,7 @@ public class BackupHostedService(
                     using var scope  = sp.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
                     var adminIds = await db.Professors
-                        .Where(p => p.IsAdmin && p.IsActive)
+                        .Where(p => p.IsAdmin)
                         .Select(p => p.Id)
                         .ToListAsync();
                     foreach (var adminId in adminIds)
