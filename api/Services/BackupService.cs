@@ -27,12 +27,13 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
 {
     private static readonly JsonSerializerOptions _json = new()
     {
-        WriteIndented             = true,
+        WriteIndented               = true,
         PropertyNameCaseInsensitive = true,
-        DefaultIgnoreCondition    = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition      = JsonIgnoreCondition.WhenWritingNull
     };
 
-    private string BackupsDir => cfg["Backup:Path"] ?? "/app/backups";
+    private string BackupsDir => cfg["Backup:Path"]      ?? "/app/backups";
+    private string PhotosDir  => cfg["Photos:BasePath"]  ?? "/app/fotos";
 
     private void EnsureDir() => Directory.CreateDirectory(BackupsDir);
 
@@ -51,8 +52,6 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var evals      = await db.Evaluations.AsNoTracking().Include(e => e.Scores).ToListAsync();
         var notes      = await db.ProfessorNotes.AsNoTracking().ToListAsync();
         var templates  = await db.ActivityTemplates.AsNoTracking().ToListAsync();
-        var auditLogs  = await db.AdminAuditLogs.AsNoTracking()
-            .OrderByDescending(l => l.CreatedAt).ToListAsync();
 
         var classDtos = classes.Select(c => new ClassBackupDto(
             c.Id, c.Name, c.AcademicYear, c.CreatedAt,
@@ -92,46 +91,87 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var templateDtos = templates.Select(t => new TemplateBackupDto(
             t.Id, t.ProfessorId, t.Name, t.Description, t.CriteriaJson, t.CreatedAt)).ToList();
 
-        var auditDtos = auditLogs.Select(l => new AdminAuditLogBackupDto(
-            l.Action, l.ActorId, l.ActorName, l.Details, l.CreatedAt)).ToList();
-
         return new BackupDto("2.0", DateTime.UtcNow,
             professors.Select(p => new ProfessorBackupDto(
                 p.Id, p.Email, p.Nom, p.Cognoms, p.IsAdmin, p.PasswordHash, p.CreatedAt)).ToList(),
             classDtos, activityDtos,
             templateDtos.Count > 0 ? templateDtos : null,
-            auditDtos.Count > 0 ? auditDtos : null);
+            null); // AuditLogs no s'inclouen al backup
     }
 
     public async Task<byte[]> ExportZipAsync() => ToZip(await ExportAsync());
 
-    // Genera un ZIP amb un backup.json dins
-    private static byte[] ToZip(BackupDto backup)
+    // ZIP amb backup.json + fotos d'alumnes i professors
+    private byte[] ToZip(BackupDto backup)
     {
-        using var ms  = new MemoryStream();
+        using var ms = new MemoryStream();
         using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
         {
-            var entry = zip.CreateEntry("backup.json", CompressionLevel.Optimal);
-            using var w = new StreamWriter(entry.Open(), System.Text.Encoding.UTF8);
-            w.Write(JsonSerializer.Serialize(backup, _json));
+            // ── backup.json ───────────────────────────────────────────────────
+            var jsonEntry = zip.CreateEntry("backup.json", CompressionLevel.Optimal);
+            using (var w = new StreamWriter(jsonEntry.Open(), System.Text.Encoding.UTF8))
+                w.Write(JsonSerializer.Serialize(backup, _json));
+
+            // ── Fotos alumnes ─────────────────────────────────────────────────
+            AddFotosToZip(zip, Path.Combine(PhotosDir, "alumnes"),    "fotos/alumnes");
+
+            // ── Fotos professors ──────────────────────────────────────────────
+            AddFotosToZip(zip, Path.Combine(PhotosDir, "professors"), "fotos/professors");
         }
         return ms.ToArray();
     }
 
-    private static BackupDto? FromZip(byte[] data)
+    private static void AddFotosToZip(ZipArchive zip, string sourceDir, string zipPrefix)
     {
+        if (!Directory.Exists(sourceDir)) return;
+        foreach (var file in Directory.GetFiles(sourceDir, "*.jpg"))
+        {
+            var entry = zip.CreateEntry($"{zipPrefix}/{Path.GetFileName(file)}", CompressionLevel.NoCompression);
+            using var dest = entry.Open();
+            using var src  = File.OpenRead(file);
+            src.CopyTo(dest);
+        }
+    }
+
+    // Llegeix backup.json + fotos d'un ZIP
+    private static (BackupDto? Dto, Dictionary<string, byte[]> Photos) FromZipFull(byte[] data)
+    {
+        var photos = new Dictionary<string, byte[]>();
+        BackupDto? dto = null;
+
         using var ms  = new MemoryStream(data);
         using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
-        var entry = zip.GetEntry("backup.json") ?? zip.Entries.FirstOrDefault();
-        if (entry is null) return null;
-        using var r = new StreamReader(entry.Open(), System.Text.Encoding.UTF8);
-        return JsonSerializer.Deserialize<BackupDto>(r.ReadToEnd(), _json);
+
+        foreach (var entry in zip.Entries)
+        {
+            if (entry.FullName == "backup.json")
+            {
+                using var r = new StreamReader(entry.Open(), System.Text.Encoding.UTF8);
+                dto = JsonSerializer.Deserialize<BackupDto>(r.ReadToEnd(), _json);
+            }
+            else if (entry.FullName.StartsWith("fotos/") && entry.Name.EndsWith(".jpg"))
+            {
+                using var buf = new MemoryStream();
+                using var es  = entry.Open();
+                es.CopyTo(buf);
+                // Clau: "alumnes/42" o "professors/5"
+                var relative = entry.FullName["fotos/".Length..];
+                var key      = relative[..relative.LastIndexOf('.')];
+                photos[key]  = buf.ToArray();
+            }
+        }
+
+        return (dto, photos);
     }
 
     // ── Import (substitueix totes les dades) ──────────────────────────────────
-    public async Task<ImportResult> ImportAsync(BackupDto bk)
+    public Task<ImportResult> ImportAsync(BackupDto backup) => ImportCoreAsync(backup, null);
+
+    private async Task<ImportResult> ImportCoreAsync(BackupDto bk, Dictionary<string, byte[]>? photos)
     {
         await using var tx = await db.Database.BeginTransactionAsync();
+        Dictionary<int, int> profMap    = [];
+        Dictionary<int, int> studentMap = [];
         try
         {
             // Esborrar en ordre de dependències FK
@@ -149,7 +189,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             await db.ActivityTemplates.ExecuteDeleteAsync();
             await db.Professors.ExecuteDeleteAsync();
 
-            // ── Professors (1 SaveChanges) ────────────────────────────────────
+            // ── Professors ────────────────────────────────────────────────────
             var profEnts = bk.Professors.Select(p => new Professor
             {
                 Email = p.Email, Nom = p.Nom, Cognoms = p.Cognoms,
@@ -157,10 +197,10 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             }).ToList();
             db.Professors.AddRange(profEnts);
             await db.SaveChangesAsync();
-            var profMap = bk.Professors.Zip(profEnts)
+            profMap = bk.Professors.Zip(profEnts)
                 .ToDictionary(x => x.First.Id, x => x.Second.Id);
 
-            // ── Activity Templates (1 SaveChanges) ───────────────────────────
+            // ── Activity Templates ────────────────────────────────────────────
             if (bk.Templates is { Count: > 0 })
             {
                 foreach (var t in bk.Templates)
@@ -176,13 +216,13 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 await db.SaveChangesAsync();
             }
 
-            // ── Classes (1 SaveChanges) ───────────────────────────────────────
+            // ── Classes ───────────────────────────────────────────────────────
             var classEnts = bk.Classes.Select(c => new Class
                 { Name = c.Name, AcademicYear = c.AcademicYear, CreatedAt = c.CreatedAt }).ToList();
             db.Classes.AddRange(classEnts);
             await db.SaveChangesAsync();
 
-            // ── Students (1 SaveChanges) ──────────────────────────────────────
+            // ── Students ──────────────────────────────────────────────────────
             var studentPairs = new List<(StudentBackupDto Dto, Student Ent)>();
             for (int ci = 0; ci < bk.Classes.Count; ci++)
             {
@@ -202,9 +242,9 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 }
             }
             await db.SaveChangesAsync();
-            var studentMap = studentPairs.ToDictionary(x => x.Dto.Id, x => x.Ent.Id);
+            studentMap = studentPairs.ToDictionary(x => x.Dto.Id, x => x.Ent.Id);
 
-            // ── Modules (1 SaveChanges) ───────────────────────────────────────
+            // ── Modules ───────────────────────────────────────────────────────
             var modulePairs = new List<(ModuleBackupDto Dto, Module Ent)>();
             for (int ci = 0; ci < bk.Classes.Count; ci++)
             {
@@ -223,14 +263,14 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             await db.SaveChangesAsync();
             var moduleMap = modulePairs.ToDictionary(x => x.Dto.Id, x => x.Ent.Id);
 
-            // ── Exclusions (1 SaveChanges) ────────────────────────────────────
+            // ── Exclusions ────────────────────────────────────────────────────
             foreach (var (mDto, mEnt) in modulePairs)
                 foreach (var exclId in mDto.ExcludedStudentIds)
                     if (studentMap.TryGetValue(exclId, out var newStId))
                         db.ModuleExclusions.Add(new ModuleExclusion { ModuleId = mEnt.Id, StudentId = newStId });
             await db.SaveChangesAsync();
 
-            // ── Activities (1 SaveChanges) ────────────────────────────────────
+            // ── Activities ────────────────────────────────────────────────────
             var actPairs = new List<(ActivityBackupDto Dto, Activity Ent)>();
             foreach (var a in bk.Activities)
             {
@@ -247,7 +287,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             }
             await db.SaveChangesAsync();
 
-            // ── Activity Criteria (1 SaveChanges) ────────────────────────────
+            // ── Activity Criteria ─────────────────────────────────────────────
             foreach (var (aDto, actEnt) in actPairs)
                 if (aDto.Criteria is { Count: > 0 })
                     foreach (var c in aDto.Criteria)
@@ -261,7 +301,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                         });
             await db.SaveChangesAsync();
 
-            // ── Groups (1 SaveChanges) ────────────────────────────────────────
+            // ── Groups ────────────────────────────────────────────────────────
             var groupPairs = new List<(GroupBackupDto Dto, Group Ent)>();
             foreach (var (aDto, actEnt) in actPairs)
                 foreach (var g in aDto.Groups)
@@ -272,14 +312,14 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 }
             await db.SaveChangesAsync();
 
-            // ── Group Members (1 SaveChanges) ─────────────────────────────────
+            // ── Group Members ─────────────────────────────────────────────────
             foreach (var (gDto, gEnt) in groupPairs)
                 foreach (var sid in gDto.StudentIds)
                     if (studentMap.TryGetValue(sid, out var newSid))
                         db.GroupMembers.Add(new GroupMember { GroupId = gEnt.Id, StudentId = newSid });
             await db.SaveChangesAsync();
 
-            // ── Evaluations (1 SaveChanges) ───────────────────────────────────
+            // ── Evaluations ───────────────────────────────────────────────────
             var evalPairs = new List<(Evaluation Ent, Dictionary<string, double> Scores)>();
             foreach (var (aDto, actEnt) in actPairs)
                 foreach (var ev in aDto.Evaluations)
@@ -296,14 +336,14 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 }
             await db.SaveChangesAsync();
 
-            // ── Evaluation Scores (1 SaveChanges) ─────────────────────────────
+            // ── Evaluation Scores ─────────────────────────────────────────────
             foreach (var (evEnt, scores) in evalPairs)
                 foreach (var (key, score) in scores)
                     db.EvaluationScores.Add(new EvaluationScore
                         { EvaluationId = evEnt.Id, CriteriaKey = key, Score = score });
             await db.SaveChangesAsync();
 
-            // ── Professor Notes (1 SaveChanges) ───────────────────────────────
+            // ── Professor Notes ───────────────────────────────────────────────
             foreach (var (aDto, actEnt) in actPairs)
                 if (aDto.Notes is { Count: > 0 })
                     foreach (var n in aDto.Notes)
@@ -319,17 +359,59 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
 
             await tx.CommitAsync();
 
-            return new ImportResult(true, null,
+            var result = new ImportResult(true, null,
                 bk.Professors.Count, bk.Classes.Count,
                 bk.Classes.Sum(c => c.Students.Count),
                 bk.Classes.Sum(c => c.Modules.Count),
                 bk.Activities.Count, evalPairs.Count);
+
+            // ── Fotos (fora de la transacció BD) ──────────────────────────────
+            if (photos is { Count: > 0 })
+                await RemapPhotosAsync(photos, studentMap, profMap);
+
+            return result;
         }
         catch (Exception ex)
         {
             await tx.RollbackAsync();
             logger.LogError(ex, "Error important backup");
             return new ImportResult(false, "Error intern en importar el backup. Consulta els logs del servidor.", 0, 0, 0, 0, 0, 0);
+        }
+    }
+
+    private async Task RemapPhotosAsync(
+        Dictionary<string, byte[]> photos,
+        Dictionary<int, int>       studentMap,
+        Dictionary<int, int>       profMap)
+    {
+        try
+        {
+            var alumnesDir    = Path.Combine(PhotosDir, "alumnes");
+            var professorsDir = Path.Combine(PhotosDir, "professors");
+            Directory.CreateDirectory(alumnesDir);
+            Directory.CreateDirectory(professorsDir);
+
+            foreach (var (key, data) in photos)
+            {
+                if (key.StartsWith("alumnes/") &&
+                    int.TryParse(key["alumnes/".Length..], out var oldSid) &&
+                    studentMap.TryGetValue(oldSid, out var newSid))
+                {
+                    await File.WriteAllBytesAsync(Path.Combine(alumnesDir, $"{newSid}.jpg"), data);
+                }
+                else if (key.StartsWith("professors/") &&
+                    int.TryParse(key["professors/".Length..], out var oldPid) &&
+                    profMap.TryGetValue(oldPid, out var newPid))
+                {
+                    await File.WriteAllBytesAsync(Path.Combine(professorsDir, $"{newPid}.jpg"), data);
+                }
+            }
+
+            logger.LogInformation("Fotos remapades: {Count} fitxer(s) restaurat(s)", photos.Count);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error remapant fotos del backup");
         }
     }
 
@@ -406,21 +488,23 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         if (path is null || !File.Exists(path))
             return new ImportResult(false, "Fitxer no trobat", 0, 0, 0, 0, 0, 0);
 
-        BackupDto? backup;
         if (name.EndsWith(".zip"))
         {
             var bytes = await File.ReadAllBytesAsync(path);
-            backup = FromZip(bytes);
+            var (backup, photos) = FromZipFull(bytes);
+            if (backup is null)
+                return new ImportResult(false, "Format invàlid", 0, 0, 0, 0, 0, 0);
+            return await ImportCoreAsync(backup, photos);
         }
         else
         {
-            var json = await File.ReadAllTextAsync(path);
-            backup = JsonSerializer.Deserialize<BackupDto>(json, _json);
+            // Compatibilitat amb còpies .json antigues (sense fotos)
+            var json   = await File.ReadAllTextAsync(path);
+            var backup = JsonSerializer.Deserialize<BackupDto>(json, _json);
+            if (backup is null)
+                return new ImportResult(false, "Format invàlid", 0, 0, 0, 0, 0, 0);
+            return await ImportCoreAsync(backup, null);
         }
-
-        if (backup is null)
-            return new ImportResult(false, "Format invàlid", 0, 0, 0, 0, 0, 0);
-        return await ImportAsync(backup);
     }
 
     // Evita path traversal
