@@ -140,6 +140,9 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Dash_StatActivities"] = "Activitats",
         ["Dash_StatGroups"]     = "Grups",
         ["Dash_Management"]     = "Gestió",
+        ["Dash_Statistics"]     = "Estadístiques",
+        ["Dash_System"]         = "Sistema",
+        ["Dash_Audit"]          = "Auditoria",
 
         // ── Classes ───────────────────────────────────────────────────────────
         ["Classes_Title"]          = "Gestió de classes",
@@ -899,6 +902,9 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Dash_StatActivities"] = "Actividades",
         ["Dash_StatGroups"]     = "Grupos",
         ["Dash_Management"]     = "Gestión",
+        ["Dash_Statistics"]     = "Estadísticas",
+        ["Dash_System"]         = "Sistema",
+        ["Dash_Audit"]          = "Auditoría",
 
         // ── Classes ───────────────────────────────────────────────────────────
         ["Classes_Title"]          = "Gestión de clases",
