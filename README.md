@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.20
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.22
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -58,7 +58,8 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 **Administració**
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
-- **Còpies de seguretat**: exportació/importació JSON completa (incloent criteris, notes, plantilles i contrasenyes xifrades); **backup automàtic** diari/setmanal configurable via variables d'entorn (`BACKUP_*`)
+- **Menú d'administració** a la barra de navegació (icona `AdminPanelSettings`), visible únicament als administradors; dona accés a Professors, Còpies de seguretat, Estadístiques, Sistema i Auditoria des de qualsevol pàgina
+- **Còpies de seguretat**: backup ZIP complet (dades + fotos d'alumnes i professors amb remap d'IDs automàtic en restaurar); **backup automàtic** diari/setmanal configurable via variables d'entorn (`BACKUP_*`); compatibilitat enrere amb còpies `.json` antigues
 - **Configuració del sistema** (`/admin/sistema`): selector de nivell de log (Error/Warning/Information/Debug/Trace), s'aplica immediatament a l'API i al web sense reinici i persisteix via Redis
 - **KPIs al tauler**: classes, mòduls, alumnes, activitats, obertes i grups
 - **Mode fosc** i **selector de tema de color** (6 opcions) amb preferències desades al navegador
@@ -352,6 +353,16 @@ GET  /api/criteria                                    # Llista de criteris globa
 
 ## Changelog
 
+### v2.5.22
+- **Backup complet amb fotos** — el ZIP de còpia ara inclou les fotos d'alumnes (`fotos/alumnes/*.jpg`) i professors (`fotos/professors/*.jpg`); en restaurar, `RemapPhotosAsync` reasigna cada fitxer als nous IDs auto-generats (evita fotos trencades); còpies `.json` antigues continuen restaurant-se sense fotos
+- **AuditLogs exclosos del backup** — `AdminAuditLogs` ja no s'inclouen a l'export (no té sentit restaurar-los)
+- **Fix mòduls infinits a Gestió de classes** — `@onclick` dins `TitleContent` de `MudExpansionPanel` no era fiable; substituït per `@bind-Expanded` + `@bind-Expanded:after` amb `StateHasChanged()` explícit
+- **Neteja capçalera Professors** — eliminat el botó de còpies de seguretat de `/admin/professors`; accessible des del menú admin del navbar
+
+### v2.5.21
+- **Menú d'administració al navbar** — nova icona `AdminPanelSettings` a la barra de navegació, visible únicament als administradors (entre la campana i l'avatar); desplega accés a Professors, Còpies de seguretat, Estadístiques, Sistema i Auditoria des de qualsevol pàgina
+- **Dashboard simplificat** — eliminats tots els botons i icones d'administració de la capçalera del tauler; queden únicament «Gestió de classes» i «+ Nova activitat»
+
 ### v2.5.20
 - **Neteja automàtica de logins** — `ProfessorLoginsCleanupService` (BackgroundService) elimina entrades de `ProfessorLogins` de més de 90 dies cada diumenge a les 03:00 UTC
 - **Notificacions in-app** — campana a la navbar del professor amb MudBadge; les notificacions es reben en temps real via Redis pub/sub (canal `autoco:notif:{professorId}`); esdeveniments: activitat al 100% i error de còpia de seguretat; botó «Esborrar totes»
@@ -362,8 +373,7 @@ GET  /api/criteria                                    # Llista de criteris globa
 - **Resultats visibles a l'alumne** — nou toggle «Mostrar resultats a l'alumne» a la configuració de l'activitat; quan s'activa i l'activitat és tancada, l'alumne veu la pàgina `/alumne/resultats/{id}` amb les seves mitjanes i comentaris anònims
 - **Evolució de l'alumne per mòdul** — nova pàgina `/professor/evolucio/{ClassId}/{ModuleId}` amb gràfic de línies (Chart.js) que mostra la progressió de les puntuacions d'un alumne en totes les activitats del mòdul, amb selector d'alumne i de criteri
 - **Renovació de curs** — endpoint `POST /api/admin/new-year` que duplica l'estructura de classes i mòduls per a un nou any acadèmic (sense alumnes ni activitats)
-- **Còpies de seguretat en format ZIP** — les còpies generades ara són fitxers `.zip` (compatibilitat enrere amb `.json`); inclouen DNI d'alumnes, pesos de criteris, `ShowResultsToStudents`, `OpenAt`/`CloseAt` i registre d'auditoria; exclouen `ActivityLog` i `ProfessorLogins`
-- **Dashboard professor simplificat** — els botons de gestió (classes, professors) agrupats en un bloc únic; eliminats del tauler els botons de còpies, estadístiques, sistema i auditoria
+- **Còpies de seguretat en format ZIP** — les còpies generades ara són fitxers `.zip` (compatibilitat enrere amb `.json`); inclouen DNI d'alumnes, pesos de criteris, `ShowResultsToStudents`, `OpenAt`/`CloseAt`; exclouen `ActivityLog`, `ProfessorLogins` i `AdminAuditLogs`
 
 ### v2.5.16
 - **Programació d'obertura i tancament automàtic d'activitats** — cada activitat pot tenir una data/hora d'obertura (`OpenAt`) i de tancament (`CloseAt`) opcionals; `ActivitySchedulerService` (BackgroundService) comprova cada minut i obre/tanca les activitats programades, netejant el camp usats per evitar re-disparaments; el diàleg d'edició inclou un panell expandible amb dos parells MudDatePicker+MudTimePicker; la targeta d'activitat mostra un xip «S'obrirà el…» o «Es tancarà el…» quan hi ha programació activa; `ToggleOpenAsync` neteja automàticament dates passades en canviar l'estat manualment
