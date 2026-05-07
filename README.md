@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.22
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.23
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -352,6 +352,12 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.23
+- **Fix overflow text targetes compactes** — afegit `min-width:0` i `overflow:hidden` a `.mud-card-header-content` en mode compacte per permetre l'ellipsis en flex layout; el pare `.mud-card-header-content` de MudBlazor té `flex:1` sense `min-width:0` per defecte
+- **Fix ghost drag & drop** — el ghost és ara un clon del chip sense el botó X (el qual ampliava el fantasma i desplaçava el cursor del centre); hotspot calculat sobre les dimensions reals del ghost; el ghost es crea fora del contenidor `overflow-y:auto` per evitar que alguns navegadors capturessin tot el panell
+- **Fix service worker** — `site.css`, `app.js` i `charts.js` eliminats de `STATIC_ASSETS`; la caché HTTP (ETag/Last-Modified) gestiona aquests fitxers automàticament; el `CACHE_NAME` del SW ja no cal actualitzar-lo en cada desplegament
+- **Fix combobox resultats** — `ShrinkLabel="true"` als `MudSelect` del filtre de resultats per evitar solapament de la label amb el valor seleccionat
 
 ### v2.5.22
 - **Backup complet amb fotos** — el ZIP de còpia ara inclou les fotos d'alumnes (`fotos/alumnes/*.jpg`) i professors (`fotos/professors/*.jpg`); en restaurar, `RemapPhotosAsync` reasigna cada fitxer als nous IDs auto-generats (evita fotos trencades); còpies `.json` antigues continuen restaurant-se sense fotos
