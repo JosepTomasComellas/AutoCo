@@ -246,6 +246,14 @@ public class ApiClient
     public Task<StudentOwnResultDto?> GetStudentOwnResultAsync(int activityId) =>
         GetAsync<StudentOwnResultDto>($"/api/student/results/{activityId}");
 
+    // ── Notificacions in-app ──────────────────────────────────────────────────
+
+    public Task<List<NotificationDto>?> GetNotificationsAsync() =>
+        GetAsync<List<NotificationDto>>("/api/notifications");
+
+    public Task<bool> ClearNotificationsAsync() =>
+        DeleteAsync("/api/notifications");
+
     public Task<bool> ChangeStudentPasswordAsync(string currentPassword, string newPassword) =>
         PutNoContentAsync("/api/student/password",
             new ChangeStudentPasswordRequest(currentPassword, newPassword));

@@ -16,7 +16,8 @@ public interface IEvaluationService
 }
 
 public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactory,
-    IConnectionMultiplexer redis, ILogger<EvaluationService> logger, IPhotoService photos) : IEvaluationService
+    IConnectionMultiplexer redis, ILogger<EvaluationService> logger, IPhotoService photos,
+    INotificationService notifications) : IEvaluationService
 {
     public async Task<EvaluationFormDto?> GetFormAsync(int activityId, int studentId)
     {
@@ -188,7 +189,6 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
             // ── Notificació si l'activitat és 100% completa ───────────────
             // IMPORTANT: usa un scope propi per evitar que el DbContext
             // scoped de la petició HTTP quedi disposat dins del Task.Run
-            if (email?.IsEnabled == true)
             {
                 var capturedActivityId   = activityId;
                 var capturedActivityName = activity.Name;
@@ -196,10 +196,8 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
                 {
                     try
                     {
-                        using var scope     = scopeFactory.CreateScope();
-                        var scopedDb        = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                        var scopedEmail     = scope.ServiceProvider.GetRequiredService<IEmailService>();
-                        if (!scopedEmail.IsEnabled) return;
+                        using var scope  = scopeFactory.CreateScope();
+                        var scopedDb     = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
                         var allGroupMembers = await scopedDb.GroupMembers
                             .Where(gm => gm.Group.ActivityId == capturedActivityId)
@@ -220,12 +218,23 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
                                 .Include(m => m.Class)
                                 .FirstOrDefaultAsync(m => m.Activities.Any(a => a.Id == capturedActivityId));
                             if (mod?.Professor is not null)
-                                await scopedEmail.SendActivityCompletedAsync(
-                                    mod.Professor.Email, mod.Professor.NomComplet,
-                                    capturedActivityName, mod.Class.Name, allGroupMembers.Count);
+                            {
+                                // Correu (si SMTP configurat)
+                                var scopedEmail = scope.ServiceProvider.GetRequiredService<IEmailService>();
+                                if (email?.IsEnabled == true && scopedEmail.IsEnabled)
+                                    await scopedEmail.SendActivityCompletedAsync(
+                                        mod.Professor.Email, mod.Professor.NomComplet,
+                                        capturedActivityName, mod.Class.Name, allGroupMembers.Count);
+
+                                // Notificació in-app (sempre)
+                                await notifications.PushAsync(
+                                    mod.Professor.Id, "group_complete",
+                                    $"Activitat «{capturedActivityName}» al 100% — tots els alumnes han avaluat.",
+                                    $"/professor/resultats/{capturedActivityId}");
+                            }
                         }
                     }
-                    catch (Exception ex) { logger.LogWarning(ex, "Error enviant notificació de compleció (activitat {Id})", capturedActivityId); }
+                    catch (Exception ex) { logger.LogWarning(ex, "Error en notificació de compleció (activitat {Id})", capturedActivityId); }
                 });
             }
 

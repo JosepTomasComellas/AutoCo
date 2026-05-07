@@ -310,3 +310,6 @@ public record SetLogLevelRequest(string Level);
 
 // ─── Auditoria d'accions admin ────────────────────────────────────────────────
 public record AdminAuditLogDto(int Id, string Action, string? ActorName, string? Details, DateTime CreatedAt);
+
+// ─── Notificacions in-app ─────────────────────────────────────────────────────
+public record NotificationDto(int ProfessorId, string Type, string Message, string? Href, DateTime CreatedAt);

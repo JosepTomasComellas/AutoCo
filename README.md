@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.19
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.20
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -351,6 +351,11 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.20
+- **Neteja automàtica de logins** — `ProfessorLoginsCleanupService` (BackgroundService) elimina entrades de `ProfessorLogins` de més de 90 dies cada diumenge a les 03:00 UTC
+- **Notificacions in-app** — campana a la navbar del professor amb MudBadge; les notificacions es reben en temps real via Redis pub/sub (canal `autoco:notif:{professorId}`); esdeveniments: activitat al 100% i error de còpia de seguretat; botó «Esborrar totes»
+- **Filtre de grup a l'informe** — selector de grup a la barra de control de l'informe d'activitat quan hi ha més d'un grup; filtra la taula resum, les estadístiques per criteri i el detall individual
 
 ### v2.5.19
 - **Pesos de criteris** — cada criteri d'avaluació té un pes (enter ≥ 1); les mitjanes globals es calculen com a mitjana ponderada; el diàleg de criteris inclou un camp de pes per criteri

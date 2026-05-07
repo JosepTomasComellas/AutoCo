@@ -6,6 +6,7 @@
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> Loc
 @inject ApiClient Api
+@inject NotificationBroadcastService NotifBroadcast
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
@@ -38,6 +39,43 @@
                 </MudText>
                 @if (UserState.IsProfessor)
                 {
+                    <!-- Campana de notificacions -->
+                    <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                             Dense="true" MaxHeight="400">
+                        <ActivatorContent>
+                            <MudBadge Content="@(_notifs.Count > 0 ? (object)_notifs.Count : null)"
+                                      Color="Color.Error" Overlap="true" Dot="@(_notifs.Count == 0)">
+                                <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                                               Color="Color.Inherit" title="@Loc["Nav_Notifications"]" />
+                            </MudBadge>
+                        </ActivatorContent>
+                        <ChildContent>
+                            @if (!_notifs.Any())
+                            {
+                                <MudMenuItem Disabled="true">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Nav_NoNotifications"]</MudText>
+                                </MudMenuItem>
+                            }
+                            else
+                            {
+                                @foreach (var n in _notifs)
+                                {
+                                    <MudMenuItem Href="@n.Href" Style="max-width:320px;white-space:normal">
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body2">@n.Message</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @n.CreatedAt.ToLocalTime().ToString("dd/MM HH:mm")
+                                            </MudText>
+                                        </MudStack>
+                                    </MudMenuItem>
+                                }
+                                <MudDivider />
+                                <MudMenuItem OnClick="ClearNotificationsAsync">
+                                    <MudText Typo="Typo.caption" Color="Color.Error">@Loc["Nav_ClearNotifications"]</MudText>
+                                </MudMenuItem>
+                            }
+                        </ChildContent>
+                    </MudMenu>
                     <MudTooltip Text="@Loc["Nav_MyProfile"]" Placement="Placement.Bottom">
                         <MudIconButton Href="/professor/perfil" Style="padding:4px">
                             @if (UserState.FotoUrl is not null)
@@ -139,6 +177,10 @@
     private bool   _darkMode       = false;
     private string _primaryColor   = "#CC0000";
 
+    // Notificacions in-app
+    private List<NotificationDto> _notifs = [];
+    private Func<NotificationDto, Task>? _notifHandler;
+
     private static readonly (string Name, string Hex)[] _colorOptions =
     [
         ("Vermell (per defecte)", "#CC0000"),
@@ -161,6 +203,8 @@
     public void Dispose()
     {
         UserState.OnSessionExpired -= HandleSessionExpired;
+        if (_notifHandler is not null && UserState.UserId.HasValue)
+            NotifBroadcast.Unsubscribe(UserState.UserId.Value, _notifHandler);
     }
 
     private async void HandleSessionExpired()
@@ -278,6 +322,22 @@
         ApplyColor(_primaryColor);
 
         _sessionChecked = true;
+
+        // Carregar notificacions in-app si és professor
+        if (UserState.IsProfessor && UserState.UserId.HasValue)
+        {
+            var pid = UserState.UserId.Value;
+            _notifs = await Api.GetNotificationsAsync() ?? [];
+
+            _notifHandler = async dto =>
+            {
+                _notifs.Insert(0, dto);
+                if (_notifs.Count > 20) _notifs = _notifs.Take(20).ToList();
+                await InvokeAsync(StateHasChanged);
+            };
+            NotifBroadcast.Subscribe(pid, _notifHandler);
+        }
+
         StateHasChanged();
     }
 
@@ -326,5 +386,11 @@
         try { await LocalStorage.DeleteAsync("autoco_session"); } catch { }
         UserState.Logout();
         Nav.NavigateTo("/", forceLoad: false);
+    }
+
+    private async Task ClearNotificationsAsync()
+    {
+        await Api.ClearNotificationsAsync();
+        _notifs.Clear();
     }
 }

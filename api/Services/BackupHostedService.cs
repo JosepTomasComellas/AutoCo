@@ -1,9 +1,12 @@
+using Microsoft.EntityFrameworkCore;
+
 namespace AutoCo.Api.Services;
 
 public class BackupHostedService(
     IServiceProvider sp,
     IConfiguration   cfg,
-    ILogger<BackupHostedService> logger) : BackgroundService
+    ILogger<BackupHostedService> logger,
+    INotificationService notifications) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
@@ -72,6 +75,24 @@ public class BackupHostedService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error en el backup automàtic {Type}", type);
+            // Notificar tots els admins
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope  = sp.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<Data.AppDbContext>();
+                    var adminIds = await db.Professors
+                        .Where(p => p.IsAdmin && p.IsActive)
+                        .Select(p => p.Id)
+                        .ToListAsync();
+                    foreach (var adminId in adminIds)
+                        await notifications.PushAsync(adminId, "backup_error",
+                            $"Error en la còpia de seguretat automàtica ({type}).",
+                            "/admin/backup");
+                }
+                catch { }
+            });
         }
     }
 }

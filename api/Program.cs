@@ -65,6 +65,8 @@ builder.Services.AddScoped<IBackupService,     BackupService>();
 builder.Services.AddScoped<IPhotoService,      PhotoService>();
 builder.Services.AddHostedService<BackupHostedService>();
 builder.Services.AddHostedService<ActivitySchedulerService>();
+builder.Services.AddHostedService<ProfessorLoginsCleanupService>();
+builder.Services.AddSingleton<INotificationService, NotificationService>();
 
 // ── Redis (caché de resultats) ─────────────────────────────────────────────────
 var redisConn = builder.Configuration["Redis:ConnectionString"] ?? "localhost:6379";
@@ -1613,5 +1615,25 @@ app.MapGet("/api/admin/audit", async (AppDbContext db, ClaimsPrincipal user,
         .ToListAsync();
     return Results.Ok(new PagedResult<AdminAuditLogDto>(items, total, page, size));
 }).RequireAuthorization().RequireRateLimiting("admin");
+
+// ── Notificacions in-app ──────────────────────────────────────────────────────
+
+app.MapGet("/api/notifications", async (
+    INotificationService notifSvc, ClaimsPrincipal user) =>
+{
+    var professorId = GetUserId(user);
+    if (professorId == 0) return Results.Forbid();
+    var list = await notifSvc.GetAsync(professorId);
+    return Results.Ok(list);
+}).RequireAuthorization();
+
+app.MapDelete("/api/notifications", async (
+    INotificationService notifSvc, ClaimsPrincipal user) =>
+{
+    var professorId = GetUserId(user);
+    if (professorId == 0) return Results.Forbid();
+    await notifSvc.ClearAsync(professorId);
+    return Results.NoContent();
+}).RequireAuthorization();
 
 app.Run();

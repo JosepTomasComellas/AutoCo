@@ -19,6 +19,18 @@
         <MudSpacer />
         @if (_results is not null)
         {
+            @if (_results.Students.Select(s => s.GroupName).Distinct().Count() > 1)
+            {
+                <MudSelect T="string" @bind-Value="_selectedGroup" Label="@Loc["InformeAct_FilterGroup"]"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Style="min-width:160px"
+                           Clearable="true">
+                    <MudSelectItem T="string" Value='@("")'>@Loc["Dash_AllClasses"]</MudSelectItem>
+                    @foreach (var g in _results.Students.Select(s => s.GroupName).Distinct().OrderBy(g => g))
+                    {
+                        <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
+                    }
+                </MudSelect>
+            }
             <MudSwitch @bind-Value="_showDetail" Color="Color.Primary"
                        Label="@Loc["InformeAct_ShowDetail"]" Size="Size.Small" Class="mr-2" />
         }
@@ -40,10 +52,10 @@ else if (_results is null || !_results.Students.Any())
 }
 else
 {
-    var totalAlumnes = _results.Students.Count;
-    var ambCoaval    = _results.Students.Count(s => s.NumPeerEvaluators > 0);
+    var totalAlumnes = _visibleStudents.Count;
+    var ambCoaval    = _visibleStudents.Count(s => s.NumPeerEvaluators > 0);
     var pctCompletat = totalAlumnes > 0 ? (double)ambCoaval / totalAlumnes * 100 : 0;
-    var byGroup      = _results.Students.GroupBy(s => s.GroupName).OrderBy(g => g.Key);
+    var byGroup      = _visibleStudents.GroupBy(s => s.GroupName).OrderBy(g => g.Key);
 
     <div class="informe-activitat">
 
@@ -152,10 +164,10 @@ else
                 <tbody>
                     @foreach (var c in _results.Criteria)
                     {
-                        var autoVals = _results.Students
+                        var autoVals = _visibleStudents
                             .Where(s => s.SelfScores.TryGetValue(c.Key, out var v) && v.HasValue)
                             .Select(s => s.SelfScores[c.Key]!.Value).ToList();
-                        var coVals = _results.Students
+                        var coVals = _visibleStudents
                             .Where(s => s.AvgCoScores.TryGetValue(c.Key, out var v) && v.HasValue)
                             .Select(s => s.AvgCoScores[c.Key]!.Value).ToList();
                         var avgAuto = autoVals.Count > 0 ? (double?)autoVals.Average() : null;
@@ -187,7 +199,7 @@ else
         <!-- ── Detall individual per alumne (opcional) ───────────────────── -->
         @if (_showDetail)
         {
-            foreach (var s in _results.Students.OrderBy(x => x.GroupName).ThenBy(x => x.NumLlista))
+            foreach (var s in _visibleStudents.OrderBy(x => x.GroupName).ThenBy(x => x.NumLlista))
             {
                 var note = _notes.GetValueOrDefault(s.StudentId, "");
                 <div class="informe-page-break">
@@ -331,10 +343,16 @@ else
 @code {
     [Parameter] public int ActivityId { get; set; }
 
-    private ActivityResultsDto?     _results    = null;
-    private Dictionary<int, string> _notes      = [];
-    private bool                    _loading    = true;
-    private bool                    _showDetail = false;
+    private ActivityResultsDto?     _results       = null;
+    private Dictionary<int, string> _notes         = [];
+    private bool                    _loading       = true;
+    private bool                    _showDetail    = false;
+    private string                  _selectedGroup = "";
+
+    private List<StudentResultDto> _visibleStudents =>
+        string.IsNullOrEmpty(_selectedGroup)
+            ? _results?.Students ?? []
+            : _results?.Students.Where(s => s.GroupName == _selectedGroup).ToList() ?? [];
 
     protected override async Task OnInitializedAsync()
     {

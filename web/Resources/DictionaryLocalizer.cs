@@ -53,6 +53,9 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Home_Footer"]         = "Salesians de Sarrià · Dept. d'Informàtica",
 
         // ── Navegació i barra superior ─────────────────────────────────────────
+        ["Nav_Notifications"]      = "Notificacions",
+        ["Nav_NoNotifications"]    = "Cap notificació",
+        ["Nav_ClearNotifications"] = "Esborrar totes",
         ["Nav_Dashboard"]   = "Tauler",
         ["Nav_Results"]     = "Resultats",
         ["Nav_Classes"]     = "Classes",
@@ -629,6 +632,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["InformeAct_NotFound"]     = "Activitat no trobada o sense resultats.",
         ["InformeAct_BackToResults"]= "← Resultats",
         ["InformeAct_ShowDetail"]   = "Incloure detall individual",
+        ["InformeAct_FilterGroup"]  = "Filtrar per grup",
         ["InformeAct_SummaryTitle"] = "Taula resum per grup",
         ["InformeAct_CriteriaStats"]= "Estadístiques per criteri",
         ["InformeAct_DetailTitle"]  = "Detall individual per alumne",
@@ -808,6 +812,9 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Home_Footer"]         = "Salesians de Sarrià · Dept. d'Informàtica",
 
         // ── Navegació i barra superior ─────────────────────────────────────────
+        ["Nav_Notifications"]      = "Notificaciones",
+        ["Nav_NoNotifications"]    = "Sin notificaciones",
+        ["Nav_ClearNotifications"] = "Borrar todas",
         ["Nav_Dashboard"]   = "Panel",
         ["Nav_Results"]     = "Resultados",
         ["Nav_Classes"]     = "Clases",
@@ -1384,6 +1391,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["InformeAct_NotFound"]     = "Actividad no encontrada o sin resultados.",
         ["InformeAct_BackToResults"]= "← Resultados",
         ["InformeAct_ShowDetail"]   = "Incluir detalle individual",
+        ["InformeAct_FilterGroup"]  = "Filtrar por grupo",
         ["InformeAct_SummaryTitle"] = "Tabla resumen por grupo",
         ["InformeAct_CriteriaStats"]= "Estadísticas por criterio",
         ["InformeAct_DetailTitle"]  = "Detalle individual por alumno",

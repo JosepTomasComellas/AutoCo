@@ -75,6 +75,10 @@ builder.Services.AddScoped<UserStateService>();
 builder.Services.AddSingleton<ParticipationNotificationService>();
 builder.Services.AddHostedService<ParticipationRedisSubscriber>();
 
+// Notificacions in-app (Redis pub/sub → Blazor)
+builder.Services.AddSingleton<NotificationBroadcastService>();
+builder.Services.AddHostedService<NotificationRedisSubscriber>();
+
 // HTTP client cap a l'API
 builder.Services.AddHttpClient<ApiClient>(client =>
 {

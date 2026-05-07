@@ -31,7 +31,7 @@ else if (!_students.Any())
 else
 {
     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4" Wrap="Wrap.Wrap">
-        <MudSelect @bind-Value="_selectedStudentId" Label="@Loc["Evolution_SelectStudent"]"
+        <MudSelect Value="_selectedStudentId" Label="@Loc["Evolution_SelectStudent"]"
                    Variant="Variant.Outlined" Style="min-width:260px"
                    T="int" ValueChanged="OnStudentChangedAsync">
             @foreach (var s in _students)
@@ -41,7 +41,7 @@ else
         </MudSelect>
         @if (_evolution is not null && _evolution.CriteriaKeys.Any())
         {
-            <MudSelect @bind-Value="_selectedCriterion" Label="@Loc["Evolution_SelectCriterion"]"
+            <MudSelect Value="_selectedCriterion" Label="@Loc["Evolution_SelectCriterion"]"
                        Variant="Variant.Outlined" Style="min-width:200px"
                        T="string" ValueChanged="RedrawAsync">
                 <MudSelectItem Value="@("__all__")">@Loc["Evolution_AllCriteria"]</MudSelectItem>
