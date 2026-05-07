@@ -1,17 +1,18 @@
 // AutoCo Service Worker — v2.5.23
 // Blazor Server requereix connexió al servidor, però podem:
 //   1. Instal·lar l'app com a PWA (standalone)
-//   2. Cachear assets estàtics per càrrega més ràpida
-//   3. Mostrar pàgina offline quan no hi ha xarxa
-// IMPORTANT: Actualitzar CACHE_NAME en cada desplegament per forçar neteja de caché vella.
+//   2. Mostrar pàgina offline quan no hi ha xarxa
+//
+// NOTA: site.css / app.js / charts.js NO es cachen aquí.
+// Blazor Server necessita xarxa per funcionar; aquests fitxers els gestiona
+// la caché HTTP normal (ETag/Last-Modified), que s'invalida automàticament.
+// Només es cachen recursos necessaris per mostrar la pàgina d'error offline.
+// IMPORTANT: Actualitzar CACHE_NAME quan canviïn els STATIC_ASSETS (rarament).
 
 const CACHE_NAME = 'autoco-v2.5.23';
 
 const STATIC_ASSETS = [
     '/offline.html',
-    '/css/site.css',
-    '/js/app.js',
-    '/js/charts.js',
     '/favicon.ico',
     '/images/logo2.png',
 ];

@@ -43,7 +43,7 @@ AutoCo/
 │   │   ├── css/site.css        # Estils globals (DnD, dark mode, print, informe PDF)
 │   │   ├── js/                 # app.js (utilitats JS), charts.js (Chart.js interop)
 │   │   ├── manifest.json       # PWA manifest (theme_color #1e293b)
-│   │   ├── service-worker.js   # PWA: cache-first assets, pàgina offline
+│   │   ├── service-worker.js   # PWA: caché offline.html+imatges; CSS/JS via HTTP cache (ETag)
 │   │   └── offline.html        # Pàgina offline en català
 │   ├── Program.cs              # Configuració (Redis, SignalR, MudBlazor, i18n, DataProtection)
 │   └── Dockerfile
@@ -203,3 +203,4 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Rate limiting: SlidingWindow `auth` (5/min), SlidingWindow `remind` (2/min, mass-send), FixedWindow `admin` (20/min); `RejectionStatusCode = 429`
 - Compressió fotos: `SixLabors.ImageSharp` a l'API; `SaveImageAsync` redimensiona a 400×400 crop centrat, JPEG Q85; valida content-type (jpeg/png/webp/gif)
 - Audit log: model `AdminAuditLog` (sense FK, preservat si s'esborren altres entitats); helper `AuditAsync()` a `Program.cs`; `GET /api/admin/audit` paginat; pàgina `/admin/auditoria` amb colors per tipus d'acció
+- Service Worker PWA (`service-worker.js`): **NO caches `site.css`/`app.js`/`charts.js`** — la caché HTTP (ETag) ja ho gestiona i s'invalida automàticament. Només cacha `offline.html` i imatges. `CACHE_NAME` cal actualitzar-lo ÚNICAMENT si canvien els `STATIC_ASSETS` (rarament)
