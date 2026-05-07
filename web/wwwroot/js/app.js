@@ -9,6 +9,14 @@ document.addEventListener('dragover', function (e) {
     }
 });
 
+// Drag ghost: mostra només el chip arrossegat, no tot el grup
+document.addEventListener('dragstart', function (e) {
+    const chip = e.target.closest('.dnd-chip');
+    if (chip) {
+        e.dataTransfer.setDragImage(chip, chip.offsetWidth / 2, chip.offsetHeight / 2);
+    }
+}, true);
+
 // ── Canvi de cultura (i18n) ───────────────────────────────────────────────────
 // Escriu la cookie .AspNetCore.Culture i recarrega la pàgina per aplicar-la.
 window.setCulture = function (culture) {

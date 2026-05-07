@@ -11,16 +11,26 @@
          Class="@($"activity-card{(Act.IsOpen ? "" : " activity-card--closed")}{(Compact ? " activity-card--compact" : "")}")">
     <MudCardHeader Class="@(Compact ? "pb-1" : "")">
         <CardHeaderContent>
-            <MudText Typo="@(Compact ? Typo.body1 : Typo.h6)"
-                     Style="@($"font-weight:600;{(Act.IsOpen ? "" : "color:var(--mud-palette-text-secondary)")}{(Compact ? ";overflow:hidden;text-overflow:ellipsis;white-space:nowrap" : "")}")"
-                     title="@Act.Name">
-                @Act.Name
-            </MudText>
-            <MudText Typo="Typo.caption" Color="Color.Secondary"
-                     Style="@(Compact ? "overflow:hidden;text-overflow:ellipsis;white-space:nowrap" : "")"
-                     title="@($"{Act.ModuleCode} – {Act.ModuleName} · {Act.ClassName}")">
-                @Act.ModuleCode – @Act.ModuleName · @Act.ClassName
-            </MudText>
+            @if (Compact)
+            {
+                <div style="overflow:hidden;min-width:0">
+                    <div style="font-weight:600;font-size:.875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mud-palette-text-secondary)"
+                         title="@Act.Name">@Act.Name</div>
+                    <div style="font-size:.75rem;color:var(--mud-palette-text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                         title="@($"{Act.ModuleCode} – {Act.ModuleName} · {Act.ClassName}")">
+                        @Act.ModuleCode – @Act.ModuleName · @Act.ClassName
+                    </div>
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.h6" Style="@(Act.IsOpen ? "font-weight:600" : "font-weight:600;color:var(--mud-palette-text-secondary)")">
+                    @Act.Name
+                </MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @Act.ModuleCode – @Act.ModuleName · @Act.ClassName · @Act.ProfessorName
+                </MudText>
+            }
         </CardHeaderContent>
     </MudCardHeader>
     @if (!Compact && Act.Description is not null)

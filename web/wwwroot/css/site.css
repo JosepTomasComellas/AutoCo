@@ -90,13 +90,6 @@ html { scroll-behavior: smooth; }
     border: 1px dashed #cbd5e1;
     border-radius: 4px;
 }
-/* ── Targetes d'activitat ────────────────────────────────────────────────── */
-/* Mode compacte: el CardHeaderContent és un fill flex que ha de poder encongir */
-.activity-card--compact .mud-card-header-content {
-    min-width: 0;
-    overflow: hidden;
-}
-
 /* Durant un drag, tots els fills de les zones perden pointer-events
    perquè els events dragover/drop arribin directament a la zona pare */
 .is-dragging .dnd-zone * {
