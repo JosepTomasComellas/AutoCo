@@ -89,10 +89,10 @@
                 @foreach (var c in _classes)
                 {
                     <MudCard Elevation="1" Style="border-left:3px solid var(--mud-palette-primary)">
-                        <MudExpansionPanel>
+                        <MudExpansionPanel @bind-Expanded="@_expanded[c.Id]"
+                                           @bind-Expanded:after="@(async () => await EnsureModulesLoaded(c))">
                             <TitleContent>
-                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%"
-                                          @onclick="() => EnsureModulesLoaded(c)">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%">
                                     <MudAvatar Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Medium" Style="flex-shrink:0">
                                         <MudIcon Icon="@Icons.Material.Filled.Class" />
                                     </MudAvatar>
@@ -220,14 +220,17 @@
     private bool _loading = true;
     private bool _saving  = false;
 
-    // Caché de mòduls per classe (càrrega lazy al primer clic)
+    // Caché de mòduls per classe (càrrega lazy al desplegar)
     private Dictionary<int, List<ModuleDto>> _modulesCache = new();
+    private Dictionary<int, bool>            _expanded     = new();
 
     private async Task EnsureModulesLoaded(ClassDto c)
     {
+        if (!_expanded.TryGetValue(c.Id, out var exp) || !exp) return;
         if (_modulesCache.ContainsKey(c.Id)) return;
         Api.SetToken(UserState.Token!);
         _modulesCache[c.Id] = await Api.GetModulesAsync(c.Id) ?? [];
+        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()
@@ -235,6 +238,7 @@
         if (!UserState.IsProfessor) return;
         Api.SetToken(UserState.Token!);
         _classes = await Api.GetClassesAsync() ?? [];
+        foreach (var c in _classes) _expanded[c.Id] = false;
         _loading = false;
     }
 
