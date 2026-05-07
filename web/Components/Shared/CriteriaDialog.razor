@@ -21,10 +21,13 @@
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
                     <MudTextField @bind-Value="_items[idx].Key" Label="@Loc["Criteria_KeyLabel"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  Style="max-width:130px" Disabled="@(_items[idx].IsGlobal)"
+                                  Style="max-width:110px" Disabled="@(_items[idx].IsGlobal)"
                                   HelperText="@(_items[idx].IsGlobal ? Loc["Criteria_GlobalHint"].Value : "")" />
                     <MudTextField @bind-Value="_items[idx].Label" Label="@Loc["Criteria_EtiquetaLabel"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1" />
+                    <MudNumericField @bind-Value="_items[idx].Weight" Label="@Loc["Criteria_WeightLabel"]"
+                                     Variant="Variant.Outlined" Margin="Margin.Dense"
+                                     Style="max-width:70px" Min="1" Max="100" />
                     <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
                                    Disabled="@(idx == 0)"
                                    OnClick="() => MoveUp(idx)" />
@@ -64,6 +67,7 @@
     {
         public string Key      { get; set; } = "";
         public string Label    { get; set; } = "";
+        public int    Weight   { get; set; } = 1;
         public bool   IsGlobal { get; set; }  // claus originals → no canviem la key per retrocompat.
     }
 
@@ -75,13 +79,14 @@
         {
             Key      = c.Key,
             Label    = c.Label,
+            Weight   = c.Weight,
             IsGlobal = false
         }).ToList();
         _loading = false;
     }
 
     private void AddItem() =>
-        _items.Add(new CriterionEntry { Key = $"criteri{_items.Count + 1}", Label = Loc["Criteria_NewCriterion"].Value });
+        _items.Add(new CriterionEntry { Key = $"criteri{_items.Count + 1}", Label = Loc["Criteria_NewCriterion"].Value, Weight = 1 });
 
     private void Remove(int i) { if (_items.Count > 1) _items.RemoveAt(i); }
 
@@ -110,7 +115,7 @@
         _saving = true;
         Api.SetToken(UserState.Token!);
         var req = new SaveCriteriaRequest(_items.Select(x =>
-            new CriterionItem(x.Key.Trim().ToLowerInvariant(), x.Label.Trim())).ToList());
+            new CriterionItem(x.Key.Trim().ToLowerInvariant(), x.Label.Trim(), Math.Max(1, x.Weight))).ToList());
         var result = await Api.SaveActivityCriteriaAsync(ActivityId, req);
         _saving = false;
 

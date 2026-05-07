@@ -8,4 +8,5 @@ public class ActivityCriterion
     public string   Key        { get; set; } = "";
     public string   Label      { get; set; } = "";
     public int      OrderIndex { get; set; }
+    public int      Weight     { get; set; } = 1;
 }

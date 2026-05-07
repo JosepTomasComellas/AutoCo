@@ -8,6 +8,9 @@
         <MudTextField @bind-Value="_desc" Label="@Loc["DupDialog_Description"]" Variant="Variant.Outlined"
                       Lines="3" Class="mb-3" />
 
+        <MudSwitch @bind-Value="_showResults" Color="Color.Info"
+                   Label="@Loc["EditAct_ShowResults"]" Class="mb-3" />
+
         <MudExpansionPanel Text="@Loc["EditAct_Schedule"]" Icon="@Icons.Material.Filled.Schedule"
                            @bind-Expanded="_showSchedule">
             <MudGrid Spacing="2" Class="mt-1">
@@ -43,10 +46,11 @@
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
-    [Parameter] public string    NomActual     { get; set; } = "";
-    [Parameter] public string?   DescActual    { get; set; }
-    [Parameter] public DateTime? OpenAtActual  { get; set; }
-    [Parameter] public DateTime? CloseAtActual { get; set; }
+    [Parameter] public string    NomActual                 { get; set; } = "";
+    [Parameter] public string?   DescActual                { get; set; }
+    [Parameter] public DateTime? OpenAtActual              { get; set; }
+    [Parameter] public DateTime? CloseAtActual             { get; set; }
+    [Parameter] public bool      ShowResultsActual         { get; set; }
 
     private string    _nom  = "";
     private string?   _desc;
@@ -55,6 +59,7 @@
     private DateTime? _closeDate;
     private TimeSpan? _closeTime;
     private bool      _showSchedule;
+    private bool      _showResults;
 
     protected override void OnParametersSet()
     {
@@ -70,6 +75,7 @@
         _closeTime  = closeLocal?.TimeOfDay;
 
         _showSchedule = OpenAtActual.HasValue || CloseAtActual.HasValue;
+        _showResults  = ShowResultsActual;
     }
 
     private void Cancel() => MudDialog.Cancel();
@@ -83,6 +89,7 @@
             _nom.Trim(),
             string.IsNullOrWhiteSpace(_desc) ? null : _desc.Trim(),
             openAt,
-            closeAt)));
+            closeAt,
+            _showResults)));
     }
 }

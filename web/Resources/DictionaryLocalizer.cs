@@ -136,6 +136,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Dash_StatStudents"]   = "Alumnes",
         ["Dash_StatActivities"] = "Activitats",
         ["Dash_StatGroups"]     = "Grups",
+        ["Dash_Management"]     = "Gestió",
 
         // ── Classes ───────────────────────────────────────────────────────────
         ["Classes_Title"]          = "Gestió de classes",
@@ -191,6 +192,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Moduls_SaveBtn"]          = "Guardar",
         ["Moduls_IncludedMsg"]      = "{0} inclòs al mòdul.",
         ["Moduls_ExcludedMsg"]      = "{0} exclòs del mòdul.",
+        ["Moduls_Evolution"]        = "Evolució de l'alumne",
 
         // ── Nova Activitat ────────────────────────────────────────────────────
         ["NewAct_Title"]          = "Nova activitat",
@@ -464,6 +466,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["EditAct_OpenTime"]      = "Hora d'obertura",
         ["EditAct_CloseDate"]     = "Data de tancament",
         ["EditAct_CloseTime"]     = "Hora de tancament",
+        ["EditAct_ShowResults"]   = "Mostrar resultats a l'alumne (quan estigui tancada)",
         ["Card_DupCrossTitle"]   = "Duplicar a altra classe",
 
         // ── Dashboard alumne ──────────────────────────────────────────────────
@@ -484,6 +487,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Student_ChangePassword"] = "Canviar contrasenya",
         ["Student_PwdMinLength"]   = "Mínim 6 caràcters",
         ["Student_PwdChanged"]     = "Contrasenya actualitzada correctament.",
+        ["Student_MyResults"]      = "Els meus resultats",
 
         // ── Avaluació alumne ──────────────────────────────────────────────────
         ["Eval_Back"]          = "Tornar",
@@ -723,6 +727,27 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Criteria_UniqueKeys"]     = "Les claus han de ser úniques.",
         ["Criteria_Saved"]          = "Criteris desats correctament.",
         ["Criteria_SaveError"]      = "Error en desar els criteris.",
+        ["Criteria_WeightLabel"]    = "Pes",
+
+        // ── Resultats propis alumne ───────────────────────────────────────────
+        ["MyResults_Title"]         = "Els meus resultats",
+        ["MyResults_NotAvailable"]  = "Els resultats d'aquesta activitat no estan disponibles.",
+        ["MyResults_CoAvg"]         = "Mitjana coavaluació",
+        ["MyResults_SelfAvg"]       = "Mitjana autoavaluació",
+        ["MyResults_ByCriterion"]   = "Detall per criteri",
+        ["MyResults_Criterion"]     = "Criteri",
+        ["MyResults_Weight"]        = "Pes",
+        ["MyResults_SelfScore"]     = "Autoavaluació",
+        ["MyResults_CoScore"]       = "Coavaluació",
+        ["MyResults_Comments"]      = "Comentaris rebuts",
+
+        // ── Evolució alumne ───────────────────────────────────────────────────
+        ["Evolution_Title"]         = "Evolució de l'alumne",
+        ["Evolution_NoStudents"]    = "No hi ha alumnes en aquest mòdul.",
+        ["Evolution_SelectStudent"] = "Selecciona un alumne",
+        ["Evolution_SelectCriterion"] = "Criteri",
+        ["Evolution_AllCriteria"]   = "Tots els criteris",
+        ["Evolution_NoData"]        = "Aquest alumne encara no té avaluacions en aquest mòdul.",
 
         // ── Diàleg Gràfica ────────────────────────────────────────────────────
         ["ChartDialog_NoData"]      = "No hi ha dades d'avaluació.",
@@ -866,6 +891,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Dash_StatStudents"]   = "Alumnos",
         ["Dash_StatActivities"] = "Actividades",
         ["Dash_StatGroups"]     = "Grupos",
+        ["Dash_Management"]     = "Gestión",
 
         // ── Classes ───────────────────────────────────────────────────────────
         ["Classes_Title"]          = "Gestión de clases",
@@ -921,6 +947,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Moduls_SaveBtn"]          = "Guardar",
         ["Moduls_IncludedMsg"]      = "{0} incluido en el módulo.",
         ["Moduls_ExcludedMsg"]      = "{0} excluido del módulo.",
+        ["Moduls_Evolution"]        = "Evolución del alumno",
 
         // ── Nova Activitat ────────────────────────────────────────────────────
         ["NewAct_Title"]         = "Nueva actividad",
@@ -1194,6 +1221,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["EditAct_OpenTime"]      = "Hora de apertura",
         ["EditAct_CloseDate"]     = "Fecha de cierre",
         ["EditAct_CloseTime"]     = "Hora de cierre",
+        ["EditAct_ShowResults"]   = "Mostrar resultados al alumno (cuando esté cerrada)",
         ["Card_DupCrossTitle"]   = "Duplicar a otra clase",
 
         // ── Dashboard alumne ──────────────────────────────────────────────────
@@ -1214,6 +1242,7 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Student_ChangePassword"] = "Cambiar contraseña",
         ["Student_PwdMinLength"]   = "Mínimo 6 caracteres",
         ["Student_PwdChanged"]     = "Contraseña actualizada correctamente.",
+        ["Student_MyResults"]      = "Mis resultados",
 
         // ── Avaluació alumne ──────────────────────────────────────────────────
         ["Eval_Back"]          = "Volver",
@@ -1453,6 +1482,27 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Criteria_UniqueKeys"]     = "Las claves deben ser únicas.",
         ["Criteria_Saved"]          = "Criterios guardados correctamente.",
         ["Criteria_SaveError"]      = "Error al guardar los criterios.",
+        ["Criteria_WeightLabel"]    = "Peso",
+
+        // ── Resultados propios alumno ─────────────────────────────────────────
+        ["MyResults_Title"]         = "Mis resultados",
+        ["MyResults_NotAvailable"]  = "Los resultados de esta actividad no están disponibles.",
+        ["MyResults_CoAvg"]         = "Media coevaluación",
+        ["MyResults_SelfAvg"]       = "Media autoevaluación",
+        ["MyResults_ByCriterion"]   = "Detalle por criterio",
+        ["MyResults_Criterion"]     = "Criterio",
+        ["MyResults_Weight"]        = "Peso",
+        ["MyResults_SelfScore"]     = "Autoevaluación",
+        ["MyResults_CoScore"]       = "Coevaluación",
+        ["MyResults_Comments"]      = "Comentarios recibidos",
+
+        // ── Evolución alumno ──────────────────────────────────────────────────
+        ["Evolution_Title"]         = "Evolución del alumno",
+        ["Evolution_NoStudents"]    = "No hay alumnos en este módulo.",
+        ["Evolution_SelectStudent"] = "Selecciona un alumno",
+        ["Evolution_SelectCriterion"] = "Criterio",
+        ["Evolution_AllCriteria"]   = "Todos los criterios",
+        ["Evolution_NoData"]        = "Este alumno todavía no tiene evaluaciones en este módulo.",
 
         // ── Diàleg Gràfica ────────────────────────────────────────────────────
         ["ChartDialog_NoData"]      = "No hay datos de evaluación.",

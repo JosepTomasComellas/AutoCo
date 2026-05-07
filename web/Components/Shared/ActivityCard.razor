@@ -300,19 +300,20 @@
     {
         var parameters = new DialogParameters<EditarActivitatDialog>
         {
-            { d => d.NomActual,     Act.Name },
-            { d => d.DescActual,    Act.Description },
-            { d => d.OpenAtActual,  Act.OpenAt },
-            { d => d.CloseAtActual, Act.CloseAt }
+            { d => d.NomActual,         Act.Name },
+            { d => d.DescActual,        Act.Description },
+            { d => d.OpenAtActual,      Act.OpenAt },
+            { d => d.CloseAtActual,     Act.CloseAt },
+            { d => d.ShowResultsActual, Act.ShowResultsToStudents }
         };
         var opts   = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
         var dialog = await Dialog.ShowAsync<EditarActivitatDialog>(Loc["Card_EditDialogTitle"].Value, parameters, opts);
         var result = await dialog.Result;
         if (result is null || result.Canceled) return;
 
-        var (nom, desc, openAt, closeAt) = ((string, string?, DateTime?, DateTime?))result.Data!;
+        var (nom, desc, openAt, closeAt, showResults) = ((string, string?, DateTime?, DateTime?, bool))result.Data!;
         Api.SetToken(UserState.Token!);
-        var updated = await Api.UpdateActivityAsync(Act.Id, new UpdateActivityRequest(nom, desc, openAt, closeAt));
+        var updated = await Api.UpdateActivityAsync(Act.Id, new UpdateActivityRequest(nom, desc, openAt, closeAt, showResults));
         if (updated is not null)
         {
             Snackbar.Add(Loc["Card_Updated"].Value, Severity.Success);

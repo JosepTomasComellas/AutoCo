@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.18
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.19
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -351,6 +351,14 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.5.19
+- **Pesos de criteris** — cada criteri d'avaluació té un pes (enter ≥ 1); les mitjanes globals es calculen com a mitjana ponderada; el diàleg de criteris inclou un camp de pes per criteri
+- **Resultats visibles a l'alumne** — nou toggle «Mostrar resultats a l'alumne» a la configuració de l'activitat; quan s'activa i l'activitat és tancada, l'alumne veu la pàgina `/alumne/resultats/{id}` amb les seves mitjanes i comentaris anònims
+- **Evolució de l'alumne per mòdul** — nova pàgina `/professor/evolucio/{ClassId}/{ModuleId}` amb gràfic de línies (Chart.js) que mostra la progressió de les puntuacions d'un alumne en totes les activitats del mòdul, amb selector d'alumne i de criteri
+- **Renovació de curs** — endpoint `POST /api/admin/new-year` que duplica l'estructura de classes i mòduls per a un nou any acadèmic (sense alumnes ni activitats)
+- **Còpies de seguretat en format ZIP** — les còpies generades ara són fitxers `.zip` (compatibilitat enrere amb `.json`); inclouen DNI d'alumnes, pesos de criteris, `ShowResultsToStudents`, `OpenAt`/`CloseAt` i registre d'auditoria; exclouen `ActivityLog` i `ProfessorLogins`
+- **Dashboard professor simplificat** — els botons de gestió (classes, professors) agrupats en un bloc únic; eliminats del tauler els botons de còpies, estadístiques, sistema i auditoria
 
 ### v2.5.16
 - **Programació d'obertura i tancament automàtic d'activitats** — cada activitat pot tenir una data/hora d'obertura (`OpenAt`) i de tancament (`CloseAt`) opcionals; `ActivitySchedulerService` (BackgroundService) comprova cada minut i obre/tanca les activitats programades, netejant el camp usats per evitar re-disparaments; el diàleg d'edició inclou un panell expandible amb dos parells MudDatePicker+MudTimePicker; la targeta d'activitat mostra un xip «S'obrirà el…» o «Es tancarà el…» quan hi ha programació activa; `ToggleOpenAsync` neteja automàticament dates passades en canviar l'estat manualment

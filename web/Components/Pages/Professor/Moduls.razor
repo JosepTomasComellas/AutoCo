@@ -103,6 +103,9 @@
                                    OnClick="() => ToggleExclusionPanel(m.Id, m.ClassId)">
                             @Loc["Moduls_Exclusions"]
                         </MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.ShowChart" Size="Size.Small"
+                                       Color="Color.Info" title="@Loc["Moduls_Evolution"]"
+                                       Href="@($"/professor/evolucio/{ClassId}/{m.Id}")" />
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
                                        Color="Color.Default" title="@Loc["Action_Edit"]"
                                        OnClick="() => StartEdit(m)" />

@@ -127,10 +127,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
                 (isAdmin || a.Module.ProfessorId == professorId));
         if (a is null) return null;
 
-        a.Name        = req.Name.Trim();
-        a.Description = req.Description?.Trim();
-        a.OpenAt      = req.OpenAt;
-        a.CloseAt     = req.CloseAt;
+        a.Name                  = req.Name.Trim();
+        a.Description           = req.Description?.Trim();
+        a.OpenAt                = req.OpenAt;
+        a.CloseAt               = req.CloseAt;
+        a.ShowResultsToStudents = req.ShowResultsToStudents;
         await db.SaveChangesAsync();
         return ToDto(a);
     }
@@ -573,7 +574,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             result.Add(new StudentActivityDto(
                 act.Id, act.Name, act.Description, act.IsOpen,
                 myGroup.Name, myGroup.Id,
-                myGroup.Members.Count, alreadyEval));
+                myGroup.Members.Count, alreadyEval,
+                act.ShowResultsToStudents));
         }
         return result;
     }
@@ -603,7 +605,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
                 ActivityId = activityId,
                 Key        = req.Items[i].Key.Trim().ToLowerInvariant(),
                 Label      = req.Items[i].Label.Trim(),
-                OrderIndex = i
+                OrderIndex = i,
+                Weight     = Math.Max(1, req.Items[i].Weight)
             });
         }
         await db.SaveChangesAsync();
@@ -623,7 +626,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
                 ActivityId = activityId,
                 Key        = Criteria.All[i].Key,
                 Label      = Criteria.All[i].Label,
-                OrderIndex = i
+                OrderIndex = i,
+                Weight     = 1
             });
         }
         await db.SaveChangesAsync();
@@ -645,7 +649,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
                 ActivityId = targetActivityId,
                 Key        = c.Key,
                 Label      = c.Label,
-                OrderIndex = c.OrderIndex
+                OrderIndex = c.OrderIndex,
+                Weight     = c.Weight
             });
         }
         await db.SaveChangesAsync();
@@ -663,7 +668,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
             a.Module.Professor.NomComplet,
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents,
-            a.OpenAt, a.CloseAt);
+            a.OpenAt, a.CloseAt, a.ShowResultsToStudents);
     }
 
     private StudentDto ToStudentDto(Student s) => new(

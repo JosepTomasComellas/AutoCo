@@ -14,6 +14,8 @@ public interface IResultsService
     Task<(byte[] Content, string FileName)?> ExportCsvAsync(int activityId, int professorId, bool isAdmin);
     Task<(byte[] Content, string FileName)?> ExportExcelAsync(int activityId, int professorId, bool isAdmin);
     Task<ActivityChartDto?> GetChartAsync(int activityId, int professorId, bool isAdmin);
+    Task<StudentOwnResultDto?> GetStudentOwnResultAsync(int activityId, int studentId);
+    Task<ModuleEvolutionDto?> GetModuleEvolutionAsync(int moduleId, int studentId);
     Task InvalidateCacheAsync(int activityId);
 }
 
@@ -30,6 +32,21 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
 
     private static string ResultsCacheKey(int id) => $"autoco:results:{id}";
     private static string ChartCacheKey(int id)   => $"autoco:chart:{id}";
+
+    private static double? WeightedAvg(
+        List<(string Key, string Label, int Weight)> criteria,
+        Func<string, double?> scoreFor)
+    {
+        double sumW = 0, sumWV = 0;
+        foreach (var c in criteria)
+        {
+            var v = scoreFor(c.Key);
+            if (!v.HasValue) continue;
+            sumW  += c.Weight;
+            sumWV += c.Weight * v.Value;
+        }
+        return sumW > 0 ? sumWV / sumW : null;
+    }
 
     public async Task InvalidateCacheAsync(int activityId)
     {
@@ -106,19 +123,17 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
                 e.Scores.ToDictionary(sc => sc.CriteriaKey, sc => sc.Score),
                 e.Comment)).ToList();
 
-            var avgCoScores = criteriaKeys.ToDictionary(
-                k => k,
-                k => {
+            var avgCoScores = actCriteria.ToDictionary(
+                c => c.Key,
+                c => {
                     var vals = peerEvals
-                        .Select(e => e.Scores.FirstOrDefault(sc => sc.CriteriaKey == k)?.Score)
+                        .Select(e => e.Scores.FirstOrDefault(sc => sc.CriteriaKey == c.Key)?.Score)
                         .Where(v => v.HasValue).Select(v => v!.Value).ToList();
                     return vals.Count > 0 ? (double?)vals.Average() : null;
                 });
 
-            var allCoVals    = avgCoScores.Values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
-            var avgGlobal    = allCoVals.Count > 0 ? (double?)allCoVals.Average() : null;
-            var allAutVals   = selfScores.Values.Where(v => v.HasValue).Select(v => v!.Value).ToList();
-            var autAvgGlobal = allAutVals.Count > 0 ? (double?)allAutVals.Average() : null;
+            var avgGlobal    = WeightedAvg(actCriteria, k => avgCoScores.GetValueOrDefault(k));
+            var autAvgGlobal = WeightedAvg(actCriteria, k => selfScores.TryGetValue(k, out var sv) ? sv : null);
 
             studentResults.Add(new StudentResultDto(
                 s.Id, s.Nom, s.Cognoms, s.NomComplet, s.Email, s.NumLlista, member.GroupName,
@@ -133,10 +148,12 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
             activity.Module.ClassId, activity.Module.Class.Name, activity.Module.Class.AcademicYear,
             activity.Module.Professor.NomComplet,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
-            activity.Groups.Count, allMembers.Count);
+            activity.Groups.Count, allMembers.Count,
+            activity.OpenAt, activity.CloseAt, activity.ShowResultsToStudents);
 
         var criteriaDto = actCriteria
             .Select(c => new CriteriaDto(c.Key, c.Label)).ToList();
+
 
         return new ActivityResultsDto(actDto, studentResults, criteriaDto);
     }
@@ -234,6 +251,116 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
             activity.Module.Class.Name, activity.Module.Class.AcademicYear,
             groupCharts, criteriaAll, criteriaDetail);
     }
+
+    // ── Resultats propis de l'alumne ─────────────────────────────────────────
+
+    public async Task<StudentOwnResultDto?> GetStudentOwnResultAsync(int activityId, int studentId)
+    {
+        var activity = await db.Activities
+            .Include(a => a.Module)
+            .FirstOrDefaultAsync(a => a.Id == activityId && a.ShowResultsToStudents && !a.IsOpen &&
+                a.Groups.Any(g => g.Members.Any(m => m.StudentId == studentId)));
+        if (activity is null) return null;
+
+        var actCriteria = await CriteriaHelper.GetForActivityAsync(db, activityId);
+        var criteriaKeys = actCriteria.Select(c => c.Key).ToList();
+
+        var selfEval = await db.Evaluations
+            .Include(e => e.Scores)
+            .FirstOrDefaultAsync(e => e.ActivityId == activityId && e.EvaluatorId == studentId && e.IsSelf);
+
+        var peerEvals = await db.Evaluations
+            .Include(e => e.Scores)
+            .Where(e => e.ActivityId == activityId && e.EvaluatedId == studentId && !e.IsSelf)
+            .ToListAsync();
+
+        var selfScores = selfEval?.Scores.ToDictionary(sc => sc.CriteriaKey, sc => (double?)sc.Score)
+            ?? criteriaKeys.ToDictionary(k => k, _ => (double?)null);
+
+        var criterionDtos = actCriteria.Select(c =>
+        {
+            selfScores.TryGetValue(c.Key, out var self);
+            var coVals = peerEvals
+                .Select(e => e.Scores.FirstOrDefault(sc => sc.CriteriaKey == c.Key)?.Score)
+                .Where(v => v.HasValue).Select(v => v!.Value).ToList();
+            var avgCo = coVals.Count > 0 ? (double?)coVals.Average() : null;
+            return new StudentOwnCriterionDto(c.Key, c.Label, c.Weight, self, avgCo);
+        }).ToList();
+
+        var avgCoMap = criterionDtos.ToDictionary(c => c.Key, c => c.AvgCoScore);
+        var selfMap  = criterionDtos.ToDictionary(c => c.Key, c => c.SelfScore);
+        var avgGlobal    = WeightedAvg(actCriteria, k => avgCoMap.GetValueOrDefault(k));
+        var autAvgGlobal = WeightedAvg(actCriteria, k => selfMap.GetValueOrDefault(k));
+
+        var anonComments = peerEvals
+            .Where(e => !string.IsNullOrWhiteSpace(e.Comment))
+            .Select(e => e.Comment!).ToList();
+
+        return new StudentOwnResultDto(
+            activityId, activity.Name, activity.IsOpen,
+            criterionDtos, avgGlobal, autAvgGlobal, anonComments);
+    }
+
+    // ── Evolució de l'alumne al llarg del mòdul ──────────────────────────────
+
+    public async Task<ModuleEvolutionDto?> GetModuleEvolutionAsync(int moduleId, int studentId)
+    {
+        var modul = await db.Modules.FindAsync(moduleId);
+        if (modul is null) return null;
+
+        var activities = await db.Activities
+            .Where(a => a.ModuleId == moduleId &&
+                a.Groups.Any(g => g.Members.Any(m => m.StudentId == studentId)))
+            .OrderBy(a => a.CreatedAt)
+            .ToListAsync();
+
+        if (!activities.Any()) return new ModuleEvolutionDto(moduleId, modul.Name, [], [], []);
+
+        // Pren els criteris de la primera activitat com a referència
+        var refCriteria = await CriteriaHelper.GetForActivityAsync(db, activities.First().Id);
+        var criteriaKeys   = refCriteria.Select(c => c.Key).ToList();
+        var criteriaLabels = refCriteria.Select(c => c.Label).ToList();
+
+        var activityIds = activities.Select(a => a.Id).ToList();
+        var allEvals = await db.Evaluations
+            .Include(e => e.Scores)
+            .Where(e => activityIds.Contains(e.ActivityId) &&
+                (e.EvaluatorId == studentId || e.EvaluatedId == studentId))
+            .ToListAsync();
+
+        var points = new List<ActivityEvolutionPoint>();
+        foreach (var act in activities)
+        {
+            var actCriteria = await CriteriaHelper.GetForActivityAsync(db, act.Id);
+            var actKeys = actCriteria.Select(c => c.Key).ToList();
+
+            var selfEval = allEvals.FirstOrDefault(e =>
+                e.ActivityId == act.Id && e.EvaluatorId == studentId && e.IsSelf);
+            var peerEvals = allEvals.Where(e =>
+                e.ActivityId == act.Id && e.EvaluatedId == studentId && !e.IsSelf).ToList();
+
+            var selfScores = actKeys.ToDictionary(k => k,
+                k => selfEval?.Scores.FirstOrDefault(sc => sc.CriteriaKey == k)?.Score as double?);
+            var avgCoScores = actKeys.ToDictionary(k => k, k =>
+            {
+                var vals = peerEvals
+                    .Select(e => e.Scores.FirstOrDefault(sc => sc.CriteriaKey == k)?.Score)
+                    .Where(v => v.HasValue).Select(v => v!.Value).ToList();
+                return vals.Count > 0 ? (double?)vals.Average() : null;
+            });
+
+            var avgGlobal    = WeightedAvg(actCriteria, k => avgCoScores.GetValueOrDefault(k));
+            var autAvgGlobal = WeightedAvg(actCriteria, k => selfScores.GetValueOrDefault(k));
+
+            points.Add(new ActivityEvolutionPoint(
+                act.Id, act.Name, act.CreatedAt,
+                selfScores, avgCoScores, avgGlobal, autAvgGlobal));
+        }
+
+        return new ModuleEvolutionDto(moduleId, modul.Name, criteriaKeys, criteriaLabels, points);
+    }
+
+    // ── Exportació CSV / Excel ───────────────────────────────────────────────
 
     public async Task<(byte[] Content, string FileName)?> ExportCsvAsync(
         int activityId, int professorId, bool isAdmin)

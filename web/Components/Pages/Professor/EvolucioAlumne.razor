@@ -1,0 +1,154 @@
+@page "/professor/evolucio/{ClassId:int}/{ModuleId:int}"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
+
+<PageTitle>Evolució alumne – AutoCo</PageTitle>
+@if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text"
+               Color="Color.Default" Href="@($"/professor/moduls/{ClassId}")">
+        @Loc["Action_Back"]
+    </MudButton>
+    <MudText Typo="Typo.h5">@Loc["Evolution_Title"]</MudText>
+    @if (_moduleName is not null)
+    {
+        <MudText Typo="Typo.subtitle1" Color="Color.Secondary">— @_moduleName</MudText>
+    }
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (!_students.Any())
+{
+    <MudAlert Severity="Severity.Info">@Loc["Evolution_NoStudents"]</MudAlert>
+}
+else
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="3" Class="mb-4" Wrap="Wrap.Wrap">
+        <MudSelect @bind-Value="_selectedStudentId" Label="@Loc["Evolution_SelectStudent"]"
+                   Variant="Variant.Outlined" Style="min-width:260px"
+                   T="int" ValueChanged="OnStudentChangedAsync">
+            @foreach (var s in _students)
+            {
+                <MudSelectItem Value="@s.Id">@s.NomComplet (@s.NumLlista)</MudSelectItem>
+            }
+        </MudSelect>
+        @if (_evolution is not null && _evolution.CriteriaKeys.Any())
+        {
+            <MudSelect @bind-Value="_selectedCriterion" Label="@Loc["Evolution_SelectCriterion"]"
+                       Variant="Variant.Outlined" Style="min-width:200px"
+                       T="string" ValueChanged="RedrawAsync">
+                <MudSelectItem Value="@("__all__")">@Loc["Evolution_AllCriteria"]</MudSelectItem>
+                @for (int i = 0; i < _evolution.CriteriaKeys.Count; i++)
+                {
+                    var key   = _evolution.CriteriaKeys[i];
+                    var label = _evolution.CriteriaLabels[i];
+                    <MudSelectItem Value="@key">@label</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    </MudStack>
+
+    @if (_loadingEvolution)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+    }
+    else if (_evolution is not null && _evolution.Activities.Any())
+    {
+        <MudPaper Elevation="1" Class="pa-4">
+            <canvas id="evolution-chart" style="max-height:420px"></canvas>
+        </MudPaper>
+    }
+    else if (_selectedStudentId > 0)
+    {
+        <MudAlert Severity="Severity.Info">@Loc["Evolution_NoData"]</MudAlert>
+    }
+}
+
+@code {
+    [Parameter] public int ClassId  { get; set; }
+    [Parameter] public int ModuleId { get; set; }
+
+    private List<StudentDto> _students = [];
+    private bool _loading         = true;
+    private bool _loadingEvolution = false;
+
+    private int    _selectedStudentId = 0;
+    private string _selectedCriterion = "__all__";
+    private string? _moduleName;
+
+    private ModuleEvolutionDto? _evolution;
+
+    private static readonly string[] _palette =
+        ["#ef4444","#3b82f6","#22c55e","#f59e0b","#8b5cf6","#14b8a6","#f97316","#ec4899"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsProfessor) return;
+        Api.SetToken(UserState.Token!);
+
+        var modules = await Api.GetModulesAsync(ClassId);
+        _moduleName = modules?.FirstOrDefault(m => m.Id == ModuleId)?.Name;
+
+        var studs = await Api.GetStudentsAsync(ClassId);
+        _students = studs ?? [];
+        _loading = false;
+    }
+
+    private async Task OnStudentChangedAsync(int studentId)
+    {
+        _selectedStudentId = studentId;
+        _loadingEvolution  = true;
+        StateHasChanged();
+
+        Api.SetToken(UserState.Token!);
+        _evolution = await Api.GetModuleEvolutionAsync(ModuleId, studentId);
+        _loadingEvolution = false;
+        StateHasChanged();
+
+        await RedrawAsync(_selectedCriterion);
+    }
+
+    private async Task RedrawAsync(string criterion)
+    {
+        _selectedCriterion = criterion;
+        if (_evolution is null || !_evolution.Activities.Any()) return;
+
+        var labels = _evolution.Activities.Select(a => a.ActivityName).ToArray();
+        var datasets = new List<object>();
+
+        var criteriaToShow = criterion == "__all__"
+            ? _evolution.CriteriaKeys.Zip(_evolution.CriteriaLabels).ToList()
+            : _evolution.CriteriaKeys.Zip(_evolution.CriteriaLabels)
+                .Where(x => x.First == criterion).ToList();
+
+        for (int ci = 0; ci < criteriaToShow.Count; ci++)
+        {
+            var (key, label) = criteriaToShow[ci];
+            var color = _palette[ci % _palette.Length];
+
+            var selfData = _evolution.Activities
+                .Select(a => a.SelfScores.TryGetValue(key, out var v) ? v : (double?)null)
+                .ToArray();
+            var coData = _evolution.Activities
+                .Select(a => a.AvgCoScores.TryGetValue(key, out var v) ? v : (double?)null)
+                .ToArray();
+
+            datasets.Add(new { label = $"{label} (auto)", data = selfData,
+                borderColor = color, borderDash = new[] { 5, 5 },
+                backgroundColor = "transparent", tension = 0.3,
+                spanGaps = true, pointRadius = 4 });
+            datasets.Add(new { label = $"{label} (co)", data = coData,
+                borderColor = color, backgroundColor = "transparent",
+                tension = 0.3, spanGaps = true, pointRadius = 4 });
+        }
+
+        await JS.InvokeVoidAsync("autocoCharts.renderLine", "evolution-chart", labels, datasets);
+    }
+}

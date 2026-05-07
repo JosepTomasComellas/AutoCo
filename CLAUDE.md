@@ -159,16 +159,19 @@ GET  /api/activities/{id}/log                             # Registre d'activitat
 GET  /api/evaluations/{activityId}           # Formulari d'avaluació (alumne)
 POST /api/evaluations/{activityId}           # Guardar avaluació
 GET  /api/student/activities                 # Dashboard alumne
+GET  /api/student/results/{activityId}       # Resultats propis de l'alumne
 
 GET  /api/results/{activityId}               # Resultats (professor)
 GET  /api/results/{activityId}/chart         # Dades gràfica
 GET  /api/results/{activityId}/csv           # Exportar CSV
+GET  /api/results/module/{moduleId}/evolution?studentId=  # Evolució alumne per mòdul
 
 GET  /api/criteria                           # Criteris globals
 GET  /api/health                             # Estat DB + Redis (públic, sense auth)
 
 GET  /api/admin/log-level                    # Llegir nivell de log actual (admin)
 PUT  /api/admin/log-level                    # Canviar nivell de log en calent (admin)
+POST /api/admin/new-year                     # Duplicar estructura classes+mòduls per a nou any acadèmic (admin)
 
 POST /api/auth/refresh                       # Renovar JWT amb refresh token (rotació)
 POST /api/auth/logout                        # Invalidar refresh token a Redis
@@ -189,6 +192,10 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Estat de panels a `Resultats.razor`: `sessionStorage` clau `autoco:resultats:{ActivityId}`, carregat a `OnAfterRenderAsync(firstRender)`
 - `MudExpansionPanel` (MudBlazor 8.x): usar `@bind-Expanded` + `@bind-Expanded:after` — **no** `IsExpanded`/`IsExpandedChanged` (MUD0002)
 - Programació d'activitats: `OpenAt`/`CloseAt` en UTC; `ActivitySchedulerService` comprova cada minut i neteja el camp usat; `ToggleOpenAsync` neteja dates passades; UTC→local per a display, local→UTC en desar
+- Pesos de criteris: `ActivityCriterion.Weight` (int, default 1); les mitjanes globals es calculen com a `sum(score*weight)/sum(weights)`; `CriteriaHelper.GetForActivityAsync` retorna `(Key, Label, Weight)` tuples
+- Còpies de seguretat ZIP: `IBackupService.ExportZipAsync()` retorna `byte[]`; `BackupService` usa `System.IO.Compression.ZipArchive`; compatibilitat enrere amb `.json` antics; `ListFilesAsync` llista `*.zip` i `*.json`
+- Resultats alumne: `ShowResultsToStudents` a `Activity`; quan és `true` i activitat tancada, `GET /api/student/results/{id}` retorna `StudentOwnResultDto`; visible a `/alumne/resultats/{id}`
+- Renovació de curs: `POST /api/admin/new-year` duplica classes (nou `AcademicYear`) i mòduls; retorna `NewYearResult(ClassesCreated, ModulesCreated)`
 - Validació de requests: DataAnnotations als DTOs (`[Required]`, `[MaxLength]`, `[EmailAddress]`, `[Range]`); helper `Validate<T>()` a `Program.cs` retorna `Results.ValidationProblem` (RFC 9457)
 - JWT refresh tokens: `StoreRefreshTokenAsync` genera base64url segur, desa a Redis `autoco:refresh:{token}` (TTL 7 dies); rotació en cada refresh; `RefreshFromTokenAsync` a `ApiClient` per a `MainLayout`; `TryRefreshAsync` privat per a reintentar peticions 401
 - Paginació del servidor: `PagedResult<T>` als DTOs; paràmetres `?page=1&size=N`; `ApiClient` desempaqueta a `List<T>` (size=500 per defecte = compatible amb codi existent)

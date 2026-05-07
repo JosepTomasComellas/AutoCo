@@ -72,9 +72,9 @@ public record ChangeStudentPasswordRequest(string CurrentPassword, string NewPas
 public record ImportFotosResult(int Imported, List<string> NotFound, List<string> Errors);
 
 // ─── Criteris per activitat ──────────────────────────────────────────────────
-public record ActivityCriterionDto(int Id, string Key, string Label, int OrderIndex);
+public record ActivityCriterionDto(int Id, string Key, string Label, int OrderIndex, int Weight = 1);
 public record SaveCriteriaRequest(List<CriterionItem> Items);
-public record CriterionItem(string Key, string Label);
+public record CriterionItem(string Key, string Label, int Weight = 1);
 
 // ─── Mòduls ──────────────────────────────────────────────────────────────────
 public record ModuleDto(
@@ -98,7 +98,8 @@ public record ActivityDto(
     int ClassId, string ClassName, string? ClassAcademicYear, string ProfessorName,
     string Name, string? Description, bool IsOpen,
     DateTime CreatedAt, int NumGroups, int NumStudents,
-    DateTime? OpenAt = null, DateTime? CloseAt = null);
+    DateTime? OpenAt = null, DateTime? CloseAt = null,
+    bool ShowResultsToStudents = false);
 
 public record CreateActivityRequest(
     [Range(1, int.MaxValue)] int ModuleId,
@@ -108,7 +109,8 @@ public record CreateActivityRequest(
 public record UpdateActivityRequest(
     [Required][MaxLength(300)] string Name,
     string? Description,
-    DateTime? OpenAt = null, DateTime? CloseAt = null);
+    DateTime? OpenAt = null, DateTime? CloseAt = null,
+    bool ShowResultsToStudents = false);
 public record DuplicateActivityRequest(string Name, string? Description);
 public record DuplicateCrossRequest(int TargetModuleId, string Name, string? Description);
 public record ImportGroupsRequest(string CsvContent);
@@ -176,10 +178,11 @@ public record CriteriaGroupValueDto(string GroupName, double? AvgAuto, double? A
 // ─── Backup / Restore ────────────────────────────────────────────────────────
 public record BackupDto(
     string Version, DateTime CreatedAt,
-    List<ProfessorBackupDto>  Professors,
-    List<ClassBackupDto>      Classes,
-    List<ActivityBackupDto>   Activities,
-    List<TemplateBackupDto>?  Templates = null);
+    List<ProfessorBackupDto>      Professors,
+    List<ClassBackupDto>          Classes,
+    List<ActivityBackupDto>       Activities,
+    List<TemplateBackupDto>?      Templates  = null,
+    List<AdminAuditLogBackupDto>? AuditLogs  = null);
 
 public record ProfessorBackupDto(
     int Id, string Email, string Nom, string Cognoms,
@@ -193,13 +196,14 @@ public record ClassBackupDto(
 public record StudentBackupDto(
     int Id, string Nom, string Cognoms, int NumLlista,
     string Email, string PasswordHash, DateTime CreatedAt,
-    string? PlainPasswordEncrypted = null);
+    string? PlainPasswordEncrypted = null,
+    string? Dni = null);
 
 public record ModuleBackupDto(
     int Id, int ProfessorId, string Code, string Name, DateTime CreatedAt,
     List<int> ExcludedStudentIds);
 
-public record CriterionBackupDto(string Key, string Label, int OrderIndex);
+public record CriterionBackupDto(string Key, string Label, int OrderIndex, int Weight = 1);
 public record NoteBackupDto(int StudentId, string Note, DateTime UpdatedAt);
 public record TemplateBackupDto(
     int Id, int ProfessorId, string Name, string? Description,
@@ -210,8 +214,14 @@ public record ActivityBackupDto(
     bool IsOpen, DateTime CreatedAt,
     List<GroupBackupDto>       Groups,
     List<EvaluationBackupDto>  Evaluations,
-    List<CriterionBackupDto>?  Criteria  = null,
-    List<NoteBackupDto>?       Notes     = null);
+    List<CriterionBackupDto>?  Criteria              = null,
+    List<NoteBackupDto>?       Notes                 = null,
+    bool                       ShowResultsToStudents = false,
+    DateTime?                  OpenAt                = null,
+    DateTime?                  CloseAt               = null);
+
+public record AdminAuditLogBackupDto(
+    string Action, int? ActorId, string? ActorName, string? Details, DateTime CreatedAt);
 
 public record GroupBackupDto(int Id, string Name, List<int> StudentIds);
 
@@ -264,7 +274,35 @@ public record StudentDashboardDto(List<StudentActivityDto> Activities);
 
 public record StudentActivityDto(
     int Id, string Name, string? Description, bool IsOpen,
-    string GroupName, int GroupId, int TotalToEvaluate, int AlreadyEvaluated);
+    string GroupName, int GroupId, int TotalToEvaluate, int AlreadyEvaluated,
+    bool ShowResultsToStudents = false);
+
+// ─── Resultats propis de l'alumne ────────────────────────────────────────────
+public record StudentOwnResultDto(
+    int ActivityId, string ActivityName, bool IsOpen,
+    List<StudentOwnCriterionDto> Criteria,
+    double? AvgGlobal, double? AutAvgGlobal,
+    List<string> AnonymousComments);
+
+public record StudentOwnCriterionDto(
+    string Key, string Label, int Weight,
+    double? SelfScore, double? AvgCoScore);
+
+// ─── Evolució de l'alumne al llarg del mòdul ─────────────────────────────────
+public record ModuleEvolutionDto(
+    int ModuleId, string ModuleName,
+    List<string> CriteriaKeys, List<string> CriteriaLabels,
+    List<ActivityEvolutionPoint> Activities);
+
+public record ActivityEvolutionPoint(
+    int ActivityId, string ActivityName, DateTime CreatedAt,
+    Dictionary<string, double?> SelfScores,
+    Dictionary<string, double?> AvgCoScores,
+    double? AvgGlobal, double? AutAvgGlobal);
+
+// ─── Renovació de curs ────────────────────────────────────────────────────────
+public record NewYearRequest(string TargetYear);
+public record NewYearResult(int ClassesCreated, int ModulesCreated);
 
 // ─── Nivell de log (admin) ────────────────────────────────────────────────────
 public record LogLevelDto(string Level);

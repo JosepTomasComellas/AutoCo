@@ -224,6 +224,14 @@ using (var scope = app.Services.CreateScope())
             CREATE INDEX [IX_AdminAuditLogs_CreatedAt]
                 ON [AdminAuditLogs] ([CreatedAt]);
         END
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                       WHERE TABLE_NAME='ActivityCriteria' AND COLUMN_NAME='Weight')
+            ALTER TABLE [ActivityCriteria] ADD [Weight] INT NOT NULL DEFAULT 1;
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                       WHERE TABLE_NAME='Activities' AND COLUMN_NAME='ShowResultsToStudents')
+            ALTER TABLE [Activities] ADD [ShowResultsToStudents] BIT NOT NULL DEFAULT 0;
         """);
 
     // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
@@ -999,6 +1007,14 @@ app.MapGet("/api/student/activities", async (IActivityService svc, ClaimsPrincip
     return Results.Ok(new StudentDashboardDto(list));
 }).RequireAuthorization();
 
+app.MapGet("/api/student/results/{activityId:int}", async (
+    int activityId, IResultsService svc, ClaimsPrincipal user) =>
+{
+    if (!user.IsInRole("Student")) return Results.Forbid();
+    var r = await svc.GetStudentOwnResultAsync(activityId, GetUserId(user));
+    return r is null ? Results.NotFound() : Results.Ok(r);
+}).RequireAuthorization();
+
 app.MapPut("/api/student/password", async (
     ChangeStudentPasswordRequest req, IClassService svc, ClaimsPrincipal user) =>
 {
@@ -1070,6 +1086,15 @@ app.MapGet("/api/results/{activityId:int}/excel", async (int activityId,
     var (content, fileName) = result.Value;
     return Results.File(content,
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+}).RequireAuthorization();
+
+// ── Evolució de l'alumne al llarg del mòdul ───────────────────────────────────
+app.MapGet("/api/results/module/{moduleId:int}/evolution", async (
+    int moduleId, int studentId, IResultsService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var r = await svc.GetModuleEvolutionAsync(moduleId, studentId);
+    return r is null ? Results.NotFound() : Results.Ok(r);
 }).RequireAuthorization();
 
 // ── Criteri ───────────────────────────────────────────────────────────────────
@@ -1194,15 +1219,57 @@ app.MapDelete("/api/admin/stats/logins", async (AppDbContext db, ClaimsPrincipal
 // BACKUP / RESTORE (admin only)
 // ════════════════════════════════════════════════════════════════════════════
 
+app.MapPost("/api/admin/new-year", async (
+    NewYearRequest req, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    if (string.IsNullOrWhiteSpace(req.TargetYear))
+        return Results.BadRequest(new { error = "Cal especificar l'any acadèmic de destí." });
+
+    var classes = await db.Classes.ToListAsync();
+    var modules = await db.Modules.OrderBy(m => m.Id).ToListAsync();
+
+    int classesCreated = 0, modulesCreated = 0;
+    foreach (var cls in classes)
+    {
+        var newClass = new AutoCo.Api.Data.Models.Class
+        {
+            Name         = cls.Name,
+            AcademicYear = req.TargetYear,
+            CreatedAt    = DateTime.UtcNow
+        };
+        db.Classes.Add(newClass);
+        await db.SaveChangesAsync();
+        classesCreated++;
+
+        foreach (var m in modules.Where(m => m.ClassId == cls.Id))
+        {
+            db.Modules.Add(new AutoCo.Api.Data.Models.Module
+            {
+                ClassId     = newClass.Id,
+                ProfessorId = m.ProfessorId,
+                Code        = m.Code,
+                Name        = m.Name,
+                CreatedAt   = DateTime.UtcNow
+            });
+            modulesCreated++;
+        }
+        await db.SaveChangesAsync();
+    }
+
+    await AuditAsync(db, "new_year.created", GetUserId(user),
+        user.FindFirstValue(System.Security.Claims.ClaimTypes.Name),
+        $"TargetYear:{req.TargetYear} Classes:{classesCreated} Modules:{modulesCreated}");
+
+    return Results.Ok(new NewYearResult(classesCreated, modulesCreated));
+}).RequireAuthorization().RequireRateLimiting("admin");
+
 app.MapGet("/api/admin/backup/export", async (IBackupService svc, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();
-    var backup   = await svc.ExportAsync();
-    var json     = System.Text.Json.JsonSerializer.Serialize(backup,
-        new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-    var bytes    = System.Text.Encoding.UTF8.GetBytes(json);
-    var fileName = $"autoco_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
-    return Results.File(bytes, "application/json", fileName);
+    var bytes    = await svc.ExportZipAsync();
+    var fileName = $"autoco_backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.zip";
+    return Results.File(bytes, "application/zip", fileName);
 }).RequireAuthorization();
 
 app.MapPost("/api/admin/backup/import", async (
@@ -1236,7 +1303,8 @@ app.MapGet("/api/admin/backup/files/{name}", async (
     if (!IsAdmin(user)) return Results.Forbid();
     var result = await svc.DownloadFileAsync(name);
     if (result is null) return Results.NotFound();
-    return Results.File(result.Value.Data, "application/json", result.Value.Name);
+    var ct = name.EndsWith(".zip") ? "application/zip" : "application/json";
+    return Results.File(result.Value.Data, ct, result.Value.Name);
 }).RequireAuthorization();
 
 app.MapDelete("/api/admin/backup/files/{name}", async (

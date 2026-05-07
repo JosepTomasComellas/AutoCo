@@ -243,6 +243,9 @@ public class ApiClient
     public Task<StudentDashboardDto?> GetStudentDashboardAsync() =>
         GetAsync<StudentDashboardDto>("/api/student/activities");
 
+    public Task<StudentOwnResultDto?> GetStudentOwnResultAsync(int activityId) =>
+        GetAsync<StudentOwnResultDto>($"/api/student/results/{activityId}");
+
     public Task<bool> ChangeStudentPasswordAsync(string currentPassword, string newPassword) =>
         PutNoContentAsync("/api/student/password",
             new ChangeStudentPasswordRequest(currentPassword, newPassword));
@@ -251,6 +254,9 @@ public class ApiClient
 
     public Task<ActivityResultsDto?> GetResultsAsync(int activityId) =>
         GetAsync<ActivityResultsDto>($"/api/results/{activityId}");
+
+    public Task<ModuleEvolutionDto?> GetModuleEvolutionAsync(int moduleId, int studentId) =>
+        GetAsync<ModuleEvolutionDto>($"/api/results/module/{moduleId}/evolution?studentId={studentId}");
 
     public Task<ActivityChartDto?> GetChartAsync(int activityId) =>
         GetAsync<ActivityChartDto>($"/api/results/{activityId}/chart");
@@ -358,6 +364,11 @@ public class ApiClient
             ?? $"avaluacio_{activityId}.xlsx";
         return (bytes, fileName.Trim('"'));
     }
+
+    // ── Nou curs (admin) ─────────────────────────────────────────────────────
+
+    public Task<NewYearResult?> NewYearAsync(string targetYear) =>
+        PostAsync<NewYearResult>("/api/admin/new-year", new NewYearRequest(targetYear));
 
     // ── Nivell de log (admin) ─────────────────────────────────────────────────
 

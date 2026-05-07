@@ -135,6 +135,14 @@ else
                                     @Loc["Student_NotCompleted"]
                                 </MudChip>
                             }
+                            @if (act.ShowResultsToStudents)
+                            {
+                                <MudButton Variant="Variant.Text" Color="Color.Info"
+                                           Href="@($"/alumne/resultats/{act.Id}")"
+                                           StartIcon="@Icons.Material.Filled.BarChart">
+                                    @Loc["Student_MyResults"]
+                                </MudButton>
+                            }
                         }
                     </MudCardActions>
                 </MudCard>

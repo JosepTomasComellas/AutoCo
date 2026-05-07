@@ -3,6 +3,7 @@ using AutoCo.Api.Data.Models;
 using AutoCo.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -11,6 +12,7 @@ namespace AutoCo.Api.Services;
 public interface IBackupService
 {
     Task<BackupDto>               ExportAsync();
+    Task<byte[]>                  ExportZipAsync();
     Task<ImportResult>            ImportAsync(BackupDto backup);
     Task<List<BackupFileInfoDto>> ListFilesAsync();
     Task<BackupFileInfoDto>       CreateFileAsync();
@@ -49,12 +51,14 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var evals      = await db.Evaluations.AsNoTracking().Include(e => e.Scores).ToListAsync();
         var notes      = await db.ProfessorNotes.AsNoTracking().ToListAsync();
         var templates  = await db.ActivityTemplates.AsNoTracking().ToListAsync();
+        var auditLogs  = await db.AdminAuditLogs.AsNoTracking()
+            .OrderByDescending(l => l.CreatedAt).ToListAsync();
 
         var classDtos = classes.Select(c => new ClassBackupDto(
             c.Id, c.Name, c.AcademicYear, c.CreatedAt,
             students.Where(s => s.ClassId == c.Id)
                 .Select(s => new StudentBackupDto(s.Id, s.Nom, s.Cognoms, s.NumLlista,
-                    s.Email, s.PasswordHash, s.CreatedAt, s.PlainPasswordEncrypted)).ToList(),
+                    s.Email, s.PasswordHash, s.CreatedAt, s.PlainPasswordEncrypted, s.Dni)).ToList(),
             modules.Where(m => m.ClassId == c.Id)
                 .Select(m => new ModuleBackupDto(m.Id, m.ProfessorId, m.Code, m.Name, m.CreatedAt,
                     exclusions.Where(e => e.ModuleId == m.Id).Select(e => e.StudentId).ToList()))
@@ -75,23 +79,53 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 .ToList(),
             criteria.Where(c => c.ActivityId == a.Id)
                 .OrderBy(c => c.OrderIndex)
-                .Select(c => new CriterionBackupDto(c.Key, c.Label, c.OrderIndex))
+                .Select(c => new CriterionBackupDto(c.Key, c.Label, c.OrderIndex, c.Weight))
                 .ToList()
                 .NullIfEmpty(),
             notes.Where(n => n.ActivityId == a.Id)
                 .Select(n => new NoteBackupDto(n.StudentId, n.Note, n.UpdatedAt))
                 .ToList()
-                .NullIfEmpty()
+                .NullIfEmpty(),
+            a.ShowResultsToStudents, a.OpenAt, a.CloseAt
         )).ToList();
 
         var templateDtos = templates.Select(t => new TemplateBackupDto(
             t.Id, t.ProfessorId, t.Name, t.Description, t.CriteriaJson, t.CreatedAt)).ToList();
 
-        return new BackupDto("1.0", DateTime.UtcNow,
+        var auditDtos = auditLogs.Select(l => new AdminAuditLogBackupDto(
+            l.Action, l.ActorId, l.ActorName, l.Details, l.CreatedAt)).ToList();
+
+        return new BackupDto("2.0", DateTime.UtcNow,
             professors.Select(p => new ProfessorBackupDto(
                 p.Id, p.Email, p.Nom, p.Cognoms, p.IsAdmin, p.PasswordHash, p.CreatedAt)).ToList(),
             classDtos, activityDtos,
-            templateDtos.Count > 0 ? templateDtos : null);
+            templateDtos.Count > 0 ? templateDtos : null,
+            auditDtos.Count > 0 ? auditDtos : null);
+    }
+
+    public async Task<byte[]> ExportZipAsync() => ToZip(await ExportAsync());
+
+    // Genera un ZIP amb un backup.json dins
+    private static byte[] ToZip(BackupDto backup)
+    {
+        using var ms  = new MemoryStream();
+        using (var zip = new ZipArchive(ms, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = zip.CreateEntry("backup.json", CompressionLevel.Optimal);
+            using var w = new StreamWriter(entry.Open(), System.Text.Encoding.UTF8);
+            w.Write(JsonSerializer.Serialize(backup, _json));
+        }
+        return ms.ToArray();
+    }
+
+    private static BackupDto? FromZip(byte[] data)
+    {
+        using var ms  = new MemoryStream(data);
+        using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
+        var entry = zip.GetEntry("backup.json") ?? zip.Entries.FirstOrDefault();
+        if (entry is null) return null;
+        using var r = new StreamReader(entry.Open(), System.Text.Encoding.UTF8);
+        return JsonSerializer.Deserialize<BackupDto>(r.ReadToEnd(), _json);
     }
 
     // ── Import (substitueix totes les dades) ──────────────────────────────────
@@ -160,6 +194,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                         NumLlista = s.NumLlista, Email = s.Email,
                         PasswordHash = s.PasswordHash,
                         PlainPasswordEncrypted = s.PlainPasswordEncrypted,
+                        Dni = s.Dni,
                         CreatedAt = s.CreatedAt
                     };
                     studentPairs.Add((s, ent));
@@ -203,7 +238,9 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 var ent = new Activity
                 {
                     ModuleId = newModId, Name = a.Name, Description = a.Description,
-                    IsOpen = a.IsOpen, CreatedAt = a.CreatedAt
+                    IsOpen = a.IsOpen, CreatedAt = a.CreatedAt,
+                    ShowResultsToStudents = a.ShowResultsToStudents,
+                    OpenAt = a.OpenAt, CloseAt = a.CloseAt
                 };
                 actPairs.Add((a, ent));
                 db.Activities.Add(ent);
@@ -219,7 +256,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                             ActivityId = actEnt.Id,
                             Key        = c.Key,
                             Label      = c.Label,
-                            OrderIndex = c.OrderIndex
+                            OrderIndex = c.OrderIndex,
+                            Weight     = c.Weight > 0 ? c.Weight : 1
                         });
             await db.SaveChangesAsync();
 
@@ -300,7 +338,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
     {
         EnsureDir();
         var files = new DirectoryInfo(BackupsDir)
-            .GetFiles("backup_*.json")
+            .GetFiles("backup_*.zip")
+            .Concat(new DirectoryInfo(BackupsDir).GetFiles("backup_*.json")) // compatibilitat enrere
             .OrderByDescending(f => f.LastWriteTimeUtc)
             .Select(f => new BackupFileInfoDto(f.Name, f.LastWriteTimeUtc, f.Length))
             .ToList();
@@ -311,9 +350,9 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
     {
         EnsureDir();
         var backup = await ExportAsync();
-        var name   = $"backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+        var name   = $"backup_{DateTime.UtcNow:yyyyMMdd_HHmmss}.zip";
         var path   = Path.Combine(BackupsDir, name);
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(backup, _json));
+        await File.WriteAllBytesAsync(path, ToZip(backup));
         var info   = new FileInfo(path);
         return new BackupFileInfoDto(name, info.LastWriteTimeUtc, info.Length);
     }
@@ -322,9 +361,9 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
     {
         EnsureDir();
         var backup = await ExportAsync();
-        var name   = $"backup_{type}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.json";
+        var name   = $"backup_{type}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.zip";
         var path   = Path.Combine(BackupsDir, name);
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(backup, _json));
+        await File.WriteAllBytesAsync(path, ToZip(backup));
         var info   = new FileInfo(path);
         logger.LogInformation("Backup automàtic {Type} creat: {Name}", type, name);
         return new BackupFileInfoDto(name, info.LastWriteTimeUtc, info.Length);
@@ -334,7 +373,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
     {
         EnsureDir();
         var files = new DirectoryInfo(BackupsDir)
-            .GetFiles($"backup_{type}_*.json")
+            .GetFiles($"backup_{type}_*.zip")
+            .Concat(new DirectoryInfo(BackupsDir).GetFiles($"backup_{type}_*.json"))
             .OrderByDescending(f => f.Name)
             .ToList();
         foreach (var f in files.Skip(maxCount))
@@ -365,8 +405,19 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var path = SafePath(name);
         if (path is null || !File.Exists(path))
             return new ImportResult(false, "Fitxer no trobat", 0, 0, 0, 0, 0, 0);
-        var json   = await File.ReadAllTextAsync(path);
-        var backup = JsonSerializer.Deserialize<BackupDto>(json, _json);
+
+        BackupDto? backup;
+        if (name.EndsWith(".zip"))
+        {
+            var bytes = await File.ReadAllBytesAsync(path);
+            backup = FromZip(bytes);
+        }
+        else
+        {
+            var json = await File.ReadAllTextAsync(path);
+            backup = JsonSerializer.Deserialize<BackupDto>(json, _json);
+        }
+
         if (backup is null)
             return new ImportResult(false, "Format invàlid", 0, 0, 0, 0, 0, 0);
         return await ImportAsync(backup);
@@ -376,7 +427,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
     private string? SafePath(string name)
     {
         if (name.Contains('/') || name.Contains('\\') || name.Contains("..")) return null;
-        if (!name.StartsWith("backup_") || !name.EndsWith(".json")) return null;
+        if (!name.StartsWith("backup_")) return null;
+        if (!name.EndsWith(".zip") && !name.EndsWith(".json")) return null;
         return Path.Combine(BackupsDir, name);
     }
 }

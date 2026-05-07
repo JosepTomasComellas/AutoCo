@@ -1,0 +1,97 @@
+@page "/alumne/resultats/{ActivityId:int}"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResources> Loc
+
+<PageTitle>Els meus resultats – AutoCo</PageTitle>
+@if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack"
+               Href="/alumne/dashboard" Variant="Variant.Text" Color="Color.Default">
+        @Loc["Action_Back"]
+    </MudButton>
+    <MudText Typo="Typo.h5">@Loc["MyResults_Title"]</MudText>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_result is null)
+{
+    <MudAlert Severity="Severity.Info">@Loc["MyResults_NotAvailable"]</MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h6" Class="mb-4">@_result.ActivityName</MudText>
+
+    <!-- Resum global -->
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6">
+            <MudPaper Elevation="1" Class="pa-4" Style="text-align:center">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["MyResults_CoAvg"]</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Primary">
+                    @(_result.AvgGlobal.HasValue ? _result.AvgGlobal.Value.ToString("F2") : "—")
+                </MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudPaper Elevation="1" Class="pa-4" Style="text-align:center">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["MyResults_SelfAvg"]</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Secondary">
+                    @(_result.AutAvgGlobal.HasValue ? _result.AutAvgGlobal.Value.ToString("F2") : "—")
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Detall per criteri -->
+    <MudText Typo="Typo.subtitle1" Class="mb-2">@Loc["MyResults_ByCriterion"]</MudText>
+    <MudTable Items="_result.Criteria" Dense="true" Hover="true" Elevation="1" Class="mb-4">
+        <HeaderContent>
+            <MudTh>@Loc["MyResults_Criterion"]</MudTh>
+            <MudTh Style="text-align:right">@Loc["MyResults_Weight"]</MudTh>
+            <MudTh Style="text-align:right">@Loc["MyResults_SelfScore"]</MudTh>
+            <MudTh Style="text-align:right">@Loc["MyResults_CoScore"]</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Label</MudTd>
+            <MudTd Style="text-align:right">@context.Weight</MudTd>
+            <MudTd Style="text-align:right">
+                @(context.SelfScore.HasValue ? context.SelfScore.Value.ToString("F1") : "—")
+            </MudTd>
+            <MudTd Style="text-align:right; font-weight:600">
+                @(context.AvgCoScore.HasValue ? context.AvgCoScore.Value.ToString("F1") : "—")
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    <!-- Comentaris anònims -->
+    @if (_result.AnonymousComments.Any())
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-2">@Loc["MyResults_Comments"]</MudText>
+        @foreach (var comment in _result.AnonymousComments)
+        {
+            <MudPaper Elevation="0" Class="pa-3 mb-2" Style="border-left:3px solid var(--mud-palette-primary)">
+                <MudText Typo="Typo.body2">@comment</MudText>
+            </MudPaper>
+        }
+    }
+}
+
+@code {
+    [Parameter] public int ActivityId { get; set; }
+
+    private StudentOwnResultDto? _result;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsStudent) return;
+        Api.SetToken(UserState.Token!);
+        _result  = await Api.GetStudentOwnResultAsync(ActivityId);
+        _loading = false;
+    }
+}
