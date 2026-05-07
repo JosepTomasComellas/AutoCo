@@ -21,16 +21,16 @@ document.addEventListener('dragover', function (e) {
 
         if (_ghost) { _ghost.remove(); _ghost = null; }
 
-        var rect = chip.getBoundingClientRect();
         _ghost = chip.cloneNode(true);
+        // Eliminar el botó X del ghost: l'amplada extra desplaça el cursor del centre
+        var closeBtn = _ghost.querySelector('button');
+        if (closeBtn) closeBtn.remove();
         _ghost.style.cssText = 'position:fixed;top:-1000px;left:0;margin:0;'
-            + 'width:' + rect.width + 'px;opacity:1;pointer-events:none;z-index:9999;';
+            + 'width:auto;opacity:1;pointer-events:none;z-index:9999;';
         document.body.appendChild(_ghost);
 
-        // Hotspot = posició exacta on l'usuari ha agafat el chip
-        var hotX = e.clientX - rect.left;
-        var hotY = e.clientY - rect.top;
-        e.dataTransfer.setDragImage(_ghost, hotX, hotY);
+        // Hotspot al centre del ghost resultant (sense el botó)
+        e.dataTransfer.setDragImage(_ghost, _ghost.offsetWidth / 2, _ghost.offsetHeight / 2);
     }, true);
 
     document.addEventListener('dragend', function () {
