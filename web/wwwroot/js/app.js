@@ -27,7 +27,10 @@ document.addEventListener('dragover', function (e) {
             + 'width:' + rect.width + 'px;opacity:1;pointer-events:none;z-index:9999;';
         document.body.appendChild(_ghost);
 
-        e.dataTransfer.setDragImage(_ghost, rect.width / 2, rect.height / 2);
+        // Hotspot = posició exacta on l'usuari ha agafat el chip
+        var hotX = e.clientX - rect.left;
+        var hotY = e.clientY - rect.top;
+        e.dataTransfer.setDragImage(_ghost, hotX, hotY);
     }, true);
 
     document.addEventListener('dragend', function () {
