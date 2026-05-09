@@ -44,6 +44,8 @@ public record ClassDto(
     int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents,
     int CicleId = 0, string CicleName = "");
 
+public record AssignClassRequest([Range(1, int.MaxValue)] int ClassId);
+
 public record CreateClassRequest(
     [Required][MaxLength(200)] string Name,
     [MaxLength(20)] string? AcademicYear,

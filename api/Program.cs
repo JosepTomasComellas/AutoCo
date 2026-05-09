@@ -143,6 +143,20 @@ using (var scope = app.Services.CreateScope())
             INSERT INTO [Cicles] ([Name]) VALUES (N'General');
         END
 
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorClasses')
+        BEGIN
+            CREATE TABLE [ProfessorClasses] (
+                [ProfessorId] INT NOT NULL,
+                [ClassId]     INT NOT NULL,
+                CONSTRAINT [PK_ProfessorClasses] PRIMARY KEY ([ProfessorId], [ClassId]),
+                CONSTRAINT [FK_ProfessorClasses_Professors]
+                    FOREIGN KEY ([ProfessorId]) REFERENCES [Professors]([Id]) ON DELETE CASCADE,
+                CONSTRAINT [FK_ProfessorClasses_Classes]
+                    FOREIGN KEY ([ClassId]) REFERENCES [Classes]([Id]) ON DELETE CASCADE
+            );
+            CREATE INDEX [IX_ProfessorClasses_ClassId] ON [ProfessorClasses] ([ClassId]);
+        END
+
         IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
                        WHERE TABLE_NAME='Classes' AND COLUMN_NAME='CicleId')
         BEGIN
@@ -299,6 +313,18 @@ static bool IsAdmin(ClaimsPrincipal user) =>
 
 static bool IsProfessor(ClaimsPrincipal user) =>
     user.IsInRole("Professor") || user.IsInRole("Admin");
+
+// Retorna els ClassIds assignats al professor; null si és admin (accés total).
+static Task<HashSet<int>> GetProfClassIdsAsync(int profId, AppDbContext db) =>
+    db.ProfessorClasses
+        .Where(pc => pc.ProfessorId == profId)
+        .Select(pc => pc.ClassId)
+        .ToHashSetAsync();
+
+// Comprova si el professor té accés a una classe concreta.
+static Task<bool> HasClassAccessAsync(int profId, bool isAdmin, int classId, AppDbContext db) =>
+    isAdmin ? Task.FromResult(true)
+            : db.ProfessorClasses.AnyAsync(pc => pc.ProfessorId == profId && pc.ClassId == classId);
 
 // Valida DataAnnotations d'un request DTO; retorna 422 si hi ha errors.
 static IResult? Validate<T>(T req) where T : class
@@ -502,6 +528,57 @@ app.MapPost("/api/professors/send-all-credentials", async (
 }).RequireAuthorization().RequireRateLimiting("remind");
 
 // ════════════════════════════════════════════════════════════════════════════
+// ASSIGNACIÓ PROFESSOR ↔ CLASSE  (admin only)
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/professors/{profId:int}/classes", async (
+    int profId, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var classes = await db.ProfessorClasses
+        .Where(pc => pc.ProfessorId == profId)
+        .Include(pc => pc.Class).ThenInclude(c => c.Cicle)
+        .Include(pc => pc.Class).ThenInclude(c => c.Students)
+        .OrderBy(pc => pc.Class.Cicle.Name).ThenBy(pc => pc.Class.Name)
+        .Select(pc => new ClassDto(
+            pc.Class.Id, pc.Class.Name, pc.Class.AcademicYear, pc.Class.CreatedAt,
+            pc.Class.Students.Count, pc.Class.CicleId, pc.Class.Cicle.Name))
+        .ToListAsync();
+    return Results.Ok(classes);
+}).RequireAuthorization();
+
+app.MapPost("/api/professors/{profId:int}/classes", async (
+    int profId, AssignClassRequest req, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
+    if (!await db.Professors.AnyAsync(p => p.Id == profId)) return Results.NotFound();
+    if (!await db.Classes.AnyAsync(c => c.Id == req.ClassId)) return Results.NotFound();
+    if (await db.ProfessorClasses.AnyAsync(pc => pc.ProfessorId == profId && pc.ClassId == req.ClassId))
+        return Results.Conflict(new { error = "El professor ja té aquesta classe assignada." });
+    db.ProfessorClasses.Add(new AutoCo.Api.Data.Models.ProfessorClass
+        { ProfessorId = profId, ClassId = req.ClassId });
+    await db.SaveChangesAsync();
+    await AuditAsync(db, "professor.class.assigned", GetUserId(user),
+        user.FindFirstValue(ClaimTypes.Name), $"ProfId:{profId} ClassId:{req.ClassId}");
+    return Results.NoContent();
+}).RequireAuthorization();
+
+app.MapDelete("/api/professors/{profId:int}/classes/{classId:int}", async (
+    int profId, int classId, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var pc = await db.ProfessorClasses
+        .FirstOrDefaultAsync(pc => pc.ProfessorId == profId && pc.ClassId == classId);
+    if (pc is null) return Results.NotFound();
+    db.ProfessorClasses.Remove(pc);
+    await db.SaveChangesAsync();
+    await AuditAsync(db, "professor.class.unassigned", GetUserId(user),
+        user.FindFirstValue(ClaimTypes.Name), $"ProfId:{profId} ClassId:{classId}");
+    return Results.NoContent();
+}).RequireAuthorization();
+
+// ════════════════════════════════════════════════════════════════════════════
 // CICLES  (lectura per a tots els professors; escriptura admin only)
 // ════════════════════════════════════════════════════════════════════════════
 
@@ -562,15 +639,19 @@ app.MapDelete("/api/cicles/{id:int}", async (int id, ICicleService svc,
 // CLASSES  (lectura per a tots els professors; escriptura admin only)
 // ════════════════════════════════════════════════════════════════════════════
 
-app.MapGet("/api/classes", async (IClassService svc, ClaimsPrincipal user) =>
+app.MapGet("/api/classes", async (IClassService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    return Results.Ok(await svc.GetAllAsync());
+    var all = await svc.GetAllAsync();
+    if (IsAdmin(user)) return Results.Ok(all);
+    var ids = await GetProfClassIdsAsync(GetUserId(user), db);
+    return Results.Ok(all.Where(c => ids.Contains(c.Id)).ToList());
 }).RequireAuthorization();
 
-app.MapGet("/api/classes/{id:int}", async (int id, IClassService svc, ClaimsPrincipal user) =>
+app.MapGet("/api/classes/{id:int}", async (int id, IClassService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), id, db)) return Results.Forbid();
     var c = await svc.GetByIdAsync(id);
     return c is null ? Results.NotFound() : Results.Ok(c);
 }).RequireAuthorization();
@@ -608,10 +689,11 @@ app.MapDelete("/api/classes/{id:int}", async (int id, IClassService svc,
 // ── Alumnes dins d'una classe ─────────────────────────────────────────────────
 
 app.MapGet("/api/classes/{classId:int}/students", async (
-    int classId, IClassService svc, ClaimsPrincipal user,
+    int classId, IClassService svc, AppDbContext db, ClaimsPrincipal user,
     int page = 1, int size = 500) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
     var (items, total) = await svc.GetStudentsPagedAsync(classId, page, size);
     return Results.Ok(new PagedResult<StudentDto>(items, total, page, size));
 }).RequireAuthorization();
@@ -688,25 +770,28 @@ app.MapPost("/api/classes/{classId:int}/students/{studentId:int}/move", async (
 // ════════════════════════════════════════════════════════════════════════════
 
 app.MapGet("/api/classes/{classId:int}/modules", async (int classId,
-    IModuleService svc, ClaimsPrincipal user) =>
+    IModuleService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
     var list = await svc.GetByClassAsync(classId);
     return Results.Ok(list);
 }).RequireAuthorization();
 
 app.MapGet("/api/classes/{classId:int}/modules/{id:int}", async (int classId, int id,
-    IModuleService svc, ClaimsPrincipal user) =>
+    IModuleService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
     var m = await svc.GetByIdAsync(id, GetUserId(user), IsAdmin(user));
     return m is null ? Results.NotFound() : Results.Ok(m);
 }).RequireAuthorization();
 
 app.MapPost("/api/classes/{classId:int}/modules", async (int classId,
-    CreateModuleRequest req, IModuleService svc, ClaimsPrincipal user) =>
+    CreateModuleRequest req, IModuleService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
     if (Validate(req) is { } err) return err;
     try
     {
