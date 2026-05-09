@@ -147,7 +147,7 @@ using (var scope = app.Services.CreateScope())
                        WHERE TABLE_NAME='Classes' AND COLUMN_NAME='CicleId')
         BEGIN
             ALTER TABLE [Classes] ADD [CicleId] INT NULL;
-            UPDATE [Classes] SET [CicleId] = (SELECT TOP 1 [Id] FROM [Cicles] ORDER BY [Id]);
+            EXEC('UPDATE [Classes] SET [CicleId] = (SELECT TOP 1 [Id] FROM [Cicles] ORDER BY [Id])');
             ALTER TABLE [Classes] ALTER COLUMN [CicleId] INT NOT NULL;
             ALTER TABLE [Classes] ADD CONSTRAINT [FK_Classes_Cicles_CicleId]
                 FOREIGN KEY ([CicleId]) REFERENCES [Cicles]([Id]);
