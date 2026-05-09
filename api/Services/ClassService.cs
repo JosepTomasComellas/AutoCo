@@ -32,35 +32,60 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
 
     // ── Classes ──────────────────────────────────────────────────────────────
 
-    public async Task<List<ClassDto>> GetAllAsync() =>
-        await db.Classes
+    public async Task<List<ClassDto>> GetAllAsync()
+    {
+        var list = await db.Classes
             .Include(c => c.Students)
-            .OrderBy(c => c.Name)
-            .Select(c => ToClassDto(c))
+            .Include(c => c.Cicle)
+            .OrderBy(c => c.Cicle.Name)
+            .ThenBy(c => c.Name)
             .ToListAsync();
+        return list.Select(ToClassDto).ToList();
+    }
 
     public async Task<ClassDto?> GetByIdAsync(int id)
     {
         var c = await db.Classes
             .Include(c => c.Students)
+            .Include(c => c.Cicle)
             .FirstOrDefaultAsync(c => c.Id == id);
         return c is null ? null : ToClassDto(c);
     }
 
     public async Task<ClassDto> CreateAsync(CreateClassRequest req)
     {
-        var classe = new Class { Name = req.Name.Trim(), AcademicYear = req.AcademicYear?.Trim() };
+        var cicleId = req.CicleId != 0
+            ? req.CicleId
+            : (await db.Cicles.OrderBy(ci => ci.Id).Select(ci => ci.Id).FirstOrDefaultAsync());
+        var classe = new Class
+        {
+            Name = req.Name.Trim(),
+            AcademicYear = req.AcademicYear?.Trim(),
+            CicleId = cicleId
+        };
         db.Classes.Add(classe);
         await db.SaveChangesAsync();
+        await db.Entry(classe).Reference(c => c.Cicle).LoadAsync();
         return ToClassDto(classe);
     }
 
     public async Task<ClassDto?> UpdateAsync(int id, UpdateClassRequest req)
     {
-        var c = await db.Classes.Include(c => c.Students).FirstOrDefaultAsync(c => c.Id == id);
+        var c = await db.Classes
+            .Include(c => c.Students)
+            .Include(c => c.Cicle)
+            .FirstOrDefaultAsync(c => c.Id == id);
         if (c is null) return null;
         c.Name = req.Name.Trim();
         c.AcademicYear = req.AcademicYear?.Trim();
+        if (req.CicleId != 0 && req.CicleId != c.CicleId)
+        {
+            if (await db.Cicles.AnyAsync(ci => ci.Id == req.CicleId))
+            {
+                c.CicleId = req.CicleId;
+                await db.Entry(c).Reference(cl => cl.Cicle).LoadAsync();
+            }
+        }
         await db.SaveChangesAsync();
         return ToClassDto(c);
     }
@@ -335,7 +360,8 @@ public class ClassService(AppDbContext db, IEmailService email, IPasswordCryptoS
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     private static ClassDto ToClassDto(Class c) => new(
-        c.Id, c.Name, c.AcademicYear, c.CreatedAt, c.Students.Count);
+        c.Id, c.Name, c.AcademicYear, c.CreatedAt, c.Students.Count,
+        c.CicleId, c.Cicle?.Name ?? "");
 
     private StudentDto ToStudentDto(Student s) => new(
         s.Id, s.ClassId, s.Nom, s.Cognoms, s.NomComplet, s.NumLlista, s.Email, s.CreatedAt,

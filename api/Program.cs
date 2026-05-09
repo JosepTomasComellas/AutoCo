@@ -55,6 +55,7 @@ builder.Services.AddSingleton<IPasswordCryptoService>(
     new PasswordCryptoService(jwtSecret));
 builder.Services.AddScoped<IAuthService,       AuthService>();
 builder.Services.AddScoped<IProfessorService,  ProfessorService>();
+builder.Services.AddScoped<ICicleService,      CicleService>();
 builder.Services.AddScoped<IClassService,      ClassService>();
 builder.Services.AddScoped<IModuleService,     ModuleService>();
 builder.Services.AddScoped<IActivityService,   ActivityService>();
@@ -131,6 +132,28 @@ using (var scope = app.Services.CreateScope())
     // no té fitxers de migració i la BD va ser creada amb EnsureCreated o bé
     // amb una versió anterior del model.
     await db.Database.ExecuteSqlRawAsync("""
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Cicles')
+        BEGIN
+            CREATE TABLE [Cicles] (
+                [Id]        INT           NOT NULL IDENTITY(1,1),
+                [Name]      NVARCHAR(200) NOT NULL,
+                [CreatedAt] DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                CONSTRAINT [PK_Cicles] PRIMARY KEY ([Id])
+            );
+            INSERT INTO [Cicles] ([Name]) VALUES (N'General');
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                       WHERE TABLE_NAME='Classes' AND COLUMN_NAME='CicleId')
+        BEGIN
+            ALTER TABLE [Classes] ADD [CicleId] INT NULL;
+            UPDATE [Classes] SET [CicleId] = (SELECT TOP 1 [Id] FROM [Cicles] ORDER BY [Id]);
+            ALTER TABLE [Classes] ALTER COLUMN [CicleId] INT NOT NULL;
+            ALTER TABLE [Classes] ADD CONSTRAINT [FK_Classes_Cicles_CicleId]
+                FOREIGN KEY ([CicleId]) REFERENCES [Cicles]([Id]);
+            CREATE INDEX [IX_Classes_CicleId] ON [Classes] ([CicleId]);
+        END
+
         IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityCriteria')
         BEGIN
             CREATE TABLE [ActivityCriteria] (
@@ -477,6 +500,63 @@ app.MapPost("/api/professors/send-all-credentials", async (
     var result = await svc.SendAllCredentialsAsync();
     return Results.Ok(result);
 }).RequireAuthorization().RequireRateLimiting("remind");
+
+// ════════════════════════════════════════════════════════════════════════════
+// CICLES  (lectura per a tots els professors; escriptura admin only)
+// ════════════════════════════════════════════════════════════════════════════
+
+app.MapGet("/api/cicles", async (ICicleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    return Results.Ok(await svc.GetAllAsync());
+}).RequireAuthorization();
+
+app.MapGet("/api/cicles/{id:int}", async (int id, ICicleService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var c = await svc.GetByIdAsync(id);
+    return c is null ? Results.NotFound() : Results.Ok(c);
+}).RequireAuthorization();
+
+app.MapPost("/api/cicles", async (CreateCicleRequest req, ICicleService svc,
+    AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
+    var c = await svc.CreateAsync(req);
+    await AuditAsync(db, "cicle.created", GetUserId(user),
+        user.FindFirstValue(ClaimTypes.Name), $"Id:{c.Id} Name:{c.Name}");
+    return Results.Created($"/api/cicles/{c.Id}", c);
+}).RequireAuthorization();
+
+app.MapPut("/api/cicles/{id:int}", async (int id, UpdateCicleRequest req,
+    ICicleService svc, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    if (Validate(req) is { } err) return err;
+    var c = await svc.UpdateAsync(id, req);
+    if (c is not null)
+        await AuditAsync(db, "cicle.updated", GetUserId(user),
+            user.FindFirstValue(ClaimTypes.Name), $"Id:{id} Name:{c.Name}");
+    return c is null ? Results.NotFound() : Results.Ok(c);
+}).RequireAuthorization();
+
+app.MapDelete("/api/cicles/{id:int}", async (int id, ICicleService svc,
+    AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    try
+    {
+        var ok = await svc.DeleteAsync(id);
+        if (ok) await AuditAsync(db, "cicle.deleted", GetUserId(user),
+            user.FindFirstValue(ClaimTypes.Name), $"Id:{id}");
+        return ok ? Results.NoContent() : Results.NotFound();
+    }
+    catch (InvalidOperationException ex)
+    {
+        return Results.BadRequest(new { error = ex.Message });
+    }
+}).RequireAuthorization();
 
 // ════════════════════════════════════════════════════════════════════════════
 // CLASSES  (lectura per a tots els professors; escriptura admin only)

@@ -7,6 +7,7 @@ namespace AutoCo.Api.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<Professor>        Professors        => Set<Professor>();
+    public DbSet<Cicle>            Cicles            => Set<Cicle>();
     public DbSet<Class>            Classes           => Set<Class>();
     public DbSet<Student>          Students          => Set<Student>();
     public DbSet<Module>           Modules           => Set<Module>();
@@ -25,6 +26,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<Cicle>(e => {
+            e.Property(c => c.Name).HasMaxLength(200);
+        });
+
         b.Entity<Professor>(e => {
             e.HasIndex(p => p.Email).IsUnique();
             e.Property(p => p.Email).HasMaxLength(200);
@@ -35,6 +40,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         b.Entity<Class>(e => {
             e.Property(c => c.Name).HasMaxLength(200);
+            e.HasOne(c => c.Cicle)
+             .WithMany(ci => ci.Classes)
+             .HasForeignKey(c => c.CicleId)
+             .OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(c => c.CicleId);
         });
 
         b.Entity<Student>(e => {

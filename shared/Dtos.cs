@@ -34,12 +34,24 @@ public record UpdateProfessorRequest(
 public record SendCredentialsResult(bool Sent, string? Reason);
 public record SendAllResult(int Sent, int Skipped, List<string> Details);
 
+// ─── Cicles ──────────────────────────────────────────────────────────────────
+public record CicleDto(int Id, string Name, DateTime CreatedAt, int NumClasses);
+public record CreateCicleRequest([Required][MaxLength(200)] string Name);
+public record UpdateCicleRequest([Required][MaxLength(200)] string Name);
+
 // ─── Classes ─────────────────────────────────────────────────────────────────
 public record ClassDto(
-    int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents);
+    int Id, string Name, string? AcademicYear, DateTime CreatedAt, int NumStudents,
+    int CicleId = 0, string CicleName = "");
 
-public record CreateClassRequest([Required][MaxLength(200)] string Name, [MaxLength(20)] string? AcademicYear);
-public record UpdateClassRequest([Required][MaxLength(200)] string Name, [MaxLength(20)] string? AcademicYear);
+public record CreateClassRequest(
+    [Required][MaxLength(200)] string Name,
+    [MaxLength(20)] string? AcademicYear,
+    int CicleId = 0);
+public record UpdateClassRequest(
+    [Required][MaxLength(200)] string Name,
+    [MaxLength(20)] string? AcademicYear,
+    int CicleId = 0);
 
 // ─── Alumnes ─────────────────────────────────────────────────────────────────
 public record StudentDto(

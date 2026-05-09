@@ -7,6 +7,9 @@ public class Class
     public string? AcademicYear { get; set; }
     public DateTime CreatedAt  { get; set; } = DateTime.UtcNow;
 
+    public int   CicleId { get; set; }
+    public Cicle Cicle   { get; set; } = null!;
+
     public ICollection<Student> Students { get; set; } = [];
     public ICollection<Module>  Modules  { get; set; } = [];
 }
