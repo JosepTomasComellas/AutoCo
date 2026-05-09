@@ -40,7 +40,9 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
     // ── Export ────────────────────────────────────────────────────────────────
     public async Task<BackupDto> ExportAsync()
     {
+        var cicles     = await db.Cicles.AsNoTracking().ToListAsync();
         var professors = await db.Professors.AsNoTracking().ToListAsync();
+        var profClasses = await db.ProfessorClasses.AsNoTracking().ToListAsync();
         var classes    = await db.Classes.AsNoTracking().ToListAsync();
         var students   = await db.Students.AsNoTracking().ToListAsync();
         var modules    = await db.Modules.AsNoTracking().ToListAsync();
@@ -53,6 +55,10 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var notes      = await db.ProfessorNotes.AsNoTracking().ToListAsync();
         var templates  = await db.ActivityTemplates.AsNoTracking().ToListAsync();
 
+        var cicleDtos = cicles.Select(ci => new CicleBackupDto(ci.Id, ci.Name, ci.CreatedAt)).ToList();
+        var profClassDtos = profClasses
+            .Select(pc => new ProfessorClassBackupDto(pc.ProfessorId, pc.ClassId)).ToList();
+
         var classDtos = classes.Select(c => new ClassBackupDto(
             c.Id, c.Name, c.AcademicYear, c.CreatedAt,
             students.Where(s => s.ClassId == c.Id)
@@ -61,7 +67,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             modules.Where(m => m.ClassId == c.Id)
                 .Select(m => new ModuleBackupDto(m.Id, m.ProfessorId, m.Code, m.Name, m.CreatedAt,
                     exclusions.Where(e => e.ModuleId == m.Id).Select(e => e.StudentId).ToList()))
-                .ToList()
+                .ToList(),
+            c.CicleId
         )).ToList();
 
         var activityDtos = activities.Select(a => new ActivityBackupDto(
@@ -91,12 +98,14 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var templateDtos = templates.Select(t => new TemplateBackupDto(
             t.Id, t.ProfessorId, t.Name, t.Description, t.CriteriaJson, t.CreatedAt)).ToList();
 
-        return new BackupDto("2.0", DateTime.UtcNow,
+        return new BackupDto("2.1", DateTime.UtcNow,
             professors.Select(p => new ProfessorBackupDto(
                 p.Id, p.Email, p.Nom, p.Cognoms, p.IsAdmin, p.PasswordHash, p.CreatedAt)).ToList(),
             classDtos, activityDtos,
             templateDtos.Count > 0 ? templateDtos : null,
-            null); // AuditLogs no s'inclouen al backup
+            null, // AuditLogs no s'inclouen al backup
+            cicleDtos.Count > 0 ? cicleDtos : null,
+            profClassDtos.Count > 0 ? profClassDtos : null);
     }
 
     public async Task<byte[]> ExportZipAsync() => ToZip(await ExportAsync());
@@ -185,9 +194,31 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             await db.ModuleExclusions.ExecuteDeleteAsync();
             await db.Modules.ExecuteDeleteAsync();
             await db.Students.ExecuteDeleteAsync();
+            await db.ProfessorClasses.ExecuteDeleteAsync();
             await db.Classes.ExecuteDeleteAsync();
             await db.ActivityTemplates.ExecuteDeleteAsync();
             await db.Professors.ExecuteDeleteAsync();
+            await db.Cicles.ExecuteDeleteAsync();
+
+            // ── Cicles ────────────────────────────────────────────────────────
+            Dictionary<int, int> cicleMap = [];
+            if (bk.Cicles is { Count: > 0 })
+            {
+                var cicleEnts = bk.Cicles.Select(ci => new AutoCo.Api.Data.Models.Cicle
+                    { Name = ci.Name, CreatedAt = ci.CreatedAt }).ToList();
+                db.Cicles.AddRange(cicleEnts);
+                await db.SaveChangesAsync();
+                cicleMap = bk.Cicles.Zip(cicleEnts)
+                    .ToDictionary(x => x.First.Id, x => x.Second.Id);
+            }
+            else
+            {
+                // Backward compat: backup sense cicles → crear "General"
+                var general = new AutoCo.Api.Data.Models.Cicle { Name = "General", CreatedAt = DateTime.UtcNow };
+                db.Cicles.Add(general);
+                await db.SaveChangesAsync();
+                // No cal mapeig — les classes antigues tenien CicleId = 0
+            }
 
             // ── Professors ────────────────────────────────────────────────────
             var profEnts = bk.Professors.Select(p => new Professor
@@ -217,8 +248,13 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             }
 
             // ── Classes ───────────────────────────────────────────────────────
-            var classEnts = bk.Classes.Select(c => new Class
-                { Name = c.Name, AcademicYear = c.AcademicYear, CreatedAt = c.CreatedAt }).ToList();
+            var classEnts = bk.Classes.Select(c =>
+            {
+                int newCicleId = c.CicleId > 0 && cicleMap.TryGetValue(c.CicleId, out var mapped)
+                    ? mapped
+                    : cicleMap.Values.FirstOrDefault();
+                return new Class { Name = c.Name, AcademicYear = c.AcademicYear, CreatedAt = c.CreatedAt, CicleId = newCicleId };
+            }).ToList();
             db.Classes.AddRange(classEnts);
             await db.SaveChangesAsync();
 
@@ -356,6 +392,18 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                                 UpdatedAt  = n.UpdatedAt
                             });
             await db.SaveChangesAsync();
+
+            // ── Professor-Class assignments ───────────────────────────────────
+            if (bk.ProfessorClasses is { Count: > 0 })
+            {
+                var classMap = bk.Classes.Zip(classEnts)
+                    .ToDictionary(x => x.First.Id, x => x.Second.Id);
+                foreach (var pc in bk.ProfessorClasses)
+                    if (profMap.TryGetValue(pc.ProfessorId, out var newPid) &&
+                        classMap.TryGetValue(pc.ClassId, out var newCid))
+                        db.ProfessorClasses.Add(new ProfessorClass { ProfessorId = newPid, ClassId = newCid });
+                await db.SaveChangesAsync();
+            }
 
             await tx.CommitAsync();
 

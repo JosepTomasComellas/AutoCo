@@ -1403,6 +1403,7 @@ app.MapPost("/api/admin/new-year", async (
         {
             Name         = cls.Name,
             AcademicYear = req.TargetYear,
+            CicleId      = cls.CicleId,
             CreatedAt    = DateTime.UtcNow
         };
         db.Classes.Add(newClass);

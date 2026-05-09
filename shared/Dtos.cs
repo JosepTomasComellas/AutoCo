@@ -195,17 +195,23 @@ public record BackupDto(
     List<ProfessorBackupDto>      Professors,
     List<ClassBackupDto>          Classes,
     List<ActivityBackupDto>       Activities,
-    List<TemplateBackupDto>?      Templates  = null,
-    List<AdminAuditLogBackupDto>? AuditLogs  = null);
+    List<TemplateBackupDto>?          Templates         = null,
+    List<AdminAuditLogBackupDto>?     AuditLogs         = null,
+    List<CicleBackupDto>?             Cicles            = null,
+    List<ProfessorClassBackupDto>?    ProfessorClasses  = null);
 
 public record ProfessorBackupDto(
     int Id, string Email, string Nom, string Cognoms,
     bool IsAdmin, string PasswordHash, DateTime CreatedAt);
 
+public record CicleBackupDto(int Id, string Name, DateTime CreatedAt);
+public record ProfessorClassBackupDto(int ProfessorId, int ClassId);
+
 public record ClassBackupDto(
     int Id, string Name, string? AcademicYear, DateTime CreatedAt,
     List<StudentBackupDto> Students,
-    List<ModuleBackupDto>  Modules);
+    List<ModuleBackupDto>  Modules,
+    int CicleId = 0);
 
 public record StudentBackupDto(
     int Id, string Nom, string Cognoms, int NumLlista,

@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.5.23
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.0
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -57,9 +57,11 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - Pàgines de login i navegació principal ja localitzades; resta de pàgines extensibles amb el mateix patró
 
 **Administració**
+- **Cicles formatius** — agrupació visual de classes per cicle (p.ex. DAM, ASIX, SMX); cada classe pertany a un cicle; la pàgina `/admin/cicles` permet crear, editar i eliminar cicles; les classes es mostren agrupades per cicle a tota la interfície
+- **Assignació professors per classe** — un professor accedeix únicament a les classes que li han estat assignades; l'assignació es gestiona des de `/admin/professors` (xips per cicle, afegir/treure classes); professors sense classes assignades no veuen res
 - Gestió de **professors** i permisos d'administrador (exclusiu rol Admin)
-- **Menú d'administració** a la barra de navegació (icona `AdminPanelSettings`), visible únicament als administradors; dona accés a Professors, Còpies de seguretat, Estadístiques, Sistema i Auditoria des de qualsevol pàgina
-- **Còpies de seguretat**: backup ZIP complet (dades + fotos d'alumnes i professors amb remap d'IDs automàtic en restaurar); **backup automàtic** diari/setmanal configurable via variables d'entorn (`BACKUP_*`); compatibilitat enrere amb còpies `.json` antigues
+- **Menú d'administració** a la barra de navegació (icona `AdminPanelSettings`), visible únicament als administradors; dona accés a Professors, Cicles, Còpies de seguretat, Estadístiques, Sistema i Auditoria des de qualsevol pàgina
+- **Còpies de seguretat**: backup ZIP complet (dades + fotos + cicles + assignacions professors; remap d'IDs automàtic en restaurar); **backup automàtic** diari/setmanal configurable via variables d'entorn (`BACKUP_*`); compatibilitat enrere amb còpies `.json` antigues
 - **Configuració del sistema** (`/admin/sistema`): selector de nivell de log (Error/Warning/Information/Debug/Trace), s'aplica immediatament a l'API i al web sense reinici i persisteix via Redis
 - **KPIs al tauler**: classes, mòduls, alumnes, activitats, obertes i grups
 - **Mode fosc** i **selector de tema de color** (6 opcions) amb preferències desades al navegador
@@ -74,7 +76,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - **Validació de requests a l'API**: DataAnnotations (`[Required]`, `[MaxLength]`, `[EmailAddress]`, `[Range]`) als DTOs; resposta `ValidationProblem` (RFC 9457) automàtica als endpoints POST/PUT
 - **JWT refresh tokens**: tokens rotatius desats a Redis (7 dies); renovació automàtica transparent al client; `POST /api/auth/refresh` i `POST /api/auth/logout`
 - **Paginació del costat del servidor**: `PagedResult<T>` a l'API amb paràmetres `?page=1&size=N`; `ApiClient` desempaqueta transparentment per compatibilitat amb el codi existent
-- **Tests unitaris** ampliats a 29 casos (xUnit + EF Core InMemory): `ResultsService` (15), `AuthService` (8), `ActivityService` (6)
+- **Tests unitaris** ampliats a 39 casos (xUnit + EF Core InMemory): `ResultsService` (15), `AuthService` (8), `ActivityService` (6), `CicleService` (10)
 - **Rate limiting millorat**: SlidingWindow per auth (5 req/min) i remind (2 req/min); FixedWindow per admin (20 req/min); 429 automàtic
 - **Compressió de fotos automàtica**: redimensionament a 400×400px + JPEG 85% (SixLabors.ImageSharp) en pujar; validació de content-type
 - **Audit log d'accions admin**: registre persistent de les accions sensibles (crear/eliminar professor, eliminar classe, importar/restaurar backup, canviar nivell de log); pàgina `/admin/auditoria` filtrable i paginada
@@ -157,14 +159,14 @@ AutoCo/
 ### Model de dades
 
 ```
-Professor ──< Module ──< Activity ──< Group ──< GroupMember (Student)
-              │               ├──< ActivityCriteria
-              │               ├──< Evaluation ──< EvaluationScore
-              │               ├──< ProfessorNote (per alumne)
-              │               └──< ActivityLog (registre d'accions)
-Class ────────┘
-  ├──< Student
-  └──< ModuleExclusion
+Cicle ────< Class ──────< Module ──< Activity ──< Group ──< GroupMember (Student)
+                │           │              ├──< ActivityCriteria
+                │           │              ├──< Evaluation ──< EvaluationScore
+                │           │              ├──< ProfessorNote (per alumne)
+                │           │              └──< ActivityLog (registre d'accions)
+                │           └──< Professor (via ProfessorClass)
+                └──< Student
+                └──< ModuleExclusion
 ActivityTemplate (per professor, criteris JSON)
 ```
 
@@ -352,6 +354,13 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.0
+- **Cicles formatius** — nova capa d'organització que agrupa les classes per cicle (DAM, ASIX, SMX…); pàgina `/admin/cicles` amb CRUD complet; les classes es mostren agrupades per cicle a totes les vistes; un cicle «General» es crea automàticament per a classes sense cicle assignat
+- **Assignació professors per classe** — cada professor veu únicament les classes que li han estat assignades; la gestió es fa des de `/admin/professors` (xips agrupats per cicle, botó de desassignació inline, desplegable per afegir noves classes); professors sense cap classe assignada veuen la pàgina buida
+- **Filtre d'accés a l'API** — els endpoints `/api/classes`, `/api/classes/{id}/students`, `/api/classes/{id}/modules` i derivats comproven que el professor tingui accés a la classe (admin ho veu tot); `GetProfClassIdsAsync` i `HasClassAccessAsync` com a helpers reutilitzables
+- **Backup v2.1 amb cicles i assignacions** — `ExportAsync` inclou `Cicles` i `ProfessorClasses`; `ImportCoreAsync` restaura els cicles primer (FK dependency), remapeja els `CicleId` de les classes, i recrea les assignacions; compatibilitat enrere: backups sense `Cicles` creen un cicle «General» automàticament
+- **Tests ampliats** — 10 nous casos de test a `CicleServiceTests`: GetAll buit, ordenació per nom, Create/Update/Delete bàsics, gestió de notFound, protecció d'eliminació si hi ha classes, i `NumClasses` correcte
 
 ### v2.5.23
 - **Fix overflow text targetes compactes** — afegit `min-width:0` i `overflow:hidden` a `.mud-card-header-content` en mode compacte per permetre l'ellipsis en flex layout; el pare `.mud-card-header-content` de MudBlazor té `flex:1` sense `min-width:0` per defecte

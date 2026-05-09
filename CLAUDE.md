@@ -90,18 +90,20 @@ Per a producció real, canviar:
 ## Model de dades
 
 ```
-Professor ──< Module ──< Activity ──< Group ──< GroupMember (Student)
-              │               ├──< ActivityCriteria (criteris per activitat)
-              │               ├──< Evaluation ──< EvaluationScore (per criteri)
-              │               ├──< ProfessorNote (per alumne)
-              │               └──< ActivityLog (registre d'accions)
-Class ────────┘
-  ├──< Student
-  └──< ModuleExclusion
+Cicle ────< Class ──────< Module ──< Activity ──< Group ──< GroupMember (Student)
+                │           │              ├──< ActivityCriteria (criteris per activitat)
+                │           │              ├──< Evaluation ──< EvaluationScore (per criteri)
+                │           │              ├──< ProfessorNote (per alumne)
+                │           │              └──< ActivityLog (registre d'accions)
+                │           └──< Professor (via ProfessorClass)
+                └──< Student
+                └──< ModuleExclusion
 ActivityTemplate (per professor, criteris JSON)
 ```
 
 - Un alumne pertany a una `Class` i autentifica amb email + contrasenya
+- Una `Class` pertany a un `Cicle` (FK obligatori; cicle «General» creat per seed)
+- Un `Professor` accedeix únicament a les classes que li han estat assignades via `ProfessorClass`
 - Una `Activity` pertany a un `Module` (que pertany a una `Class`); té camps `OpenAt?`/`CloseAt?` (UTC) per a programació automàtica
 - Un alumne avalua tots els membres del seu grup (inclòs ell mateix)
 - `IsSelf = true` quan avaluador = avaluat (autoavaluació)
@@ -122,8 +124,8 @@ Puntuació: **escala E/D/C/B/A** (estreles 1–5 = valors 1, 3.5, 5, 7.5, 10).
 
 ## Rols i autenticació
 
-- **Admin** — professor amb `IsAdmin=true`. Gestiona professors i veu tot.
-- **Professor** — veu i gestiona les seves pròpies classes/activitats.
+- **Admin** — professor amb `IsAdmin=true`. Gestiona professors, cicles i veu tot (totes les classes).
+- **Professor** — veu i gestiona únicament les classes que li han estat assignades via `ProfessorClass`.
 - **Alumne** — accedeix amb email + contrasenya. Pot avaluar quan l'activitat és oberta.
 
 JWT (professors) + `ProtectedLocalStorage` (Blazor). Estat global via `UserStateService` (Scoped).
@@ -135,6 +137,8 @@ POST /api/auth/professor          # Login professor
 POST /api/auth/student            # Login alumne
 
 GET/POST/PUT/DELETE /api/professors                       # Gestió professors (admin)
+GET/POST/DELETE    /api/professors/{id}/classes           # Assignació classes a professor (admin)
+GET/POST/PUT/DELETE /api/cicles                           # Gestió cicles (admin)
 GET/POST/PUT/DELETE /api/classes                          # Gestió classes
 GET/POST/PUT/DELETE /api/classes/{id}/students            # Gestió alumnes
 POST /api/classes/{id}/students/bulk                      # Importació CSV
@@ -199,8 +203,10 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Validació de requests: DataAnnotations als DTOs (`[Required]`, `[MaxLength]`, `[EmailAddress]`, `[Range]`); helper `Validate<T>()` a `Program.cs` retorna `Results.ValidationProblem` (RFC 9457)
 - JWT refresh tokens: `StoreRefreshTokenAsync` genera base64url segur, desa a Redis `autoco:refresh:{token}` (TTL 7 dies); rotació en cada refresh; `RefreshFromTokenAsync` a `ApiClient` per a `MainLayout`; `TryRefreshAsync` privat per a reintentar peticions 401
 - Paginació del servidor: `PagedResult<T>` als DTOs; paràmetres `?page=1&size=N`; `ApiClient` desempaqueta a `List<T>` (size=500 per defecte = compatible amb codi existent)
-- Tests (29): `ResultsServiceTests` (15), `AuthServiceTests` (8), `ActivityServiceTests` (6); pattern `file sealed class FakePhotoService : IPhotoService` per no usar mocking library
+- Tests (39): `ResultsServiceTests` (15), `AuthServiceTests` (8), `ActivityServiceTests` (6), `CicleServiceTests` (10); pattern `file sealed class FakePhotoService : IPhotoService` per no usar mocking library
 - Rate limiting: SlidingWindow `auth` (5/min), SlidingWindow `remind` (2/min, mass-send), FixedWindow `admin` (20/min); `RejectionStatusCode = 429`
 - Compressió fotos: `SixLabors.ImageSharp` a l'API; `SaveImageAsync` redimensiona a 400×400 crop centrat, JPEG Q85; valida content-type (jpeg/png/webp/gif)
 - Audit log: model `AdminAuditLog` (sense FK, preservat si s'esborren altres entitats); helper `AuditAsync()` a `Program.cs`; `GET /api/admin/audit` paginat; pàgina `/admin/auditoria` amb colors per tipus d'acció
 - Service Worker PWA (`service-worker.js`): **NO caches `site.css`/`app.js`/`charts.js`** — la caché HTTP (ETag) ja ho gestiona i s'invalida automàticament. Només cacha `offline.html` i imatges. `CACHE_NAME` cal actualitzar-lo ÚNICAMENT si canvien els `STATIC_ASSETS` (rarament)
+- Cicles: `Cicle` agrupa classes; `ProfessorClass` (join table) assigna professors a classes; admins veuen tot; professors sense classes assignades no veuen res; `GetProfClassIdsAsync` i `HasClassAccessAsync` com a helpers d'autorització; `new-year` hereta `CicleId`; el seed crea un cicle «General» per a classes preexistents (via `EXEC()` per evitar pre-compilació SQL Server)
+- Backup v2.1: inclou `Cicles` i `ProfessorClasses`; `ImportCoreAsync` esborra `ProfessorClasses` i `Cicles` (en ordre FK), recrea cicles primer, remapeja `CicleId` de les classes, i recrea assignacions amb mapeig d'IDs; backups antics sense `Cicles` creen un cicle «General» automàticament
