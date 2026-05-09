@@ -51,8 +51,17 @@
                                   AdornmentIcon="@Icons.Material.Filled.Class" />
                     <MudTextField @bind-Value="_curs" Label="@Loc["Classes_AcademicYear"]"
                                   Placeholder="@Loc["Classes_AcademicYearPh"]" Variant="Variant.Outlined"
-                                  Adornment="Adornment.Start"
+                                  Class="mb-3" Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
+                    <MudSelect T="int" @bind-Value="_cicleId" Label="@Loc["Classes_Cicle"]"
+                               Variant="Variant.Outlined"
+                               Adornment="Adornment.Start"
+                               AdornmentIcon="@Icons.Material.Filled.School">
+                        @foreach (var ci in _cicles)
+                        {
+                            <MudSelectItem Value="ci.Id">@ci.Name</MudSelectItem>
+                        }
+                    </MudSelect>
                 </MudCardContent>
                 <MudCardActions Class="px-4 pb-4">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
@@ -85,8 +94,21 @@
         }
         else
         {
-            <MudStack Spacing="2">
-                @foreach (var c in _classes)
+            @foreach (var cicleGroup in _classes.GroupBy(c => new { c.CicleId, c.CicleName }).OrderBy(g => g.Key.CicleName))
+            {
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2 mt-3">
+                    <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Small" Color="Color.Tertiary" />
+                    <MudText Typo="Typo.subtitle2" Style="font-weight:700;text-transform:uppercase;letter-spacing:.05em"
+                             Color="Color.Tertiary">
+                        @cicleGroup.Key.CicleName
+                    </MudText>
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Color="Color.Tertiary"
+                             Style="height:20px">
+                        @cicleGroup.Count()
+                    </MudChip>
+                </MudStack>
+            <MudStack Spacing="2" Class="mb-2">
+                @foreach (var c in cicleGroup.OrderBy(c => c.Name))
                 {
                     <MudCard Elevation="1" Style="border-left:3px solid var(--mud-palette-primary)">
                         <MudExpansionPanel @bind-Expanded="@_expanded[c.Id]"
@@ -136,7 +158,7 @@
                                     <MudItem xs="12" md="@(UserState.IsAdmin ? 5 : 12)">
                                         @if (UserState.IsAdmin)
                                         {
-                                            <EditClassForm Class="c" OnSaved="OnClassSaved" />
+                                            <EditClassForm Class="c" Cicles="_cicles" OnSaved="OnClassSaved" />
                                         }
                                         else
                                         {
@@ -209,18 +231,20 @@
                     </MudCard>
                 }
             </MudStack>
+            }
         }
     </MudItem>
 </MudGrid>
 
 @code {
-    private List<ClassDto> _classes = [];
-    private string _nom  = "";
-    private string _curs = "";
+    private List<ClassDto>  _classes = [];
+    private List<CicleDto>  _cicles  = [];
+    private string _nom     = "";
+    private string _curs    = "";
+    private int    _cicleId = 0;
     private bool _loading = true;
     private bool _saving  = false;
 
-    // Caché de mòduls per classe (càrrega lazy al desplegar)
     private Dictionary<int, List<ModuleDto>> _modulesCache = new();
     private Dictionary<int, bool>            _expanded     = new();
 
@@ -237,7 +261,12 @@
     {
         if (!UserState.IsProfessor) return;
         Api.SetToken(UserState.Token!);
-        _classes = await Api.GetClassesAsync() ?? [];
+        var classesTask = Api.GetClassesAsync();
+        var ciclesTask  = UserState.IsAdmin ? Api.GetCiclesAsync() : Task.FromResult<List<CicleDto>?>(null);
+        await Task.WhenAll(classesTask, ciclesTask);
+        _classes = classesTask.Result ?? [];
+        _cicles  = ciclesTask.Result  ?? [];
+        if (_cicles.Any()) _cicleId = _cicles[0].Id;
         foreach (var c in _classes) _expanded[c.Id] = false;
         _loading = false;
     }
@@ -247,11 +276,15 @@
         if (string.IsNullOrWhiteSpace(_nom)) { Snackbar.Add(Loc["Classes_NameRequired"], Severity.Warning); return; }
         _saving = true;
         Api.SetToken(UserState.Token!);
-        var c = await Api.CreateClassAsync(new CreateClassRequest(_nom.Trim(), string.IsNullOrWhiteSpace(_curs) ? null : _curs.Trim()));
+        var c = await Api.CreateClassAsync(new CreateClassRequest(
+            _nom.Trim(),
+            string.IsNullOrWhiteSpace(_curs) ? null : _curs.Trim(),
+            _cicleId));
         if (c is not null)
         {
             _classes.Add(c);
             _nom = ""; _curs = "";
+            if (_cicles.Any()) _cicleId = _cicles[0].Id;
             Snackbar.Add(Loc["Classes_CreatedMsg", c.Name], Severity.Success);
         }
         _saving = false;

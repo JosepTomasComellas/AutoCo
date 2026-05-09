@@ -71,6 +71,31 @@ public class ApiClient
     public Task<bool> DeleteClassAsync(int id) =>
         DeleteAsync($"/api/classes/{id}");
 
+    // ── Cicles ────────────────────────────────────────────────────────────────
+
+    public Task<List<CicleDto>?> GetCiclesAsync() =>
+        GetAsync<List<CicleDto>>("/api/cicles");
+
+    public Task<CicleDto?> CreateCicleAsync(CreateCicleRequest req) =>
+        PostAsync<CicleDto>("/api/cicles", req);
+
+    public Task<CicleDto?> UpdateCicleAsync(int id, UpdateCicleRequest req) =>
+        PutAsync<CicleDto>($"/api/cicles/{id}", req);
+
+    public Task<bool> DeleteCicleAsync(int id) =>
+        DeleteAsync($"/api/cicles/{id}");
+
+    // ── Assignació professor-classe ───────────────────────────────────────────
+
+    public Task<List<ClassDto>?> GetProfessorClassesAsync(int profId) =>
+        GetAsync<List<ClassDto>>($"/api/professors/{profId}/classes");
+
+    public Task<bool> AssignClassAsync(int profId, int classId) =>
+        PostNoContentAsync($"/api/professors/{profId}/classes", new AssignClassRequest(classId));
+
+    public Task<bool> UnassignClassAsync(int profId, int classId) =>
+        DeleteAsync($"/api/professors/{profId}/classes/{classId}");
+
     // ── Alumnes ───────────────────────────────────────────────────────────────
 
     public async Task<List<StudentDto>?> GetStudentsAsync(int classId, int page = 1, int size = 500)

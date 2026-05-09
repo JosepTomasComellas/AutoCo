@@ -1,0 +1,188 @@
+@page "/admin/cicles"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
+
+<PageTitle>@Loc["Cicles_Title"] – AutoCo</PageTitle>
+@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">@Loc["Nav_Dashboard"]</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Tertiary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["Cicles_Title"]</MudText>
+</MudStack>
+
+@if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Tertiary" Class="mb-4" /> }
+
+<MudGrid>
+    <!-- Formulari de creació -->
+    <MudItem xs="12" md="4">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderAvatar>
+                    <MudAvatar Color="Color.Tertiary" Variant="Variant.Filled" Size="Size.Small">
+                        <MudIcon Icon="@Icons.Material.Filled.Add" />
+                    </MudAvatar>
+                </CardHeaderAvatar>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">@Loc["Cicles_NewCicle"]</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudTextField @bind-Value="_nom" Label="@Loc["Cicles_Name"]"
+                              Placeholder="@Loc["Cicles_NamePh"]"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.School" />
+            </MudCardContent>
+            <MudCardActions Class="px-4 pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Tertiary" FullWidth="true"
+                           OnClick="CreateAsync" Disabled="_saving"
+                           StartIcon="@Icons.Material.Filled.AddCircle">
+                    @Loc["Cicles_CreateCicle"]
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <!-- Llista de cicles -->
+    <MudItem xs="12" md="8">
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-3">
+            <MudText Typo="Typo.h6" Style="font-weight:600">
+                @Loc["Cicles_ListTitle", _cicles.Count]
+            </MudText>
+        </MudStack>
+
+        @if (!_loading && !_cicles.Any())
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined">@Loc["Cicles_NoCicles"]</MudAlert>
+        }
+
+        <MudStack Spacing="2">
+            @foreach (var c in _cicles)
+            {
+                <MudCard Elevation="1" Style="border-left:3px solid var(--mud-palette-tertiary)">
+                    <MudExpansionPanel>
+                        <TitleContent>
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%">
+                                <MudAvatar Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Medium" Style="flex-shrink:0">
+                                    <MudIcon Icon="@Icons.Material.Filled.School" />
+                                </MudAvatar>
+                                <MudStack Spacing="0" Style="flex:1;min-width:0">
+                                    <MudText Typo="Typo.subtitle1" Style="font-weight:600">@c.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @Loc["Cicles_Classes", c.NumClasses]
+                                    </MudText>
+                                </MudStack>
+                                <MudStack Row="true" Spacing="0" @onclick:stopPropagation="true">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small" Color="Color.Error"
+                                                   title="@Loc["Action_Delete"]"
+                                                   OnClick="() => DeleteAsync(c)" />
+                                </MudStack>
+                            </MudStack>
+                        </TitleContent>
+                        <ChildContent>
+                            <MudDivider />
+                            <div class="pa-4">
+                                <MudGrid Spacing="2">
+                                    <MudItem xs="12" sm="8">
+                                        <MudTextField @bind-Value="@_editNames[c.Id]"
+                                                      Label="@Loc["Cicles_Name"]"
+                                                      Variant="Variant.Outlined" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="4">
+                                        <MudButton Variant="Variant.Filled" Color="Color.Tertiary"
+                                                   StartIcon="@Icons.Material.Filled.Save"
+                                                   OnClick="() => UpdateAsync(c)"
+                                                   FullWidth="true">
+                                            @Loc["Cicles_SaveName"]
+                                        </MudButton>
+                                    </MudItem>
+                                </MudGrid>
+                            </div>
+                        </ChildContent>
+                    </MudExpansionPanel>
+                </MudCard>
+            }
+        </MudStack>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<CicleDto> _cicles = [];
+    private Dictionary<int, string> _editNames = new();
+    private string _nom    = "";
+    private bool _loading  = true;
+    private bool _saving   = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsAdmin) return;
+        Api.SetToken(UserState.Token!);
+        _cicles = await Api.GetCiclesAsync() ?? [];
+        foreach (var c in _cicles) _editNames[c.Id] = c.Name;
+        _loading = false;
+    }
+
+    private async Task CreateAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nom))
+        {
+            Snackbar.Add(Loc["Cicles_NameRequired"].Value, Severity.Warning); return;
+        }
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var c = await Api.CreateCicleAsync(new CreateCicleRequest(_nom.Trim()));
+        if (c is not null)
+        {
+            _cicles.Add(c);
+            _editNames[c.Id] = c.Name;
+            _nom = "";
+            Snackbar.Add(Loc["Cicles_Created", c.Name].Value, Severity.Success);
+        }
+        _saving = false;
+    }
+
+    private async Task UpdateAsync(CicleDto cicle)
+    {
+        var nom = _editNames.GetValueOrDefault(cicle.Id, "").Trim();
+        if (string.IsNullOrWhiteSpace(nom))
+        {
+            Snackbar.Add(Loc["Cicles_NameRequired"].Value, Severity.Warning); return;
+        }
+        Api.SetToken(UserState.Token!);
+        var updated = await Api.UpdateCicleAsync(cicle.Id, new UpdateCicleRequest(nom));
+        if (updated is not null)
+        {
+            var idx = _cicles.FindIndex(c => c.Id == cicle.Id);
+            if (idx >= 0) _cicles[idx] = updated;
+            Snackbar.Add(Loc["Cicles_Updated", updated.Name].Value, Severity.Success);
+        }
+    }
+
+    private async Task DeleteAsync(CicleDto cicle)
+    {
+        var confirm = await Dialog.ShowMessageBox(Loc["Cicles_DeleteTitle"].Value,
+            Loc["Cicles_DeleteConfirm", cicle.Name].Value,
+            yesText: Loc["Cicles_DeleteYes"].Value, cancelText: Loc["Action_Cancel"].Value);
+        if (confirm != true) return;
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.DeleteCicleAsync(cicle.Id);
+        if (ok)
+        {
+            _cicles.RemoveAll(c => c.Id == cicle.Id);
+            _editNames.Remove(cicle.Id);
+            Snackbar.Add(Loc["Cicles_Deleted"].Value, Severity.Info);
+        }
+        else
+        {
+            Snackbar.Add(Loc["Msg_Error"].Value, Severity.Error);
+        }
+    }
+}

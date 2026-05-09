@@ -15,6 +15,20 @@
                       Adornment="Adornment.Start"
                       AdornmentIcon="@Icons.Material.Filled.CalendarToday" />
     </MudItem>
+    @if (Cicles.Any())
+    {
+        <MudItem xs="12">
+            <MudSelect T="int" @bind-Value="_cicleId" Label="@Loc["EditClass_Cicle"]"
+                       Variant="Variant.Outlined"
+                       Adornment="Adornment.Start"
+                       AdornmentIcon="@Icons.Material.Filled.School">
+                @foreach (var ci in Cicles)
+                {
+                    <MudSelectItem Value="ci.Id">@ci.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+    }
     <MudItem xs="12">
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Save"
@@ -26,17 +40,20 @@
 </MudGrid>
 
 @code {
-    [Parameter, EditorRequired] public ClassDto Class { get; set; } = default!;
+    [Parameter, EditorRequired] public ClassDto         Class  { get; set; } = default!;
+    [Parameter]                 public List<CicleDto>   Cicles { get; set; } = [];
     [Parameter] public EventCallback<ClassDto> OnSaved { get; set; }
 
-    private string _nom  = "";
-    private string _curs = "";
-    private bool   _saving = false;
+    private string _nom     = "";
+    private string _curs    = "";
+    private int    _cicleId = 0;
+    private bool   _saving  = false;
 
     protected override void OnParametersSet()
     {
-        _nom  = Class.Name;
-        _curs = Class.AcademicYear ?? "";
+        _nom     = Class.Name;
+        _curs    = Class.AcademicYear ?? "";
+        _cicleId = Class.CicleId;
     }
 
     private async Task SaveAsync()
@@ -48,7 +65,10 @@
         _saving = true;
         Api.SetToken(UserState.Token!);
         var updated = await Api.UpdateClassAsync(Class.Id,
-            new UpdateClassRequest(_nom.Trim(), string.IsNullOrWhiteSpace(_curs) ? null : _curs.Trim()));
+            new UpdateClassRequest(
+                _nom.Trim(),
+                string.IsNullOrWhiteSpace(_curs) ? null : _curs.Trim(),
+                _cicleId));
         _saving = false;
         if (updated is not null)
             await OnSaved.InvokeAsync(updated);

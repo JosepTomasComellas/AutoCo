@@ -174,6 +174,38 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Classes_DeleteTooltip"]  = "Eliminar classe",
         ["Classes_CreatedMsg"]     = "Classe «{0}» creada.",
         ["Classes_UpdatedMsg"]     = "Classe «{0}» actualitzada.",
+        ["Classes_Cicle"]          = "Cicle",
+
+        // ── Cicles ────────────────────────────────────────────────────────────
+        ["Cicles_Title"]        = "Gestió de cicles",
+        ["Cicles_NewCicle"]     = "Nou cicle",
+        ["Cicles_Name"]         = "Nom del cicle",
+        ["Cicles_NamePh"]       = "p.ex. DAM, ASIX, SMX...",
+        ["Cicles_NameRequired"] = "El nom és obligatori.",
+        ["Cicles_CreateCicle"]  = "Crear cicle",
+        ["Cicles_ListTitle"]    = "Cicles ({0})",
+        ["Cicles_NoCicles"]     = "Encara no hi ha cap cicle.",
+        ["Cicles_Classes"]      = "{0} classe(s)",
+        ["Cicles_Created"]      = "Cicle «{0}» creat.",
+        ["Cicles_Updated"]      = "Cicle «{0}» actualitzat.",
+        ["Cicles_Deleted"]      = "Cicle eliminat.",
+        ["Cicles_DeleteTitle"]  = "Confirmar eliminació",
+        ["Cicles_DeleteConfirm"] = "Eliminar el cicle «{0}»? Totes les classes hauran d'estar reassignades prèviament.",
+        ["Cicles_DeleteYes"]    = "Eliminar",
+        ["Cicles_SaveName"]     = "Desar nom",
+
+        // ── Professors — assignació de classes ────────────────────────────────
+        ["Profs_AssignedClasses"]   = "Classes assignades",
+        ["Profs_NoAssignedClasses"] = "Cap classe assignada. Assigna'n una des del selector.",
+        ["Profs_SelectClass"]       = "Selecciona una classe",
+        ["Profs_AssignClass"]       = "Assignar",
+        ["Profs_ClassAssigned"]     = "Classe assignada correctament.",
+        ["Profs_ClassUnassigned"]   = "Classe desassignada.",
+        ["Profs_AssignError"]       = "Error en assignar la classe.",
+
+        // ── EditClassForm ─────────────────────────────────────────────────────
+        ["EditClass_Cicle"]         = "Cicle",
+        ["EditClass_SelectCicle"]   = "Selecciona un cicle",
 
         // ── Mòduls ────────────────────────────────────────────────────────────
         ["Moduls_NewModule"]        = "Nou mòdul",
@@ -938,6 +970,38 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Classes_DeleteTooltip"]  = "Eliminar clase",
         ["Classes_CreatedMsg"]     = "Clase «{0}» creada.",
         ["Classes_UpdatedMsg"]     = "Clase «{0}» actualizada.",
+        ["Classes_Cicle"]          = "Ciclo",
+
+        // ── Cicles ────────────────────────────────────────────────────────────
+        ["Cicles_Title"]        = "Gestión de ciclos",
+        ["Cicles_NewCicle"]     = "Nuevo ciclo",
+        ["Cicles_Name"]         = "Nombre del ciclo",
+        ["Cicles_NamePh"]       = "p.ej. DAM, ASIX, SMX...",
+        ["Cicles_NameRequired"] = "El nombre es obligatorio.",
+        ["Cicles_CreateCicle"]  = "Crear ciclo",
+        ["Cicles_ListTitle"]    = "Ciclos ({0})",
+        ["Cicles_NoCicles"]     = "Todavía no hay ningún ciclo.",
+        ["Cicles_Classes"]      = "{0} clase(s)",
+        ["Cicles_Created"]      = "Ciclo «{0}» creado.",
+        ["Cicles_Updated"]      = "Ciclo «{0}» actualizado.",
+        ["Cicles_Deleted"]      = "Ciclo eliminado.",
+        ["Cicles_DeleteTitle"]  = "Confirmar eliminación",
+        ["Cicles_DeleteConfirm"] = "¿Eliminar el ciclo «{0}»? Todas las clases deben estar reasignadas previamente.",
+        ["Cicles_DeleteYes"]    = "Eliminar",
+        ["Cicles_SaveName"]     = "Guardar nombre",
+
+        // ── Professors — assignació de classes ────────────────────────────────
+        ["Profs_AssignedClasses"]   = "Clases asignadas",
+        ["Profs_NoAssignedClasses"] = "Ninguna clase asignada. Asigna una desde el selector.",
+        ["Profs_SelectClass"]       = "Selecciona una clase",
+        ["Profs_AssignClass"]       = "Asignar",
+        ["Profs_ClassAssigned"]     = "Clase asignada correctamente.",
+        ["Profs_ClassUnassigned"]   = "Clase desasignada.",
+        ["Profs_AssignError"]       = "Error al asignar la clase.",
+
+        // ── EditClassForm ─────────────────────────────────────────────────────
+        ["EditClass_Cicle"]         = "Ciclo",
+        ["EditClass_SelectCicle"]   = "Selecciona un ciclo",
 
         // ── Mòduls ────────────────────────────────────────────────────────────
         ["Moduls_NewModule"]        = "Nuevo módulo",

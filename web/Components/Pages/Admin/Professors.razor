@@ -142,6 +142,70 @@
                             <MudDivider />
                             <div class="pa-4">
                                 <EditProfessorForm Professor="p" OnSaved="OnProfessorSaved" />
+
+                                <MudDivider Class="my-4" />
+                                <MudText Typo="Typo.subtitle2" Style="font-weight:600" Class="mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Class" Size="Size.Small" Class="mr-1" />
+                                    @Loc["Profs_AssignedClasses"]
+                                </MudText>
+
+                                @{
+                                    var assigned = _professorClasses.GetValueOrDefault(p.Id) ?? [];
+                                    var assignedIds = assigned.Select(c => c.Id).ToHashSet();
+                                    var available = _allClasses.Where(c => !assignedIds.Contains(c.Id)).ToList();
+                                }
+
+                                @if (!assigned.Any())
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                        @Loc["Profs_NoAssignedClasses"]
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudStack Spacing="1" Class="mb-3">
+                                        @foreach (var cGroup in assigned.GroupBy(c => c.CicleName).OrderBy(g => g.Key))
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Style="font-weight:600;text-transform:uppercase">
+                                                @cGroup.Key
+                                            </MudText>
+                                            @foreach (var cls in cGroup.OrderBy(c => c.Name))
+                                            {
+                                                <MudChip T="string" Color="Color.Primary" Variant="Variant.Outlined"
+                                                         Size="Size.Small"
+                                                         OnClose="() => UnassignAsync(p, cls)"
+                                                         CloseIcon="@Icons.Material.Filled.Close">
+                                                    @cls.Name @if (cls.AcademicYear is not null) { <text> · @cls.AcademicYear</text> }
+                                                </MudChip>
+                                            }
+                                        }
+                                    </MudStack>
+                                }
+
+                                @if (available.Any())
+                                {
+                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                        <MudSelect T="int" @bind-Value="@_selectedClass[p.Id]"
+                                                   Label="@Loc["Profs_SelectClass"]"
+                                                   Variant="Variant.Outlined" Dense="true"
+                                                   Style="flex:1">
+                                            @foreach (var cGroup in available.GroupBy(c => c.CicleName).OrderBy(g => g.Key))
+                                            {
+                                                <MudSelectItem Value="0" Disabled="true">── @cGroup.Key ──</MudSelectItem>
+                                                @foreach (var cls in cGroup.OrderBy(c => c.Name))
+                                                {
+                                                    <MudSelectItem Value="cls.Id">@cls.Name @(cls.AcademicYear is not null ? $"· {cls.AcademicYear}" : "")</MudSelectItem>
+                                                }
+                                            }
+                                        </MudSelect>
+                                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                                   StartIcon="@Icons.Material.Filled.Add"
+                                                   OnClick="() => AssignAsync(p)"
+                                                   Disabled="@(_selectedClass.GetValueOrDefault(p.Id) == 0)">
+                                            @Loc["Profs_AssignClass"]
+                                        </MudButton>
+                                    </MudStack>
+                                }
                             </div>
                         </ChildContent>
                     </MudExpansionPanel>
@@ -153,6 +217,9 @@
 
 @code {
     private List<ProfessorDto> _professors = [];
+    private List<ClassDto>     _allClasses = [];
+    private Dictionary<int, List<ClassDto>> _professorClasses = new();
+    private Dictionary<int, int>            _selectedClass    = new();
     private bool _loading = true;
     private bool _saving  = false;
 
@@ -165,7 +232,20 @@
     {
         if (!UserState.IsAdmin) return;
         Api.SetToken(UserState.Token!);
-        _professors = await Api.GetProfessorsAsync() ?? [];
+        var profsTask   = Api.GetProfessorsAsync();
+        var classesTask = Api.GetClassesAsync();
+        await Task.WhenAll(profsTask, classesTask);
+        _professors = profsTask.Result  ?? [];
+        _allClasses = classesTask.Result ?? [];
+        foreach (var p in _professors) _selectedClass[p.Id] = 0;
+
+        var assignTasks = _professors.Select(p =>
+            Api.GetProfessorClassesAsync(p.Id)
+               .ContinueWith(t => (p.Id, Classes: t.Result ?? [])));
+        var results = await Task.WhenAll(assignTasks);
+        foreach (var (profId, classes) in results)
+            _professorClasses[profId] = classes;
+
         _loading = false;
     }
 
@@ -229,5 +309,34 @@
         if (idx >= 0) _professors[idx] = updated;
         Snackbar.Add(Loc["Profs_Updated", updated.NomComplet].Value, Severity.Success);
         await Task.CompletedTask;
+    }
+
+    private async Task AssignAsync(ProfessorDto p)
+    {
+        var classId = _selectedClass.GetValueOrDefault(p.Id);
+        if (classId == 0) return;
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.AssignClassAsync(p.Id, classId);
+        if (ok)
+        {
+            var cls = _allClasses.First(c => c.Id == classId);
+            _professorClasses.TryAdd(p.Id, []);
+            _professorClasses[p.Id].Add(cls);
+            _professorClasses[p.Id] = [.. _professorClasses[p.Id].OrderBy(c => c.CicleName).ThenBy(c => c.Name)];
+            _selectedClass[p.Id] = 0;
+            Snackbar.Add(Loc["Profs_ClassAssigned"].Value, Severity.Success);
+        }
+        else Snackbar.Add(Loc["Profs_AssignError"].Value, Severity.Error);
+    }
+
+    private async Task UnassignAsync(ProfessorDto p, ClassDto cls)
+    {
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.UnassignClassAsync(p.Id, cls.Id);
+        if (ok)
+        {
+            _professorClasses[p.Id].RemoveAll(c => c.Id == cls.Id);
+            Snackbar.Add(Loc["Profs_ClassUnassigned"].Value, Severity.Info);
+        }
     }
 }
