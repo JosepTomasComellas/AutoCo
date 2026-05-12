@@ -123,6 +123,7 @@ services:
       - dp-keys:/app/dp-keys
       - fotos-data:/app/wwwroot/fotos
       - ./config/logging.json:/app/logging.json:ro
+      - ./config/i18n:/app/i18n:ro
     networks:
       - autoco-net
     depends_on:

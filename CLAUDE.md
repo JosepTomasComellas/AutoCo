@@ -86,7 +86,8 @@ Per a producció real, canviar:
 - `JWT_SECRET` — secret JWT (mínim 32 caràcters)
 - `MSSQL_SA_PASSWORD` — contrasenya SQL Server
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — credencials de l'administrador inicial
-- `DEFAULT_LANGUAGE` — idioma per defecte de la UI (`ca` o `es`; per defecte `ca`)
+- `DEFAULT_LANGUAGE` — idioma per defecte de la UI (`ca`, `es`, o qualsevol codi de `config/i18n/`; per defecte `ca`)
+- `I18N_PATH` — ruta als fitxers JSON de traducció (per defecte `/app/i18n`, muntat via volum `./config/i18n`)
 
 ## Model de dades
 
@@ -188,7 +189,7 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Noms de fitxers i classes en anglès, text visible en català
 - API: Minimal API (no controllers), ASP.NET Core 10
 - Web: **Blazor Server + MudBlazor** (no Razor Pages, no MVC, no JS frameworks)
-- i18n: `DictionaryLocalizer` estàtic — evita problemes amb `ResourceManager` a Docker
+- i18n: `DictionaryLocalizer` — diccionaris estàtics `Ca`/`Es` + fitxers JSON externs a `I18N_PATH` (`/app/i18n/*.json`); fitxer per a idioma conegut fa override parcial, idioma nou s'afegeix automàticament a `supportedCultures`; fallback al català per claus absents
 - EF Core amb migracions automàtiques a l'inici (`db.Database.Migrate()`)
 - Passwords hashejades amb BCrypt (work factor 12)
 - Caché de resultats: Redis `IDistributedCache`, TTL 5 min, invalidació automàtica

@@ -1,14 +1,43 @@
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.Extensions.Localization;
 
 namespace AutoCo.Web.Resources;
 
 /// <summary>
-/// Localitzador basat en diccionaris estàtics. Bypassa completament ResourceManager
-/// i els fitxers .resx embeguts, evitant problemes de resolució en Docker.
+/// Localitzador basat en diccionaris estàtics amb suport per a fitxers JSON externs.
+/// Els fitxers a I18N_PATH (per defecte /app/i18n) s'apliquen com a override en calent.
+/// Bypassa ResourceManager per evitar problemes de resolució en Docker.
 /// </summary>
 public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
 {
+    // Diccionaris externs carregats des de /app/i18n/*.json
+    private readonly Dictionary<string, Dictionary<string, string>> _external;
+
+    public DictionaryLocalizer(IConfiguration config)
+    {
+        _external = [];
+        var path = config["I18N_PATH"] ?? "/app/i18n";
+        if (!Directory.Exists(path)) return;
+
+        foreach (var file in Directory.GetFiles(path, "*.json"))
+        {
+            var lang = Path.GetFileNameWithoutExtension(file);
+            if (string.IsNullOrWhiteSpace(lang)) continue;
+            try
+            {
+                var json = File.ReadAllText(file);
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+                if (dict is { Count: > 0 })
+                    _external[lang] = dict;
+            }
+            catch { /* fitxer malmès: ignora */ }
+        }
+    }
+
+    /// <summary>Retorna els codis d'idioma descoberts als fitxers externs.</summary>
+    public IReadOnlyCollection<string> ExternalLanguages => _external.Keys;
+
     // ── Català (neutral / per defecte) ───────────────────────────────────────
     private static readonly Dictionary<string, string> Ca = new()
     {
@@ -1627,10 +1656,19 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
 
     // ── Implementació IStringLocalizer ────────────────────────────────────────
 
-    private static Dictionary<string, string> GetDict()
+    private Dictionary<string, string> GetDict()
     {
         var lang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-        return lang == "es" ? Es : Ca;
+
+        // Base: diccionari estàtic (ca per defecte, es si correspon)
+        var baseDict = lang == "es" ? Es : Ca;
+
+        if (!_external.TryGetValue(lang, out var ext)) return baseDict;
+
+        // Merge: extern sobre la base (keys de l'extern guanyen)
+        var merged = new Dictionary<string, string>(baseDict);
+        foreach (var kv in ext) merged[kv.Key] = kv.Value;
+        return merged;
     }
 
     public LocalizedString this[string name]

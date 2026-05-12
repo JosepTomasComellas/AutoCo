@@ -283,9 +283,34 @@ Copia `.env.example` a `.env` i ajusta els valors:
 | `BACKUP_WEEKLY_DAY` | Dia de la setmana del backup setmanal (0=Dg, 1=Dl … 6=Ds, per defecte `0`) | |
 | `BACKUP_DAILY_RETENTION` | Nombre màxim de backups diaris a conservar (per defecte `7`) | |
 | `BACKUP_WEEKLY_RETENTION` | Nombre màxim de backups setmanals a conservar (per defecte `4`) | |
-| `DEFAULT_LANGUAGE` | Idioma per defecte de la interfície (`ca` o `es`, per defecte `ca`) | |
+| `DEFAULT_LANGUAGE` | Idioma per defecte de la interfície (`ca`, `es`, o qualsevol codi de `config/i18n/`, per defecte `ca`) | |
+| `I18N_PATH` | Ruta als fitxers JSON de traducció (per defecte `/app/i18n`; el volum Docker la munta automàticament) | |
 
 > SMTP és opcional. Si no es configura, les funcions d'email queden desactivades però l'aplicació funciona amb normalitat.
+
+### Traduccions externes (i18n)
+
+Els fitxers JSON a `./config/i18n/` permeten personalitzar o afegir idiomes sense recompilar:
+
+- **Override parcial** (`ca.json`, `es.json`): sobreescriu únicament les claus que conté; la resta usen el valor integrat.
+- **Idioma nou** (`fr.json`, `de.json`...): s'afegeix automàticament als idiomes suportats; les claus absents cauen al català per defecte.
+
+```
+config/i18n/
+├── ca.json          # override parcial del català (opcional)
+├── es.json          # override parcial del castellà (opcional)
+└── fr.json          # idioma nou complet (opcional)
+```
+
+Format dels fitxers:
+```json
+{
+  "Home_Footer": "El teu Centre · Dept. d'Informàtica",
+  "Login_Subtitle": "AutoCo · El teu centre"
+}
+```
+
+Consulta `config/i18n/ca.override.example.json` i `config/i18n/fr.example.json` com a referència. Els canvis s'apliquen al proper reinici del servei `web`.
 
 ### SSL
 
@@ -355,6 +380,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.10
+- **Traduccions externes sense recompilar** — `DictionaryLocalizer` carrega fitxers `*.json` de `/app/i18n` (muntat via `./config/i18n`); fitxer per a idioma conegut (`ca.json`, `es.json`) fa override parcial; fitxer d'idioma nou (`fr.json`...) s'afegeix automàticament a `supportedCultures`; fallback al català per claus absents. Fitxers d'exemple inclosos a `config/i18n/`
 
 ### v2.6.9
 - **Idioma per defecte configurable** — nova variable d'entorn `DEFAULT_LANGUAGE` (`ca` o `es`, per defecte `ca`); `web/Program.cs` llegeix la variable i la passa a `RequestLocalizationOptions.SetDefaultCulture`; `docker-compose.yml` i `.env.example` actualitzats

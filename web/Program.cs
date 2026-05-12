@@ -47,12 +47,17 @@ builder.Services.AddMudServices();
 // ── Localització (i18n) ───────────────────────────────────────────────────────
 builder.Services.AddLocalization(opts => opts.ResourcesPath = "Resources");
 
-// Usem DictionaryLocalizer (diccionaris estàtics) en lloc de ResourceManager/resx
+// Usem DictionaryLocalizer (diccionaris estàtics + fitxers JSON externs a I18N_PATH)
 // per evitar problemes de resolució de recursos embeguts en Docker.
-builder.Services.AddSingleton<IStringLocalizer<SharedResources>, AutoCo.Web.Resources.DictionaryLocalizer>();
+var localizer = new AutoCo.Web.Resources.DictionaryLocalizer(builder.Configuration);
+builder.Services.AddSingleton<IStringLocalizer<SharedResources>>(localizer);
 
 var defaultLang = builder.Configuration["DEFAULT_LANGUAGE"] ?? "ca";
-var supportedCultures = new[] { "ca", "es" };
+var builtinCultures = new[] { "ca", "es" };
+// Afegir idiomes descoberts als fitxers JSON externs (si no estan ja inclosos)
+var supportedCultures = builtinCultures
+    .Concat(localizer.ExternalLanguages.Where(l => !builtinCultures.Contains(l)))
+    .ToArray();
 if (!supportedCultures.Contains(defaultLang)) defaultLang = "ca";
 
 builder.Services.Configure<Microsoft.AspNetCore.Builder.RequestLocalizationOptions>(opts =>

@@ -1,0 +1,30 @@
+{
+  "_comment": "Exemple d'idioma nou (francès). Reanomena a 'fr.json' i afegeix DEFAULT_LANGUAGE=fr al .env.",
+  "_comment2": "Les claus que faltin usaran el català com a fallback.",
+
+  "Login_Teacher_Title": "Accès Professeur",
+  "Login_Student_Title": "Accès Élève",
+  "Login_Subtitle": "AutoCo · Évaluation par les pairs",
+  "Login_Email": "Adresse e-mail",
+  "Login_Password": "Mot de passe",
+  "Login_Submit": "Connexion",
+  "Login_Back": "← Retour",
+  "Login_Error_EmptyFields": "Remplissez tous les champs.",
+  "Login_Error_InvalidCredentials": "Identifiants incorrects.",
+
+  "Home_Title": "Système d'évaluation par les pairs",
+  "Home_Subtitle": "Auto-évaluation · Co-évaluation · Résultats",
+  "Home_TeacherAccess": "Accès Professeur",
+  "Home_StudentAccess": "Accès Élève",
+  "Home_Footer": "Votre établissement · Dept. Informatique",
+
+  "Nav_Dashboard": "Tableau de bord",
+  "Nav_Results": "Résultats",
+  "Nav_Classes": "Classes",
+  "Nav_MyProfile": "Mon profil",
+  "Nav_Help": "Aide",
+  "Nav_Language": "Langue",
+  "Nav_DarkMode": "Mode sombre",
+  "Nav_LightMode": "Mode clair",
+  "Nav_Logout": "Déconnexion"
+}

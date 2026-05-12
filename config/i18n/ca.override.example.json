@@ -1,0 +1,7 @@
+{
+  "_comment": "Exemple de personalització parcial del català. Reanomena a 'ca.json' per activar-lo.",
+  "_comment2": "Només cal incloure les claus que vols sobreescriure; la resta usen el valor per defecte.",
+
+  "Home_Footer": "El teu Centre · Dept. d'Informàtica",
+  "Login_Subtitle": "AutoCo · El teu centre"
+}
