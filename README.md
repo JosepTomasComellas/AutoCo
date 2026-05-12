@@ -283,6 +283,7 @@ Copia `.env.example` a `.env` i ajusta els valors:
 | `BACKUP_WEEKLY_DAY` | Dia de la setmana del backup setmanal (0=Dg, 1=Dl … 6=Ds, per defecte `0`) | |
 | `BACKUP_DAILY_RETENTION` | Nombre màxim de backups diaris a conservar (per defecte `7`) | |
 | `BACKUP_WEEKLY_RETENTION` | Nombre màxim de backups setmanals a conservar (per defecte `4`) | |
+| `DEFAULT_LANGUAGE` | Idioma per defecte de la interfície (`ca` o `es`, per defecte `ca`) | |
 
 > SMTP és opcional. Si no es configura, les funcions d'email queden desactivades però l'aplicació funciona amb normalitat.
 
@@ -354,6 +355,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.9
+- **Idioma per defecte configurable** — nova variable d'entorn `DEFAULT_LANGUAGE` (`ca` o `es`, per defecte `ca`); `web/Program.cs` llegeix la variable i la passa a `RequestLocalizationOptions.SetDefaultCulture`; `docker-compose.yml` i `.env.example` actualitzats
 
 ### v2.6.8
 - **Fix pujada de fotos** — `ApiClient.UploadStudentFotoAsync` i `UploadProfessorFotoAsync`: el `StreamContent` del multipart ara inclou el `Content-Type` correcte de la imatge (`image/jpeg`, `image/png`, `image/webp`); sense aquest header l'API rebia `application/octet-stream` i rebutjava la imatge silenciosament. Afegit `null` guard als quatre handlers de `MudFileUpload` (`Alumnes.razor`, `Perfil.razor`, `ApiClient`) per evitar `NullReferenceException` quan l'usuari elimina la fitxa amb la «×»

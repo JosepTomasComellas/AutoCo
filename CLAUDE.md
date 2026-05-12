@@ -86,6 +86,7 @@ Per a producció real, canviar:
 - `JWT_SECRET` — secret JWT (mínim 32 caràcters)
 - `MSSQL_SA_PASSWORD` — contrasenya SQL Server
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — credencials de l'administrador inicial
+- `DEFAULT_LANGUAGE` — idioma per defecte de la UI (`ca` o `es`; per defecte `ca`)
 
 ## Model de dades
 

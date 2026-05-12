@@ -51,13 +51,16 @@ builder.Services.AddLocalization(opts => opts.ResourcesPath = "Resources");
 // per evitar problemes de resolució de recursos embeguts en Docker.
 builder.Services.AddSingleton<IStringLocalizer<SharedResources>, AutoCo.Web.Resources.DictionaryLocalizer>();
 
+var defaultLang = builder.Configuration["DEFAULT_LANGUAGE"] ?? "ca";
 var supportedCultures = new[] { "ca", "es" };
+if (!supportedCultures.Contains(defaultLang)) defaultLang = "ca";
+
 builder.Services.Configure<Microsoft.AspNetCore.Builder.RequestLocalizationOptions>(opts =>
 {
-    opts.SetDefaultCulture("ca");
+    opts.SetDefaultCulture(defaultLang);
     opts.AddSupportedCultures(supportedCultures);
     opts.AddSupportedUICultures(supportedCultures);
-    // Prioritat: cookie → accept-language header → default (ca)
+    // Prioritat: cookie → accept-language header → default (DEFAULT_LANGUAGE o "ca")
     opts.ApplyCurrentCultureToResponseHeaders = true;
 });
 

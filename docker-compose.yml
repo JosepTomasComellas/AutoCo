@@ -118,6 +118,7 @@ services:
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
       ApiSettings__BaseUrl:            "http://api:8080"
       Redis__ConnectionString:         "redis:6379"
+      DEFAULT_LANGUAGE:                "${DEFAULT_LANGUAGE:-ca}"
     volumes:
       - dp-keys:/app/dp-keys
       - fotos-data:/app/wwwroot/fotos
