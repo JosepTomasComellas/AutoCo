@@ -125,6 +125,10 @@
                              OnClick="ToggleAsync">
                     @(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)
                 </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Archive" IconColor="Color.Default"
+                             OnClick="ArchiveAsync">
+                    @Loc["Card_Archive"]
+                </MudMenuItem>
                 <MudDivider />
                 <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
                              OnClick="DeleteAsync">
@@ -186,6 +190,10 @@
                              IconColor="@(Act.IsOpen ? Color.Warning : Color.Success)"
                              OnClick="ToggleAsync">
                     @(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Archive" IconColor="Color.Default"
+                             OnClick="ArchiveAsync">
+                    @Loc["Card_Archive"]
                 </MudMenuItem>
                 <MudDivider />
                 <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
@@ -285,8 +293,9 @@
 
 @code {
     [Parameter, EditorRequired] public ActivityDto Act { get; set; } = default!;
-    [Parameter] public EventCallback<ActivityDto>  OnUpdated { get; set; }
-    [Parameter] public EventCallback<ActivityDto>  OnDeleted { get; set; }
+    [Parameter] public EventCallback<ActivityDto>  OnUpdated  { get; set; }
+    [Parameter] public EventCallback<ActivityDto>  OnDeleted  { get; set; }
+    [Parameter] public EventCallback<ActivityDto>  OnArchived { get; set; }
     [Parameter] public bool Compact { get; set; }
 
     private ParticipationDto? _participation        = null;
@@ -532,6 +541,17 @@
         await Api.DeleteActivityAsync(Act.Id);
         Snackbar.Add(Loc["Card_Deleted"].Value, Severity.Success);
         await OnDeleted.InvokeAsync(Act);
+    }
+
+    private async Task ArchiveAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var updated = await Api.ArchiveActivityAsync(Act.Id);
+        if (updated is not null)
+        {
+            Snackbar.Add(updated.IsArchived ? Loc["Card_Archived"].Value : Loc["Card_Unarchived"].Value, Severity.Info);
+            await OnArchived.InvokeAsync(updated);
+        }
     }
 
     private async Task<bool> DeleteWithUndoAsync(string msg)

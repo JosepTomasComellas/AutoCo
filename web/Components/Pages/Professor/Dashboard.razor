@@ -108,8 +108,10 @@ else
                 }
             </MudSelect>
         </MudItem>
-        <MudItem xs="12" sm="6" md="3" Class="d-flex align-center gap-3">
+        <MudItem xs="12" sm="6" md="3" Class="d-flex align-center gap-3 flex-wrap">
             <MudSwitch @bind-Value="_nomesObertes" Color="Color.Success" Label="@Loc["Dash_OnlyOpen"]" Size="Size.Small" />
+            <MudSwitch @bind-Value="_mostrarArxivades" @bind-Value:after="OnToggleArxivades"
+                       Color="Color.Default" Label="@Loc["Dash_ShowArchived"]" Size="Size.Small" />
             <MudText Typo="Typo.caption" Color="Color.Secondary">
                 @Loc["Dash_CountOf", _filtrades.Count, _activities.Count]
             </MudText>
@@ -148,11 +150,30 @@ else
                      Color="Color.Default" Class="mr-1" Style="vertical-align:middle" />
             @Loc["Dash_ClosedActivities", _tancades.Count]
         </MudText>
-        <MudGrid>
+        <MudGrid Class="mb-6">
             @foreach (var act in _tancades)
             {
                 <MudItem xs="6" sm="4" md="3" lg="2">
-                    <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" Compact="true" />
+                    <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" OnArchived="OnActArchived" Compact="true" />
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    @if (_mostrarArxivades && _arxivades.Any())
+    {
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.subtitle1" Class="mb-3"
+                 Style="font-weight:600;color:var(--mud-palette-text-disabled)">
+            <MudIcon Icon="@Icons.Material.Filled.Archive" Size="Size.Small"
+                     Color="Color.Default" Class="mr-1" Style="vertical-align:middle" />
+            @Loc["Dash_ArchivedActivities", _arxivades.Count]
+        </MudText>
+        <MudGrid>
+            @foreach (var act in _arxivades)
+            {
+                <MudItem xs="6" sm="4" md="3" lg="2">
+                    <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" OnArchived="OnActArchived" Compact="true" />
                 </MudItem>
             }
         </MudGrid>
@@ -161,13 +182,15 @@ else
 
 @code {
     private List<ActivityDto> _activities = [];
+    private List<ActivityDto> _arxivades  = [];
     private List<ClassDto>    _classesDtos = [];
     private bool _loading = true;
 
-    private string _cerca        = "";
-    private int    _classeId     = 0;
-    private int    _modulId      = 0;
-    private bool   _nomesObertes = false;
+    private string _cerca             = "";
+    private int    _classeId          = 0;
+    private int    _modulId           = 0;
+    private bool   _nomesObertes      = false;
+    private bool   _mostrarArxivades  = false;
 
     private Dictionary<int, string> _classes = [];
     private Dictionary<int, string> _moduls  = [];
@@ -204,6 +227,14 @@ else
         _loading = false;
     }
 
+    private async Task OnToggleArxivades()
+    {
+        if (!_mostrarArxivades || _arxivades.Any()) return;
+        Api.SetToken(UserState.Token!);
+        var all = await Api.GetActivitiesAsync(includeArchived: true) ?? [];
+        _arxivades = all.Where(a => a.IsArchived).ToList();
+    }
+
     private void OnActUpdated(ActivityDto updated)
     {
         var idx = _activities.FindIndex(a => a.Id == updated.Id);
@@ -216,5 +247,22 @@ else
     private void OnActDeleted(ActivityDto deleted)
     {
         _activities.RemoveAll(a => a.Id == deleted.Id);
+        _arxivades.RemoveAll(a => a.Id == deleted.Id);
+    }
+
+    private void OnActArchived(ActivityDto updated)
+    {
+        if (updated.IsArchived)
+        {
+            _activities.RemoveAll(a => a.Id == updated.Id);
+            if (_mostrarArxivades && !_arxivades.Any(a => a.Id == updated.Id))
+                _arxivades.Insert(0, updated);
+        }
+        else
+        {
+            _arxivades.RemoveAll(a => a.Id == updated.Id);
+            if (!_activities.Any(a => a.Id == updated.Id))
+                _activities.Insert(0, updated);
+        }
     }
 }

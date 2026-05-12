@@ -852,10 +852,15 @@ app.MapDelete("/api/modules/{moduleId:int}/exclusions/{studentId:int}", async (
 // ════════════════════════════════════════════════════════════════════════════
 
 app.MapGet("/api/activities", async (IActivityService svc, ClaimsPrincipal user,
-    int page = 1, int size = 500) =>
+    int page = 1, int size = 500, bool includeArchived = false) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
+    if (includeArchived)
+    {
+        var all = await svc.GetAllAsync(profId, includeArchived: true);
+        return Results.Ok(new PagedResult<ActivityDto>(all, all.Count, 1, all.Count));
+    }
     var (items, total) = await svc.GetAllPagedAsync(profId, page, size);
     return Results.Ok(new PagedResult<ActivityDto>(items, total, page, size));
 }).RequireAuthorization();
@@ -1099,6 +1104,14 @@ app.MapPost("/api/activities/{id:int}/toggle", async (int id, IActivityService s
         }
         catch (Exception ex) { logger.LogWarning(ex, "Error desant log de toggle (activitat {Id})", id); }
     }
+    return a is null ? Results.NotFound() : Results.Ok(a);
+}).RequireAuthorization();
+
+app.MapPost("/api/activities/{id:int}/archive", async (int id, IActivityService svc,
+    ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var a = await svc.ArchiveAsync(id, GetUserId(user), IsAdmin(user));
     return a is null ? Results.NotFound() : Results.Ok(a);
 }).RequireAuthorization();
 

@@ -113,7 +113,8 @@ public record ActivityDto(
     string Name, string? Description, bool IsOpen,
     DateTime CreatedAt, int NumGroups, int NumStudents,
     DateTime? OpenAt = null, DateTime? CloseAt = null,
-    bool ShowResultsToStudents = false);
+    bool ShowResultsToStudents = false,
+    bool IsArchived = false);
 
 public record CreateActivityRequest(
     [Range(1, int.MaxValue)] int ModuleId,

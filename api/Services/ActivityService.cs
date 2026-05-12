@@ -8,8 +8,9 @@ namespace AutoCo.Api.Services;
 
 public interface IActivityService
 {
-    Task<List<ActivityDto>> GetAllAsync(int? professorId);
+    Task<List<ActivityDto>> GetAllAsync(int? professorId, bool includeArchived = false);
     Task<(List<ActivityDto> Items, int Total)> GetAllPagedAsync(int? professorId, int page, int size);
+    Task<ActivityDto?>      ArchiveAsync(int id, int professorId, bool isAdmin);
     Task<ActivityDto?>      GetByIdAsync(int id, int? professorId);
     Task<ActivityDto>       CreateAsync(int professorId, bool isAdmin, CreateActivityRequest req);
     Task<ActivityDto?>      UpdateAsync(int id, int professorId, bool isAdmin, UpdateActivityRequest req);
@@ -40,7 +41,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 {
     // ── Activitats ───────────────────────────────────────────────────────────
 
-    public async Task<List<ActivityDto>> GetAllAsync(int? professorId)
+    public async Task<List<ActivityDto>> GetAllAsync(int? professorId, bool includeArchived = false)
     {
         var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
@@ -50,6 +51,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
         if (professorId.HasValue)
             q = q.Where(a => a.Module.ProfessorId == professorId.Value);
+        if (!includeArchived)
+            q = q.Where(a => !a.IsArchived);
 
         return await q.OrderByDescending(a => a.CreatedAt)
             .Select(a => ToDto(a))
@@ -62,6 +65,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Where(a => !a.IsArchived)
             .AsQueryable();
 
         if (professorId.HasValue)
@@ -73,6 +77,22 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Select(a => ToDto(a))
             .ToListAsync();
         return (items, total);
+    }
+
+    public async Task<ActivityDto?> ArchiveAsync(int id, int professorId, bool isAdmin)
+    {
+        var a = await db.Activities
+            .Include(a => a.Module).ThenInclude(m => m.Professor)
+            .Include(a => a.Module).ThenInclude(m => m.Class)
+            .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .FirstOrDefaultAsync(a => a.Id == id &&
+                (isAdmin || a.Module.ProfessorId == professorId));
+        if (a is null) return null;
+
+        a.IsArchived = !a.IsArchived;
+        if (a.IsArchived) a.IsOpen = false;
+        await db.SaveChangesAsync();
+        return ToDto(a);
     }
 
     public async Task<ActivityDto?> GetByIdAsync(int id, int? professorId)
@@ -668,7 +688,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
             a.Module.Professor.NomComplet,
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents,
-            a.OpenAt, a.CloseAt, a.ShowResultsToStudents);
+            a.OpenAt, a.CloseAt, a.ShowResultsToStudents, a.IsArchived);
     }
 
     private StudentDto ToStudentDto(Student s) => new(

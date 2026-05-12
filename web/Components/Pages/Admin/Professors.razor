@@ -264,6 +264,8 @@
         {
             _professors.Add(p);
             _professors = [.. _professors.OrderBy(x => x.Cognoms)];
+            _selectedClass[p.Id]    = 0;
+            _professorClasses[p.Id] = [];
             _email = ""; _nom = ""; _cognoms = ""; _isAdmin = false;
             Snackbar.Add(Loc["Profs_Created", p.NomComplet].Value, Severity.Success);
         }

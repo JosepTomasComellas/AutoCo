@@ -161,10 +161,12 @@ public class ApiClient
 
     // ── Activitats ────────────────────────────────────────────────────────────
 
-    public async Task<List<ActivityDto>?> GetActivitiesAsync(int page = 1, int size = 500)
+    public async Task<List<ActivityDto>?> GetActivitiesAsync(int page = 1, int size = 500, bool includeArchived = false)
     {
-        var r = await GetAsync<PagedResult<ActivityDto>>(
-            $"/api/activities?page={page}&size={size}");
+        var url = includeArchived
+            ? $"/api/activities?includeArchived=true"
+            : $"/api/activities?page={page}&size={size}";
+        var r = await GetAsync<PagedResult<ActivityDto>>(url);
         return r?.Items;
     }
 
@@ -182,6 +184,9 @@ public class ApiClient
 
     public Task<ActivityDto?> ToggleActivityAsync(int id) =>
         PostAsync<ActivityDto>($"/api/activities/{id}/toggle", (object?)null);
+
+    public Task<ActivityDto?> ArchiveActivityAsync(int id) =>
+        PostAsync<ActivityDto>($"/api/activities/{id}/archive", (object?)null);
 
     public Task<ActivityDto?> DuplicateActivityAsync(int id, DuplicateActivityRequest req) =>
         PostAsync<ActivityDto>($"/api/activities/{id}/duplicate", req);
