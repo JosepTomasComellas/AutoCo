@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.16
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.17
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -389,6 +389,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.17
+- **Fix Informe Global**: correcció crida JS Excel (`autocoApp.downloadBase64` → `downloadBase64File`); classe `no-print` a la capçalera; `site.css` afegeix `no-print-shadow`, elimina ombres de `mud-paper` i preserva colors `grade-*` al PDF
 
 ### v2.6.16
 - **Rol Gestor** — nou rol intermedi entre Admin i Professor: veu totes les classes, activitats, estadístiques i l'Informe Global de Direcció, però només pot modificar les classes i activitats que té assignades; `IsGestor` al model de professor, JWT role `"Gestor"`, toggle a la gestió de professors
