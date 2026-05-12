@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.4
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.5
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -354,6 +354,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.5
+- **Fix menús navbar** — `MudMenu.ActivatorContent` en MudBlazor v9 ja no connecta el clic automàticament; corregit amb `@ref` + `OpenMenuAsync(EventArgs, bool)` explícit; afecta el menú d'administració (engranatge) i el de notificacions (campana)
 
 ### v2.6.4
 - **Tests** — cobertura dels serveis nous: `ArchiveAsync` (toggle, força tancament, autorització, admin bypass), `GetAllAsync(includeArchived)`, `GetAllPagedAsync` sempre exclou arxivades, `DefaultCriteria` (inserció, ordre, herència en crear activitat, fallback a `Constants.cs`, reemplaçament massiu) → **55 tests** en total
