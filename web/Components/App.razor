@@ -1,16 +1,17 @@
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
 @using System.Globalization
 @using Microsoft.AspNetCore.Localization
+@inject AutoCo.Web.Services.BrandingService Branding
 <!DOCTYPE html>
 <html lang="ca">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
-    <title>AutoCo Avaluació</title>
+    <title>@Branding.AppName</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#1e293b" />
+    <meta name="theme-color" content="@Branding.NavColor" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <link href="/css/site.css" rel="stylesheet" />

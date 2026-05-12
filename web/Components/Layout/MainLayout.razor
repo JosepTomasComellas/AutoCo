@@ -7,6 +7,7 @@
 @inject IStringLocalizer<SharedResources> Loc
 @inject ApiClient Api
 @inject NotificationBroadcastService NotifBroadcast
+@inject AutoCo.Web.Services.BrandingService Branding
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
@@ -14,11 +15,11 @@
 <MudSnackbarProvider />
 
 <MudLayout Class="@(_darkMode ? "app-dark" : "app-light")">
-    <MudAppBar Elevation="3" Style="background:#1e293b">
+    <MudAppBar Elevation="3" Style="@($"background:{Branding.NavColor}")">
         <!-- Logo clicable → dashboard del rol actiu -->
         <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="0" Style="min-width:0;flex-shrink:0">
             <a href="@LogoHref" style="display:block;line-height:0">
-                <MudImage Src="/images/logo2.png" Height="44" Style="display:block" />
+                <MudImage Src="@Branding.LogoUrl" Height="44" Style="display:block" />
             </a>
         </MudStack>
 
@@ -202,11 +203,11 @@
     </MudMainContent>
 
     <!-- Footer fosc, igual que la capçalera -->
-    <MudAppBar Bottom="true" Elevation="0" Dense="true" Style="background:#1e293b">
+    <MudAppBar Bottom="true" Elevation="0" Dense="true" Style="@($"background:{Branding.NavColor}")">
         <MudSpacer />
         <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.6)">
-            <strong style="color:rgba(255,255,255,.85)">Salesians de Sarrià</strong>
-            &nbsp;·&nbsp; Dept. d'Informàtica &nbsp;|&nbsp;
+            <strong style="color:rgba(255,255,255,.85)">@Branding.OrgName</strong>
+            &nbsp;·&nbsp; @Branding.OrgDept &nbsp;|&nbsp;
             AutoCo © @DateTime.Now.Year
             &nbsp;·&nbsp;
             <span style="color:rgba(255,255,255,.45);font-size:.7rem">v@(AppVersion.Current)</span>
@@ -218,7 +219,7 @@
 @code {
     private bool   _sessionChecked = false;
     private bool   _darkMode       = false;
-    private string _primaryColor   = "#CC0000";
+    private string _primaryColor   = "#CC0000"; // sobreescrit a OnInitialized des de BrandingService
 
     // Refs dels menús desplegables
     private MudMenu? _notifMenu;
@@ -255,6 +256,40 @@
 
     protected override void OnInitialized()
     {
+        _primaryColor = Branding.PrimaryColor;
+        var navDark   = DarkenHex(Branding.NavColor, 0.35);
+        _theme = new MudTheme
+        {
+            PaletteLight = new PaletteLight
+            {
+                Primary          = Branding.PrimaryColor,
+                PrimaryDarken    = DarkenHex(Branding.PrimaryColor, 0.15),
+                Secondary        = Branding.NavColor,
+                SecondaryDarken  = navDark,
+                AppbarBackground = Branding.NavColor,
+                Background       = "#e2e8f0",
+                Surface          = "#ffffff",
+                DrawerBackground = Branding.NavColor,
+            },
+            PaletteDark = new PaletteDark
+            {
+                Primary          = Branding.PrimaryColor,
+                PrimaryDarken    = DarkenHex(Branding.PrimaryColor, 0.15),
+                Secondary        = "#94a3b8",
+                SecondaryDarken  = "#64748b",
+                AppbarBackground = navDark,
+                Background       = "#020617",
+                BackgroundGray   = navDark,
+                Surface          = Branding.NavColor,
+                DrawerBackground = navDark,
+                TextPrimary      = "#f1f5f9",
+                TextSecondary    = "#94a3b8",
+                ActionDefault    = "#94a3b8",
+                LinesDefault     = "rgba(255,255,255,0.08)",
+                TableLines       = "rgba(255,255,255,0.08)",
+                Divider          = "rgba(255,255,255,0.08)",
+            }
+        };
         UserState.OnSessionExpired += HandleSessionExpired;
     }
 
@@ -292,38 +327,7 @@
         catch { return true; }
     }
 
-    private MudTheme _theme = new MudTheme()
-    {
-        PaletteLight = new PaletteLight
-        {
-            Primary         = "#CC0000",
-            PrimaryDarken   = "#a30000",
-            Secondary       = "#1e293b",
-            SecondaryDarken = "#0f172a",
-            AppbarBackground  = "#1e293b",
-            Background      = "#e2e8f0",
-            Surface         = "#ffffff",
-            DrawerBackground  = "#1e293b",
-        },
-        PaletteDark = new PaletteDark
-        {
-            Primary         = "#e53535",
-            PrimaryDarken   = "#CC0000",
-            Secondary       = "#94a3b8",
-            SecondaryDarken = "#64748b",
-            AppbarBackground  = "#0f172a",
-            Background      = "#020617",
-            BackgroundGray  = "#0f172a",
-            Surface         = "#1e293b",
-            DrawerBackground  = "#0f172a",
-            TextPrimary     = "#f1f5f9",
-            TextSecondary   = "#94a3b8",
-            ActionDefault   = "#94a3b8",
-            LinesDefault    = "rgba(255,255,255,0.08)",
-            TableLines      = "rgba(255,255,255,0.08)",
-            Divider         = "rgba(255,255,255,0.08)",
-        }
-    };
+    private MudTheme _theme = new(); // inicialitzat a OnInitialized amb BrandingService
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

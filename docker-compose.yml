@@ -119,11 +119,18 @@ services:
       ApiSettings__BaseUrl:            "http://api:8080"
       Redis__ConnectionString:         "redis:6379"
       DEFAULT_LANGUAGE:                "${DEFAULT_LANGUAGE:-ca}"
+      BRAND_APP_NAME:                  "${BRAND_APP_NAME:-AutoCo Avaluació}"
+      BRAND_APP_SHORT_NAME:            "${BRAND_APP_SHORT_NAME:-AutoCo}"
+      BRAND_ORG_NAME:                  "${BRAND_ORG_NAME:-Salesians de Sarrià}"
+      BRAND_ORG_DEPT:                  "${BRAND_ORG_DEPT:-Dept. d'Informàtica}"
+      BRAND_PRIMARY_COLOR:             "${BRAND_PRIMARY_COLOR:-#CC0000}"
+      BRAND_NAV_COLOR:                 "${BRAND_NAV_COLOR:-#1e293b}"
     volumes:
       - dp-keys:/app/dp-keys
       - fotos-data:/app/wwwroot/fotos
       - ./config/logging.json:/app/logging.json:ro
       - ./config/i18n:/app/i18n:ro
+      - ./config/branding:/app/wwwroot/branding:ro
     networks:
       - autoco-net
     depends_on:

@@ -285,8 +285,16 @@ Copia `.env.example` a `.env` i ajusta els valors:
 | `BACKUP_WEEKLY_RETENTION` | Nombre màxim de backups setmanals a conservar (per defecte `4`) | |
 | `DEFAULT_LANGUAGE` | Idioma per defecte de la interfície (`ca`, `es`, o qualsevol codi de `config/i18n/`, per defecte `ca`) | |
 | `I18N_PATH` | Ruta als fitxers JSON de traducció (per defecte `/app/i18n`; el volum Docker la munta automàticament) | |
+| `BRAND_APP_NAME` | Nom de l'aplicació (títol del navegador, manifest PWA; per defecte `AutoCo Avaluació`) | |
+| `BRAND_APP_SHORT_NAME` | Nom curt PWA (per defecte `AutoCo`) | |
+| `BRAND_ORG_NAME` | Nom de l'organització al peu de pàgina (per defecte `Salesians de Sarrià`) | |
+| `BRAND_ORG_DEPT` | Departament al peu de pàgina (per defecte `Dept. d'Informàtica`) | |
+| `BRAND_PRIMARY_COLOR` | Color primari dels botons i elements destacats (per defecte `#CC0000`) | |
+| `BRAND_NAV_COLOR` | Color de la barra de navegació i el peu de pàgina (per defecte `#1e293b`) | |
 
 > SMTP és opcional. Si no es configura, les funcions d'email queden desactivades però l'aplicació funciona amb normalitat.
+
+> **Logo personalitzat:** posa un fitxer `logo.png` a `./config/branding/` per sobreescriure el logo per defecte. El volum Docker el munta automàticament a `/app/wwwroot/branding/logo.png`.
 
 ### Traduccions externes (i18n)
 
@@ -380,6 +388,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.12
+- **Branding corporatiu configurable** — `BrandingService` llegeix variables `BRAND_*` de l'entorn: nom de l'app, organització, departament, color primari i color de navbar; logo personalitzat via fitxer `./config/branding/logo.png` (volum Docker); `manifest.json` ara és un endpoint dinàmic; `App.razor` i `MainLayout.razor` usen els valors de branding
 
 ### v2.6.11
 - **Fix crash loop i18n** — `DictionaryLocalizer` valida cada nom de fitxer amb `CultureInfo.GetCultureInfo` abans de carregar-lo; fitxers d'exemple com `ca.override.example.json` ja no provoquen `CultureNotFoundException` a l'arrencada

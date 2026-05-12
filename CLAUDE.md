@@ -88,6 +88,10 @@ Per a producció real, canviar:
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — credencials de l'administrador inicial
 - `DEFAULT_LANGUAGE` — idioma per defecte de la UI (`ca`, `es`, o qualsevol codi de `config/i18n/`; per defecte `ca`)
 - `I18N_PATH` — ruta als fitxers JSON de traducció (per defecte `/app/i18n`, muntat via volum `./config/i18n`)
+- `BRAND_APP_NAME` / `BRAND_APP_SHORT_NAME` — nom de l'app al títol i manifest PWA
+- `BRAND_ORG_NAME` / `BRAND_ORG_DEPT` — textos del peu de pàgina
+- `BRAND_PRIMARY_COLOR` / `BRAND_NAV_COLOR` — colors principals de la UI
+- Logo: fitxer `./config/branding/logo.png` → muntat a `/app/wwwroot/branding/logo.png`; `BrandingService` detecta si existeix
 
 ## Model de dades
 
@@ -190,6 +194,7 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - API: Minimal API (no controllers), ASP.NET Core 10
 - Web: **Blazor Server + MudBlazor** (no Razor Pages, no MVC, no JS frameworks)
 - i18n: `DictionaryLocalizer` — diccionaris estàtics `Ca`/`Es` + fitxers JSON externs a `I18N_PATH` (`/app/i18n/*.json`); fitxer per a idioma conegut fa override parcial, idioma nou s'afegeix automàticament a `supportedCultures`; fallback al català per claus absents
+- Branding: `BrandingService` singleton (variables `BRAND_*`); `manifest.json` és un endpoint dinàmic (fitxer estàtic eliminat); logo via volum `./config/branding/logo.png`; `MainLayout.razor` i `App.razor` injecten `BrandingService`
 - EF Core amb migracions automàtiques a l'inici (`db.Database.Migrate()`)
 - Passwords hashejades amb BCrypt (work factor 12)
 - Caché de resultats: Redis `IDistributedCache`, TTL 5 min, invalidació automàtica

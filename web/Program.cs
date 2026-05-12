@@ -87,6 +87,9 @@ builder.Services.AddHostedService<ParticipationRedisSubscriber>();
 builder.Services.AddSingleton<NotificationBroadcastService>();
 builder.Services.AddHostedService<NotificationRedisSubscriber>();
 
+// Branding corporatiu (variables BRAND_* + logo via volum ./config/branding)
+builder.Services.AddSingleton<BrandingService>();
+
 // HTTP client cap a l'API
 builder.Services.AddHttpClient<ApiClient>(client =>
 {
@@ -108,6 +111,30 @@ if (!app.Environment.IsDevelopment())
 app.UseStaticFiles();
 app.UseRequestLocalization();
 app.UseAntiforgery();
+
+// manifest.json dinàmic: usa els valors de BrandingService
+app.MapGet("/manifest.json", (BrandingService b) =>
+{
+    var json = System.Text.Json.JsonSerializer.Serialize(new
+    {
+        name             = b.AppName,
+        short_name       = b.AppShortName,
+        description      = "Sistema d'avaluació entre iguals per a activitats de grup",
+        start_url        = "/",
+        display          = "standalone",
+        background_color = "#ffffff",
+        theme_color      = b.NavColor,
+        lang             = "ca",
+        icons = new[]
+        {
+            new { src = b.LogoUrl, sizes = "192x192", type = "image/png", purpose = "any maskable" },
+            new { src = b.LogoUrl, sizes = "512x512", type = "image/png", purpose = "any maskable" },
+        },
+        categories  = new[] { "education", "productivity" },
+        orientation = "any",
+    });
+    return Results.Content(json, "application/manifest+json");
+});
 
 app.MapRazorComponents<AutoCo.Web.Components.App>()
     .AddInteractiveServerRenderMode();
