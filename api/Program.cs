@@ -1270,9 +1270,12 @@ app.MapGet("/api/results/{activityId:int}/excel", async (int activityId,
 
 // ── Evolució de l'alumne al llarg del mòdul ───────────────────────────────────
 app.MapGet("/api/results/module/{moduleId:int}/evolution", async (
-    int moduleId, int studentId, IResultsService svc, ClaimsPrincipal user) =>
+    int moduleId, int studentId, IResultsService svc, ClaimsPrincipal user, AppDbContext db) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
+    var classId = await db.Modules.Where(m => m.Id == moduleId).Select(m => m.ClassId).FirstOrDefaultAsync();
+    if (classId == 0) return Results.NotFound();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
     var r = await svc.GetModuleEvolutionAsync(moduleId, studentId);
     return r is null ? Results.NotFound() : Results.Ok(r);
 }).RequireAuthorization();

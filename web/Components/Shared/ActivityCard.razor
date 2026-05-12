@@ -520,12 +520,11 @@
 
         foreach (var target in _emailTargets)
         {
-            _emailCurrent = target.NomComplet;
-            StateHasChanged();
             bool sent = _emailIsInvite
                 ? await Api.InviteOneAsync(Act.Id, target.StudentId, _emailIncludePwd)
                 : await Api.RemindOneAsync(Act.Id, target.StudentId);
             if (sent) _emailSent++; else _emailSkipped++;
+            _emailCurrent = target.NomComplet;
             _emailProgress++;
             StateHasChanged();
         }

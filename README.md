@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.5
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.6
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -354,6 +354,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.6
+- **Auditoria UI + rendiment** — `@key(act.Id)` als tres `@foreach` d'activitats del Dashboard (evita re-binding incorrecte si canvia l'ordre); `StateHasChanged()` reduït a 1 crida per iteració durant l'enviament massiu de correus (era 2); endpoint `GET /api/results/module/{id}/evolution` ara comprova si el professor té accés a la classe del mòdul; botons CSV/Excel de Resultats desactivats durant l'exportació (`_exporting` flag + `finally`)
 
 ### v2.6.5
 - **Fix menús navbar** — `MudMenu.ActivatorContent` en MudBlazor v9 ja no connecta el clic automàticament; corregit amb `@ref` + `OpenMenuAsync(EventArgs, bool)` explícit; afecta el menú d'administració (engranatge) i el de notificacions (campana)

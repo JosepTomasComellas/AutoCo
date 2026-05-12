@@ -135,7 +135,7 @@ else
         <MudGrid Class="mb-6">
             @foreach (var act in _obertes)
             {
-                <MudItem xs="12" sm="6" lg="4">
+                <MudItem @key="act.Id" xs="12" sm="6" lg="4">
                     <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" />
                 </MudItem>
             }
@@ -153,7 +153,7 @@ else
         <MudGrid Class="mb-6">
             @foreach (var act in _tancades)
             {
-                <MudItem xs="6" sm="4" md="3" lg="2">
+                <MudItem @key="act.Id" xs="6" sm="4" md="3" lg="2">
                     <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" OnArchived="OnActArchived" Compact="true" />
                 </MudItem>
             }
@@ -172,7 +172,7 @@ else
         <MudGrid>
             @foreach (var act in _arxivades)
             {
-                <MudItem xs="6" sm="4" md="3" lg="2">
+                <MudItem @key="act.Id" xs="6" sm="4" md="3" lg="2">
                     <ActivityCard Act="act" OnUpdated="OnActUpdated" OnDeleted="OnActDeleted" OnArchived="OnActArchived" Compact="true" />
                 </MudItem>
             }
