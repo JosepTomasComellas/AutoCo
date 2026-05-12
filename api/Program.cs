@@ -1277,9 +1277,52 @@ app.MapGet("/api/results/module/{moduleId:int}/evolution", async (
     return r is null ? Results.NotFound() : Results.Ok(r);
 }).RequireAuthorization();
 
-// ── Criteri ───────────────────────────────────────────────────────────────────
-app.MapGet("/api/criteria", () =>
-    Results.Ok(Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label))));
+// ── Criteris globals ──────────────────────────────────────────────────────────
+app.MapGet("/api/criteria", async (AppDbContext db) =>
+{
+    var defaults = await db.DefaultCriteria.OrderBy(d => d.OrderIndex).ToListAsync();
+    if (defaults.Count == 0)
+        return Results.Ok(Criteria.All.Select(c => new CriteriaDto(c.Key, c.Label)));
+    return Results.Ok(defaults.Select(d => new CriteriaDto(d.Key, d.Label)));
+});
+
+app.MapGet("/api/criteria/defaults", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var defaults = await db.DefaultCriteria.OrderBy(d => d.OrderIndex).ToListAsync();
+    if (defaults.Count == 0)
+    {
+        var fallback = Criteria.All.Select((c, i) =>
+            new ActivityCriterionDto(0, c.Key, c.Label, i, 1)).ToList();
+        return Results.Ok(fallback);
+    }
+    return Results.Ok(defaults.Select(d =>
+        new ActivityCriterionDto(d.Id, d.Key, d.Label, d.OrderIndex, d.Weight)).ToList());
+}).RequireAuthorization();
+
+app.MapPut("/api/criteria/defaults", async (SaveCriteriaRequest req,
+    AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var validated = Validate(req);
+    if (validated is not null) return validated;
+
+    await db.DefaultCriteria.ExecuteDeleteAsync();
+    for (int i = 0; i < req.Items.Count; i++)
+    {
+        db.DefaultCriteria.Add(new AutoCo.Api.Data.Models.DefaultCriterion
+        {
+            Key        = req.Items[i].Key.Trim().ToLowerInvariant(),
+            Label      = req.Items[i].Label.Trim(),
+            Weight     = Math.Max(1, req.Items[i].Weight),
+            OrderIndex = i
+        });
+    }
+    await db.SaveChangesAsync();
+    var result = await db.DefaultCriteria.OrderBy(d => d.OrderIndex).ToListAsync();
+    return Results.Ok(result.Select(d =>
+        new ActivityCriterionDto(d.Id, d.Key, d.Label, d.OrderIndex, d.Weight)).ToList());
+}).RequireAuthorization();
 
 // ── Compte d'avaluacions (per confirmació d'eliminació) ────────────────────────
 app.MapGet("/api/activities/{id:int}/evals-count", async (

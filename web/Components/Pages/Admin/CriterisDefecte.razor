@@ -1,0 +1,166 @@
+@page "/admin/criteris"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
+
+<PageTitle>Criteris per defecte – AutoCo</PageTitle>
+@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">@Loc["Nav_Dashboard"]</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.Tune" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["DefCriteria_Title"]</MudText>
+</MudStack>
+
+<MudGrid>
+    <MudItem xs="12" md="7" lg="5">
+        <MudCard Elevation="2">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">@Loc["DefCriteria_CardTitle"]</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @Loc["DefCriteria_CardInfo"]
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_loading)
+                {
+                    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+                }
+                else
+                {
+                    @for (int i = 0; i < _items.Count; i++)
+                    {
+                        var idx = i;
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
+                            <MudTextField @bind-Value="_items[idx].Key" Label="@Loc["Criteria_KeyLabel"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense"
+                                          Style="max-width:110px" />
+                            <MudTextField @bind-Value="_items[idx].Label" Label="@Loc["Criteria_EtiquetaLabel"]"
+                                          Variant="Variant.Outlined" Margin="Margin.Dense" Style="flex:1" />
+                            <MudNumericField @bind-Value="_items[idx].Weight" Label="@Loc["Criteria_WeightLabel"]"
+                                             Variant="Variant.Outlined" Margin="Margin.Dense"
+                                             Style="max-width:70px" Min="1" Max="100" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                                           Disabled="@(idx == 0)"
+                                           OnClick="() => MoveUp(idx)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                                           Disabled="@(idx == _items.Count - 1)"
+                                           OnClick="() => MoveDown(idx)" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                           Color="Color.Error" Disabled="@(_items.Count <= 1)"
+                                           OnClick="() => Remove(idx)" />
+                        </MudStack>
+                    }
+                    <MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small"
+                               OnClick="AddItem" Class="mt-2">
+                        @Loc["Criteria_AddBtn"]
+                    </MudButton>
+                }
+            </MudCardContent>
+            <MudCardActions Class="px-4 pb-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                           OnClick="SaveAsync"
+                           Disabled="_loading || _saving || !_items.Any()"
+                           StartIcon="@Icons.Material.Filled.Save">
+                    @Loc["Criteria_SaveBtn"]
+                </MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" md="5" lg="4">
+        <MudCard Elevation="1">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.subtitle1" Style="font-weight:600">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                        @Loc["DefCriteria_HelpTitle"]
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @Loc["DefCriteria_HelpText"]
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private List<CriterionEntry> _items  = [];
+    private bool _loading = true;
+    private bool _saving  = false;
+
+    private class CriterionEntry
+    {
+        public string Key    { get; set; } = "";
+        public string Label  { get; set; } = "";
+        public int    Weight { get; set; } = 1;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!UserState.IsAdmin) return;
+        Api.SetToken(UserState.Token!);
+        var criteria = await Api.GetDefaultCriteriaAsync() ?? [];
+        _items = criteria.Select(c => new CriterionEntry
+        {
+            Key    = c.Key,
+            Label  = c.Label,
+            Weight = c.Weight
+        }).ToList();
+        _loading = false;
+    }
+
+    private void AddItem() =>
+        _items.Add(new CriterionEntry
+        {
+            Key    = $"criteri{_items.Count + 1}",
+            Label  = Loc["Criteria_NewCriterion"].Value,
+            Weight = 1
+        });
+
+    private void Remove(int i) { if (_items.Count > 1) _items.RemoveAt(i); }
+
+    private void MoveUp(int i)
+    {
+        if (i <= 0) return;
+        (_items[i], _items[i - 1]) = (_items[i - 1], _items[i]);
+    }
+
+    private void MoveDown(int i)
+    {
+        if (i >= _items.Count - 1) return;
+        (_items[i], _items[i + 1]) = (_items[i + 1], _items[i]);
+    }
+
+    private async Task SaveAsync()
+    {
+        var invalid = _items.Where(x => string.IsNullOrWhiteSpace(x.Key) ||
+                                        string.IsNullOrWhiteSpace(x.Label)).ToList();
+        if (invalid.Any()) { Snackbar.Add(Loc["Criteria_ValidationError"].Value, Severity.Warning); return; }
+
+        var keys = _items.Select(x => x.Key.Trim().ToLowerInvariant()).ToList();
+        if (keys.Distinct().Count() != keys.Count)
+        { Snackbar.Add(Loc["Criteria_UniqueKeys"].Value, Severity.Warning); return; }
+
+        _saving = true;
+        Api.SetToken(UserState.Token!);
+        var req = new SaveCriteriaRequest(_items.Select(x =>
+            new CriterionItem(x.Key.Trim().ToLowerInvariant(), x.Label.Trim(), Math.Max(1, x.Weight))).ToList());
+        var result = await Api.SaveDefaultCriteriaAsync(req);
+        _saving = false;
+
+        if (result is not null)
+            Snackbar.Add(Loc["DefCriteria_Saved"].Value, Severity.Success);
+        else
+            Snackbar.Add(Loc["Criteria_SaveError"].Value, Severity.Error);
+    }
+}

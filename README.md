@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.1
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.2
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -354,6 +354,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.2
+- **Criteris per defecte configurables** — nova pàgina `/admin/criteris` (menú Admin → Criteris per defecte) per editar el conjunt global de criteris d'avaluació directament des de la UI; els criteris es persisten a la taula `DefaultCriteria` de la BD; les activitats noves els hereten automàticament; si la taula és buida s'usa el fallback de `Constants.cs`; les activitats existents no es modifiquen; cada activitat pot sobreescriure els seus criteris individualment
 
 ### v2.6.1
 - **Arxivat d'activitats** — nova acció «Arxivar» al menú de cada activitat; les activitats arxivades desapareixen del dashboard i es guarden sense eliminar; archivar una activitat oberta la tanca automàticament; switch «Arxivades» al filtre del dashboard per veure-les sota demanda (es carreguen de l'API en activar-lo); es pot desarxivar en qualsevol moment; `POST /api/activities/{id}/archive` + `GET /api/activities?includeArchived=true`

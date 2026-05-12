@@ -327,6 +327,12 @@ public class ApiClient
     public Task<List<CriteriaDto>?> GetCriteriaAsync() =>
         GetAsync<List<CriteriaDto>>("/api/criteria");
 
+    public Task<List<ActivityCriterionDto>?> GetDefaultCriteriaAsync() =>
+        GetAsync<List<ActivityCriterionDto>>("/api/criteria/defaults");
+
+    public Task<List<ActivityCriterionDto>?> SaveDefaultCriteriaAsync(SaveCriteriaRequest req) =>
+        PutAsync<List<ActivityCriterionDto>>("/api/criteria/defaults", req);
+
     public async Task<int> GetEvalsCountAsync(int activityId)
     {
         var resp = await GetAsync<System.Text.Json.JsonElement?>($"/api/activities/{activityId}/evals-count");

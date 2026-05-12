@@ -639,16 +639,30 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     private async Task SeedDefaultCriteriaAsync(int activityId)
     {
-        for (int i = 0; i < Criteria.All.Count; i++)
+        var defaults = await db.DefaultCriteria.OrderBy(d => d.OrderIndex).ToListAsync();
+        if (defaults.Count > 0)
         {
-            db.ActivityCriteria.Add(new ActivityCriterion
-            {
-                ActivityId = activityId,
-                Key        = Criteria.All[i].Key,
-                Label      = Criteria.All[i].Label,
-                OrderIndex = i,
-                Weight     = 1
-            });
+            for (int i = 0; i < defaults.Count; i++)
+                db.ActivityCriteria.Add(new ActivityCriterion
+                {
+                    ActivityId = activityId,
+                    Key        = defaults[i].Key,
+                    Label      = defaults[i].Label,
+                    OrderIndex = i,
+                    Weight     = defaults[i].Weight
+                });
+        }
+        else
+        {
+            for (int i = 0; i < Criteria.All.Count; i++)
+                db.ActivityCriteria.Add(new ActivityCriterion
+                {
+                    ActivityId = activityId,
+                    Key        = Criteria.All[i].Key,
+                    Label      = Criteria.All[i].Label,
+                    OrderIndex = i,
+                    Weight     = 1
+                });
         }
         await db.SaveChangesAsync();
     }

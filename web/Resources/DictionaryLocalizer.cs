@@ -180,6 +180,13 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
 
         // ── Cicles ────────────────────────────────────────────────────────────
         ["Cicles_Title"]        = "Gestió de cicles",
+        ["DefCriteria_MenuLabel"]  = "Criteris per defecte",
+        ["DefCriteria_Title"]      = "Criteris d'avaluació per defecte",
+        ["DefCriteria_CardTitle"]  = "Criteris globals",
+        ["DefCriteria_CardInfo"]   = "Aquests criteris s'aplicaran automàticament a totes les activitats noves.",
+        ["DefCriteria_HelpTitle"]  = "Com funciona",
+        ["DefCriteria_HelpText"]   = "Els criteris que definiu aquí s'usaran per defecte en crear qualsevol activitat nova. Les activitats existents no es modifiquen. Cada activitat pot sobreescriure els seus criteris individualment des de l'opció «Gestionar criteris».",
+        ["DefCriteria_Saved"]      = "Criteris per defecte desats correctament.",
         ["Cicles_NewCicle"]     = "Nou cicle",
         ["Cicles_Name"]         = "Nom del cicle",
         ["Cicles_NamePh"]       = "p.ex. DAM, ASIX, SMX...",
@@ -981,6 +988,13 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
 
         // ── Cicles ────────────────────────────────────────────────────────────
         ["Cicles_Title"]        = "Gestión de ciclos",
+        ["DefCriteria_MenuLabel"]  = "Criterios por defecto",
+        ["DefCriteria_Title"]      = "Criterios de evaluación por defecto",
+        ["DefCriteria_CardTitle"]  = "Criterios globales",
+        ["DefCriteria_CardInfo"]   = "Estos criterios se aplicarán automáticamente a todas las actividades nuevas.",
+        ["DefCriteria_HelpTitle"]  = "Cómo funciona",
+        ["DefCriteria_HelpText"]   = "Los criterios que defináis aquí se usarán por defecto al crear cualquier actividad nueva. Las actividades existentes no se modifican. Cada actividad puede sobrescribir sus criterios individualmente desde la opción «Gestionar criterios».",
+        ["DefCriteria_Saved"]      = "Criterios por defecto guardados correctamente.",
         ["Cicles_NewCicle"]     = "Nuevo ciclo",
         ["Cicles_Name"]         = "Nombre del ciclo",
         ["Cicles_NamePh"]       = "p.ej. DAM, ASIX, SMX...",

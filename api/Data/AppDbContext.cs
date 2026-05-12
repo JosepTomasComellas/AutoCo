@@ -24,6 +24,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ProfessorLogin>      ProfessorLogins      => Set<ProfessorLogin>();
     public DbSet<ProfessorClass>      ProfessorClasses     => Set<ProfessorClass>();
     public DbSet<AdminAuditLog>       AdminAuditLogs       => Set<AdminAuditLog>();
+    public DbSet<DefaultCriterion>    DefaultCriteria      => Set<DefaultCriterion>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -193,6 +194,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(l => l.Action).HasMaxLength(100);
             e.Property(l => l.ActorName).HasMaxLength(300);
             e.HasIndex(l => l.CreatedAt);
+        });
+
+        b.Entity<DefaultCriterion>(e => {
+            e.HasIndex(dc => dc.Key).IsUnique();
+            e.Property(dc => dc.Key).HasMaxLength(50);
+            e.Property(dc => dc.Label).HasMaxLength(200);
         });
 
         // Tots els DateTime llegits de la BD es marquen com a UTC perquè
