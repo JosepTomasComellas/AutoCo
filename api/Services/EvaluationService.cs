@@ -61,7 +61,7 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
             activity.Id,
             activity.ModuleId, activity.Module.Code, activity.Module.Name,
             activity.Module.ClassId, activity.Module.Class.Name, activity.Module.Class.AcademicYear,
-            activity.Module.Professor.NomComplet,
+            activity.Module.ProfessorId, activity.Module.Professor.NomComplet,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
             activity.Groups.Count,
             activity.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count());

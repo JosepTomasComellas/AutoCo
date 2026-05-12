@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.18
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.19
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -389,6 +389,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.19
+- **Control d'accés a accions d'activitat**: `ActivityDto` ara inclou `ProfessorId`; `ActivityCard` calcula `_canEdit = IsAdmin || UserId == ProfessorId`; els botons d'edició (editar, obrir/tancar, arxivar, eliminar, duplicar mateixa classe, gestió criteris, invitar, recordatoris) s'amaguen si l'usuari no és propietari ni admin — els gestors i professors que veuen activitats d'altres professors conserven accés de lectura (resultats, grups, gràfic, duplicar a altra classe, guardar com a plantilla)
 
 ### v2.6.18
 - **Fix PDF Informe Global**: vista d'impressió completament separada — la UI MudBlazor queda envoltada en `no-print` i s'afegeix una secció `print-only` amb HTML net (`informe-activitat` pattern, capçalera amb logo i colors de branding, taula de KPIs, taules per cicle); CSS: classe `.print-only` ocultada a pantalla i visible en `@media print`; KPIs amb estil `ig-kpi` amb colors per participació

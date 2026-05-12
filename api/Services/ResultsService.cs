@@ -148,7 +148,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
             activity.Id,
             activity.ModuleId, activity.Module.Code, activity.Module.Name,
             activity.Module.ClassId, activity.Module.Class.Name, activity.Module.Class.AcademicYear,
-            activity.Module.Professor.NomComplet,
+            activity.Module.ProfessorId, activity.Module.Professor.NomComplet,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt,
             activity.Groups.Count, allMembers.Count,
             activity.OpenAt, activity.CloseAt, activity.ShowResultsToStudents);

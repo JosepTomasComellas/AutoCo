@@ -108,32 +108,35 @@
                              OnClick="ShowChartAsync">
                     @Loc["Card_ViewChart"]
                 </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Edit"
-                             OnClick="EditarAsync">
-                    @Loc["Card_EditActivity"]
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.ContentCopy"
-                             OnClick="DuplicarAsync">
-                    @Loc["Card_DuplicateSame"]
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.CopyAll"
-                             OnClick="DuplicarCrossAsync">
-                    @Loc["Card_DuplicateCross"]
-                </MudMenuItem>
-                <MudMenuItem Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
-                             IconColor="@(Act.IsOpen ? Color.Warning : Color.Success)"
-                             OnClick="ToggleAsync">
-                    @(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Archive" IconColor="Color.Default"
-                             OnClick="ArchiveAsync">
-                    @Loc["Card_Archive"]
-                </MudMenuItem>
-                <MudDivider />
-                <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
-                             OnClick="DeleteAsync">
-                    <MudText Color="Color.Error">@Loc["Card_Delete"]</MudText>
-                </MudMenuItem>
+                @if (_canEdit)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Edit"
+                                 OnClick="EditarAsync">
+                        @Loc["Card_EditActivity"]
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.ContentCopy"
+                                 OnClick="DuplicarAsync">
+                        @Loc["Card_DuplicateSame"]
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.CopyAll"
+                                 OnClick="DuplicarCrossAsync">
+                        @Loc["Card_DuplicateCross"]
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+                                 IconColor="@(Act.IsOpen ? Color.Warning : Color.Success)"
+                                 OnClick="ToggleAsync">
+                        @(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Archive" IconColor="Color.Default"
+                                 OnClick="ArchiveAsync">
+                        @Loc["Card_Archive"]
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                                 OnClick="DeleteAsync">
+                        <MudText Color="Color.Error">@Loc["Card_Delete"]</MudText>
+                    </MudMenuItem>
+                }
             </MudMenu>
         }
         else
@@ -147,13 +150,16 @@
                        Href="@($"/professor/grups/{Act.Id}")">
                 @Loc["Card_Groups2"]
             </MudButton>
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
-                           title="@Loc["Card_EditActivity"]"
-                           OnClick="EditarAsync" />
+            @if (_canEdit)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Default"
+                               title="@Loc["Card_EditActivity"]"
+                               OnClick="EditarAsync" />
+            }
             <MudIconButton Icon="@Icons.Material.Filled.BarChart" Color="Color.Primary"
                            title="@Loc["Card_ViewChart"]"
                            OnClick="ShowChartAsync" />
-            @if (Act.IsOpen)
+            @if (_canEdit && Act.IsOpen)
             {
                 <MudIconButton Icon="@Icons.Material.Filled.Campaign" Color="Color.Info"
                                title="@Loc["Card_Invite"]"
@@ -163,43 +169,52 @@
             <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Default"
                      title="@Loc["Card_MoreActions"]"
                      AnchorOrigin="Origin.BottomRight" Dense="true">
-                <MudMenuItem Icon="@Icons.Material.Filled.ContentCopy"
-                             OnClick="DuplicarAsync">
-                    @Loc["Card_DuplicateSame"]
-                </MudMenuItem>
+                @if (_canEdit)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.ContentCopy"
+                                 OnClick="DuplicarAsync">
+                        @Loc["Card_DuplicateSame"]
+                    </MudMenuItem>
+                }
                 <MudMenuItem Icon="@Icons.Material.Filled.CopyAll"
                              OnClick="DuplicarCrossAsync">
                     @Loc["Card_DuplicateCross"]
                 </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Tune"
-                             OnClick="ManageCriteriaAsync">
-                    @Loc["Card_ManageCriteria"]
-                </MudMenuItem>
+                @if (_canEdit)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Tune"
+                                 OnClick="ManageCriteriaAsync">
+                        @Loc["Card_ManageCriteria"]
+                    </MudMenuItem>
+                }
                 <MudMenuItem Icon="@Icons.Material.Filled.BookmarkAdd"
                              OnClick="SaveAsTemplateAsync">
                     @Loc["Card_SaveAsTemplate"]
                 </MudMenuItem>
-                @if (Act.IsOpen)
+                @if (_canEdit && Act.IsOpen)
                 {
                     <MudMenuItem Icon="@Icons.Material.Filled.NotificationsActive"
                                  OnClick="OpenRemindDialogAsync">
                         @Loc["Card_SendReminders"]
                     </MudMenuItem>
                 }
-                <MudMenuItem Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
-                             IconColor="@(Act.IsOpen ? Color.Warning : Color.Success)"
-                             OnClick="ToggleAsync">
-                    @(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)
-                </MudMenuItem>
-                <MudMenuItem Icon="@Icons.Material.Filled.Archive" IconColor="Color.Default"
-                             OnClick="ArchiveAsync">
-                    @Loc["Card_Archive"]
-                </MudMenuItem>
-                <MudDivider />
-                <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
-                             OnClick="DeleteAsync">
-                    <MudText Color="Color.Error">@Loc["Card_Delete"]</MudText>
-                </MudMenuItem>
+                @if (_canEdit)
+                {
+                    <MudMenuItem Icon="@(Act.IsOpen ? Icons.Material.Filled.Lock : Icons.Material.Filled.LockOpen)"
+                                 IconColor="@(Act.IsOpen ? Color.Warning : Color.Success)"
+                                 OnClick="ToggleAsync">
+                        @(Act.IsOpen ? Loc["Card_CloseActivity"].Value : Loc["Card_OpenActivity"].Value)
+                    </MudMenuItem>
+                    <MudMenuItem Icon="@Icons.Material.Filled.Archive" IconColor="Color.Default"
+                                 OnClick="ArchiveAsync">
+                        @Loc["Card_Archive"]
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="@Icons.Material.Filled.Delete" IconColor="Color.Error"
+                                 OnClick="DeleteAsync">
+                        <MudText Color="Color.Error">@Loc["Card_Delete"]</MudText>
+                    </MudMenuItem>
+                }
             </MudMenu>
         }
     </MudCardActions>
@@ -297,6 +312,8 @@
     [Parameter] public EventCallback<ActivityDto>  OnDeleted  { get; set; }
     [Parameter] public EventCallback<ActivityDto>  OnArchived { get; set; }
     [Parameter] public bool Compact { get; set; }
+
+    private bool _canEdit => UserState.IsAdmin || UserState.UserId == Act.ProfessorId;
 
     private ParticipationDto? _participation        = null;
     private bool              _loadingParticipation = false;

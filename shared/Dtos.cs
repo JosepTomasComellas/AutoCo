@@ -109,7 +109,8 @@ public record ModuleExclusionDto(int StudentId, string StudentName, string Email
 public record ActivityDto(
     int Id,
     int ModuleId, string ModuleCode, string ModuleName,
-    int ClassId, string ClassName, string? ClassAcademicYear, string ProfessorName,
+    int ClassId, string ClassName, string? ClassAcademicYear,
+    int ProfessorId, string ProfessorName,
     string Name, string? Description, bool IsOpen,
     DateTime CreatedAt, int NumGroups, int NumStudents,
     DateTime? OpenAt = null, DateTime? CloseAt = null,

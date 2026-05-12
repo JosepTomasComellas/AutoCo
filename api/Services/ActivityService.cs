@@ -132,7 +132,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         return new ActivityDto(activity.Id,
             modul.Id, modul.Code, modul.Name,
             modul.ClassId, modul.Class.Name, modul.Class.AcademicYear,
-            modul.Professor.NomComplet,
+            modul.ProfessorId, modul.Professor.NomComplet,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt, 0, 0,
             activity.OpenAt, activity.CloseAt);
     }
@@ -225,7 +225,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         return new ActivityDto(nova.Id,
             original.Module.Id, original.Module.Code, original.Module.Name,
             original.Module.ClassId, original.Module.Class.Name, original.Module.Class.AcademicYear,
-            original.Module.Professor.NomComplet,
+            original.Module.ProfessorId, original.Module.Professor.NomComplet,
             nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
             original.Groups.Count, numStudents);
     }
@@ -267,7 +267,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         return new ActivityDto(nova.Id,
             targetModule.Id, targetModule.Code, targetModule.Name,
             targetModule.ClassId, targetModule.Class.Name, targetModule.Class.AcademicYear,
-            targetModule.Professor.NomComplet,
+            targetModule.ProfessorId, targetModule.Professor.NomComplet,
             nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
             original.Groups.Count, 0, null, null);
     }
@@ -700,7 +700,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             a.Id,
             a.ModuleId, a.Module.Code, a.Module.Name,
             a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
-            a.Module.Professor.NomComplet,
+            a.Module.ProfessorId, a.Module.Professor.NomComplet,
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents,
             a.OpenAt, a.CloseAt, a.ShowResultsToStudents, a.IsArchived);
     }
