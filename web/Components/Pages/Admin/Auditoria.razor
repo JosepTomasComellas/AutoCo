@@ -2,8 +2,9 @@
 @inject ApiClient Api
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Auditoria d'accions – AutoCo</PageTitle>
+<PageTitle>Auditoria d'accions – @Branding.AppName</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera -->

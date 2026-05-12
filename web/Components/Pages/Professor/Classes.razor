@@ -5,8 +5,9 @@
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Classes – AutoCo</PageTitle>
+<PageTitle>Classes – @Branding.AppName</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera de pàgina -->

@@ -4,8 +4,9 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Criteris per defecte – AutoCo</PageTitle>
+<PageTitle>Criteris per defecte – @Branding.AppName</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">

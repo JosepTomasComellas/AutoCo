@@ -5,8 +5,9 @@
 @inject IDialogService Dialog
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>@Loc["Cicles_Title"] – AutoCo</PageTitle>
+<PageTitle>@Loc["Cicles_Title"] – @Branding.AppName</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">

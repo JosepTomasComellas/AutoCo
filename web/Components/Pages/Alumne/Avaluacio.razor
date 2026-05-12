@@ -4,8 +4,9 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Avaluació – AutoCo</PageTitle>
+<PageTitle>Avaluació – @Branding.AppName</PageTitle>
 @if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
 
 @if (_loading)

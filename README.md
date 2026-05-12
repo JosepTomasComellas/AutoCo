@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.14
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.15
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -388,6 +388,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.15
+- **`<PageTitle>` dinàmic a totes les pàgines** — les 20 pàgines restants (Admin, Alumne, Professor) injecten `BrandingService` i substitueixen el literal `AutoCo` per `@Branding.AppName`; ara el títol de la pestanya del navegador reflecteix `BRAND_APP_NAME` configurable en totes les pàgines de l'aplicació
 
 ### v2.6.14
 - **Branding complet** — cobertura completa de les variables `BRAND_*` per tota la interfície: imatge de fons configurable (fitxer `background.png` o `background.jpg` a `./config/branding/`); pàgines d'autenticació (login professor, login alumne, restabliment de contrasenya) amb `NavColor` dinàmic; informes PDF (`InformeAlumne`, `InformeActivitat`) amb logo i colors de marca; gràfics (`Grafic.razor`, `Estadistiques.razor`) amb colors de branding; `App.razor` injecta CSS custom properties (`:root { --brand-primary, --brand-nav, --brand-bg-image... }`) al `<head>` per propagar el branding a tot el CSS; `site.css` usa les variables en comptes de colors codificats; `BrandingService` ampliada amb `PrimaryColorDark`, `NavColorDark` i `BgImageCssValue`

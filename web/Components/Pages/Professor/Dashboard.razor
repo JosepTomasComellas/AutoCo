@@ -3,8 +3,9 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Tauler del Professor – AutoCo</PageTitle>
+<PageTitle>Tauler del Professor – @Branding.AppName</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera -->

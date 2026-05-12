@@ -3,8 +3,9 @@
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Els meus resultats – AutoCo</PageTitle>
+<PageTitle>Els meus resultats – @Branding.AppName</PageTitle>
 @if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">

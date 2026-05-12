@@ -5,8 +5,9 @@
 @inject ISnackbar Snackbar
 @inject AutoCo.Web.Services.LogLevelHolder LogHolder
 @inject StackExchange.Redis.IConnectionMultiplexer Redis
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Sistema – AutoCo</PageTitle>
+<PageTitle>Sistema – @Branding.AppName</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera -->

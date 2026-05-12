@@ -4,8 +4,9 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResources> Loc
 @inject ISnackbar Snackbar
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Les meves activitats – AutoCo</PageTitle>
+<PageTitle>Les meves activitats – @Branding.AppName</PageTitle>
 @if (!UserState.IsStudent) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">

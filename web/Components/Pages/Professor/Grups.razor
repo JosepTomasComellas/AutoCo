@@ -6,8 +6,9 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Grups – AutoCo</PageTitle>
+<PageTitle>Grups – @Branding.AppName</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Wrap="Wrap.Wrap">

@@ -5,9 +5,10 @@
 @inject ISnackbar Snackbar
 @inject ProtectedLocalStorage LocalStorage
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 @using Microsoft.AspNetCore.Components.Forms
 
-<PageTitle>El meu perfil – AutoCo</PageTitle>
+<PageTitle>El meu perfil – @Branding.AppName</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6">

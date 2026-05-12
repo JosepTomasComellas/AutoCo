@@ -6,8 +6,9 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Alumnes – AutoCo</PageTitle>
+<PageTitle>Alumnes – @Branding.AppName</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 @if (_classe is null && !_loading)

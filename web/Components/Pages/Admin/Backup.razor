@@ -6,8 +6,9 @@
 @inject IDialogService Dialog
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Còpies de seguretat – AutoCo</PageTitle>
+<PageTitle>Còpies de seguretat – @Branding.AppName</PageTitle>
 @if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera -->
