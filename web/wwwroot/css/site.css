@@ -318,8 +318,12 @@ html, body {
     padding-bottom: 1rem;
 }
 
+/* Oculta la secció print-only a la pantalla */
+.print-only { display: none !important }
+
 @media print {
-    .no-print { display: none !important }
+    .no-print  { display: none !important }
+    .print-only { display: block !important }
     .no-print-shadow { box-shadow: none !important }
     .mud-appbar, .mud-main-content > .mud-container > *:first-child { display: none !important }
     .mud-main-content { padding: 0 !important; background: white !important }
@@ -330,9 +334,9 @@ html, body {
     .informe-group-header { -webkit-print-color-adjust: exact; print-color-adjust: exact }
     .distrib-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact }
     .informe-page-break { page-break-before: always }
-    /* Informe Global */
     .grade-high, .grade-mid, .grade-low { -webkit-print-color-adjust: exact; print-color-adjust: exact }
     .mud-paper { box-shadow: none !important; border: 1px solid #e2e8f0 }
+    .ig-kpi { -webkit-print-color-adjust: exact; print-color-adjust: exact }
 }
 
 /* ── Informe d'activitat ─────────────────────────────────────────────────── */
@@ -388,3 +392,26 @@ html, body {
         overflow-x: auto;
     }
 }
+
+/* ── Informe Global de Direcció (KPIs print) ────────────────────────────── */
+.ig-kpis {
+    display: flex;
+    gap: .75rem;
+    flex-wrap: wrap;
+    margin-bottom: .25rem;
+}
+.ig-kpi {
+    flex: 1; min-width: 90px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    padding: .5rem .75rem;
+    text-align: center;
+}
+.ig-kpi-val { font-size: 1.5rem; font-weight: 800; line-height: 1.1 }
+.ig-kpi-lbl { font-size: .72rem; color: #64748b; margin-top: .1rem }
+.ig-kpi.grade-high { border-color: #16a34a }
+.ig-kpi.grade-high .ig-kpi-val { color: #16a34a }
+.ig-kpi.grade-mid  { border-color: #ca8a04 }
+.ig-kpi.grade-mid  .ig-kpi-val { color: #ca8a04 }
+.ig-kpi.grade-low  { border-color: #dc2626 }
+.ig-kpi.grade-low  .ig-kpi-val { color: #dc2626 }
