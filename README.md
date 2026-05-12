@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.0
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.1
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -354,6 +354,11 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.1
+- **Arxivat d'activitats** — nova acció «Arxivar» al menú de cada activitat; les activitats arxivades desapareixen del dashboard i es guarden sense eliminar; archivar una activitat oberta la tanca automàticament; switch «Arxivades» al filtre del dashboard per veure-les sota demanda (es carreguen de l'API en activar-lo); es pot desarxivar en qualsevol moment; `POST /api/activities/{id}/archive` + `GET /api/activities?includeArchived=true`
+- **Fix creació de professors** — la taula de professors no s'actualitzava visiblement en afegir un professor nou per un `KeyNotFoundException` silenciós al renderitzar l'expansion panel (mancaven les entrades `_selectedClass` i `_professorClasses` per al nou professor)
+- **NuGet actualitzats** — BCrypt.Net-Next 4.2.0, ClosedXML 0.105.0, ExcelDataReader 3.8.0, Net.Codecrete.QrCodeGenerator 2.1.0 (MudBlazor v9 ajornat per trencadors de migració v8→v9)
 
 ### v2.6.0
 - **Cicles formatius** — nova capa d'organització que agrupa les classes per cicle (DAM, ASIX, SMX…); pàgina `/admin/cicles` amb CRUD complet; les classes es mostren agrupades per cicle a totes les vistes; un cicle «General» es crea automàticament per a classes sense cicle assignat
