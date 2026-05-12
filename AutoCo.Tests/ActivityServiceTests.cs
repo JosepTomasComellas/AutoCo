@@ -131,6 +131,139 @@ public class ActivityServiceTests
         Assert.Equal(5, total);
         Assert.Equal(3, items.Count);
     }
+
+    // ── ArchiveAsync ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Archive_ExistingActivity_TogglesIsArchived()
+    {
+        using var db = CreateDb(nameof(Archive_ExistingActivity_TogglesIsArchived));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Arxivar", null));
+
+        var archived = await svc.ArchiveAsync(act.Id, profId, isAdmin: false);
+
+        Assert.NotNull(archived);
+        Assert.True(archived!.IsArchived);
+    }
+
+    [Fact]
+    public async Task Archive_ArchivedActivity_Unarchives()
+    {
+        using var db = CreateDb(nameof(Archive_ArchivedActivity_Unarchives));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Toggle", null));
+        await svc.ArchiveAsync(act.Id, profId, isAdmin: false); // arxivar
+
+        var unarchived = await svc.ArchiveAsync(act.Id, profId, isAdmin: false); // desarxivar
+
+        Assert.NotNull(unarchived);
+        Assert.False(unarchived!.IsArchived);
+    }
+
+    [Fact]
+    public async Task Archive_OpenActivity_ForcesClose()
+    {
+        using var db = CreateDb(nameof(Archive_OpenActivity_ForcesClose));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Oberta", null));
+        Assert.True(act.IsOpen);
+
+        var archived = await svc.ArchiveAsync(act.Id, profId, isAdmin: false);
+
+        Assert.True(archived!.IsArchived);
+        Assert.False(archived.IsOpen);
+    }
+
+    [Fact]
+    public async Task Archive_WrongProfessor_ReturnsNull()
+    {
+        using var db = CreateDb(nameof(Archive_WrongProfessor_ReturnsNull));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "X", null));
+
+        var result = await svc.ArchiveAsync(act.Id, professorId: 999, isAdmin: false);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public async Task Archive_AsAdmin_CanArchiveAnyActivity()
+    {
+        using var db = CreateDb(nameof(Archive_AsAdmin_CanArchiveAnyActivity));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "X", null));
+
+        var result = await svc.ArchiveAsync(act.Id, professorId: 999, isAdmin: true);
+
+        Assert.NotNull(result);
+        Assert.True(result!.IsArchived);
+    }
+
+    [Fact]
+    public async Task Archive_NonExistentActivity_ReturnsNull()
+    {
+        using var db = CreateDb(nameof(Archive_NonExistentActivity_ReturnsNull));
+        var svc = CreateService(db);
+
+        var result = await svc.ArchiveAsync(999, professorId: 1, isAdmin: true);
+
+        Assert.Null(result);
+    }
+
+    // ── GetAllAsync (includeArchived) ─────────────────────────────────────────
+
+    [Fact]
+    public async Task GetAll_ByDefault_ExcludesArchivedActivities()
+    {
+        using var db = CreateDb(nameof(GetAll_ByDefault_ExcludesArchivedActivities));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Arxivada", null));
+        await svc.ArchiveAsync(act.Id, profId, isAdmin: false);
+        await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Activa", null));
+
+        var result = await svc.GetAllAsync(profId);
+
+        Assert.Single(result);
+        Assert.Equal("Activa", result[0].Name);
+    }
+
+    [Fact]
+    public async Task GetAll_IncludeArchived_ReturnsAll()
+    {
+        using var db = CreateDb(nameof(GetAll_IncludeArchived_ReturnsAll));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Arxivada", null));
+        await svc.ArchiveAsync(act.Id, profId, isAdmin: false);
+        await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Activa", null));
+
+        var result = await svc.GetAllAsync(profId, includeArchived: true);
+
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public async Task GetAllPaged_AlwaysExcludesArchived()
+    {
+        using var db = CreateDb(nameof(GetAllPaged_AlwaysExcludesArchived));
+        var (profId, _, modId) = SeedBase(db);
+        var svc = CreateService(db);
+        var act = await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Arxivada", null));
+        await svc.ArchiveAsync(act.Id, profId, isAdmin: false);
+        await svc.CreateAsync(profId, false, new CreateActivityRequest(modId, "Activa", null));
+
+        var (items, total) = await svc.GetAllPagedAsync(profId, page: 1, size: 10);
+
+        Assert.Equal(1, total);
+        Assert.Single(items);
+    }
 }
 
 // ── Fake de IPhotoService per a tests d'activitat ────────────────────────────
