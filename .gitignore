@@ -28,3 +28,6 @@ desktop.ini
 *.log
 logs/
 .claude/
+
+# Fitxers auto-generats localment
+config/i18n/reference.json
