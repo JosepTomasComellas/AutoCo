@@ -198,6 +198,7 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - `MudFileUpload` (MudBlazor 9.x): usar `<CustomContent Context="upload">` + `OnClick="@upload.OpenFilePickerAsync"` — **no** `<ActivatorContent>` ni `HtmlTag="label" for=...` (eliminat a v9)
 - `IDialogService` (MudBlazor 9.x): `ShowMessageBoxAsync` — **no** `ShowMessageBox` (renomenat a v9)
 - `MudChart` (MudBlazor 9.x): usar `BarChartOptions` per a gràfics de barres, `ChartLabels` per a les etiquetes de l'eix X — **no** `ChartOptions` genèric ni `XAxisLabels`
+- `MudMenu` (MudBlazor 9.x): `ActivatorContent` ja no connecta el click automàticament. Usar `@ref="_menu"` al component + `OnClick="OpenMenuAsync"` al botó activador, on `Task OpenMenuAsync(MouseEventArgs e) => _menu?.OpenMenuAsync(e, false) ?? Task.CompletedTask`
 - Programació d'activitats: `OpenAt`/`CloseAt` en UTC; `ActivitySchedulerService` comprova cada minut i neteja el camp usat; `ToggleOpenAsync` neteja dates passades; UTC→local per a display, local→UTC en desar
 - Pesos de criteris: `ActivityCriterion.Weight` (int, default 1); les mitjanes globals es calculen com a `sum(score*weight)/sum(weights)`; `CriteriaHelper.GetForActivityAsync` retorna `(Key, Label, Weight)` tuples
 - Còpies de seguretat ZIP: `IBackupService.ExportZipAsync()` retorna `byte[]`; `BackupService` usa `System.IO.Compression.ZipArchive`; compatibilitat enrere amb `.json` antics; `ListFilesAsync` llista `*.zip` i `*.json`
