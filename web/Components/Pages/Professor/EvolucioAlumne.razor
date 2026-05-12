@@ -108,9 +108,15 @@ else
         StateHasChanged();
 
         Api.SetToken(UserState.Token!);
-        _evolution = await Api.GetModuleEvolutionAsync(ModuleId, studentId);
-        _loadingEvolution = false;
-        StateHasChanged();
+        try
+        {
+            _evolution = await Api.GetModuleEvolutionAsync(ModuleId, studentId);
+        }
+        finally
+        {
+            _loadingEvolution = false;
+            StateHasChanged();
+        }
 
         await RedrawAsync(_selectedCriterion);
     }

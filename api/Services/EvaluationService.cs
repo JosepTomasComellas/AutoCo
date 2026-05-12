@@ -24,7 +24,7 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
         var activity = await db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
-            .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
             .FirstOrDefaultAsync(a => a.Id == activityId);
 
         if (activity is null || !activity.IsOpen) return null;
@@ -37,12 +37,11 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
         var group = activity.Groups.FirstOrDefault(g => g.Members.Any(m => m.StudentId == studentId));
         if (group is null) return null;
 
-        // Membres del grup amb les seves dades
-        var memberIds = group.Members.Select(m => m.StudentId).ToList();
-        var students  = await db.Students
-            .Where(s => memberIds.Contains(s.Id))
+        // Membres del grup amb les seves dades (Student ja carregat via ThenInclude)
+        var students = group.Members
+            .Select(m => m.Student)
             .OrderBy(s => s.NumLlista)
-            .ToListAsync();
+            .ToList();
 
         // Carregar avaluacions existents de l'alumne per a aquesta activitat
         var existingEvals = await db.Evaluations

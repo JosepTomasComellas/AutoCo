@@ -71,6 +71,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
     private async Task<ActivityResultsDto?> ComputeResultsAsync(int activityId, int professorId, bool isAdmin)
     {
         var activity = await db.Activities
+            .AsNoTracking()
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
@@ -83,6 +84,7 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
 
         // Carrega TOTES les avaluacions de l'activitat en una sola consulta (elimina N+1)
         var allEvals = await db.Evaluations
+            .AsNoTracking()
             .Include(e => e.Scores)
             .Include(e => e.Evaluator)
             .Where(e => e.ActivityId == activityId)
