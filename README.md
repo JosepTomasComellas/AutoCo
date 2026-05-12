@@ -389,6 +389,10 @@ GET  /api/criteria                                    # Llista de criteris globa
 
 ## Changelog
 
+### v2.6.13
+- **Selector d'idioma dinàmic** — el menú de llengua ara llegeix `RequestLocalizationOptions.SupportedUICultures` i mostra automàticament tots els idiomes disponibles, incloent els carregats des de `config/i18n/`; usa `CultureInfo.NativeName` per al text (català, español, français…); s'amaga si només hi ha un idioma
+- **Endpoint de referència `/i18n/reference.json`** — retorna el diccionari complet en català (totes les claus i valors) per facilitar la creació de noves traduccions; accessible des del navegador a `https://localhost/i18n/reference.json`
+
 ### v2.6.12
 - **Branding corporatiu configurable** — `BrandingService` llegeix variables `BRAND_*` de l'entorn: nom de l'app, organització, departament, color primari i color de navbar; logo personalitzat via fitxer `./config/branding/logo.png` (volum Docker); `manifest.json` ara és un endpoint dinàmic; `App.razor` i `MainLayout.razor` usen els valors de branding
 

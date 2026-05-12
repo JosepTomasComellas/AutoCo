@@ -8,6 +8,7 @@
 @inject ApiClient Api
 @inject NotificationBroadcastService NotifBroadcast
 @inject AutoCo.Web.Services.BrandingService Branding
+@inject IOptions<Microsoft.AspNetCore.Builder.RequestLocalizationOptions> LocalizationOptions
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
 <MudPopoverProvider />
@@ -137,28 +138,26 @@
                         </MudIconButton>
                     </MudTooltip>
                 }
-                <!-- Selector d'idioma -->
-                <MudMenu Icon="@Icons.Material.Filled.Translate" Color="Color.Inherit"
-                         title="@Loc["Nav_Language"]" Dense="true" AnchorOrigin="Origin.BottomRight">
-                    <MudMenuItem OnClick='async () => await JS.InvokeVoidAsync("setCulture", "ca")'>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudText Typo="Typo.body2">@Loc["Lang_Catalan"]</MudText>
-                            @if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ca")
-                            {
-                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" />
-                            }
-                        </MudStack>
-                    </MudMenuItem>
-                    <MudMenuItem OnClick='async () => await JS.InvokeVoidAsync("setCulture", "es")'>
-                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                            <MudText Typo="Typo.body2">@Loc["Lang_Spanish"]</MudText>
-                            @if (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "es")
-                            {
-                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" />
-                            }
-                        </MudStack>
-                    </MudMenuItem>
-                </MudMenu>
+                <!-- Selector d'idioma (dinàmic: inclou idiomes externs de config/i18n/) -->
+                @if (_supportedCultures.Count > 1)
+                {
+                    <MudMenu Icon="@Icons.Material.Filled.Translate" Color="Color.Inherit"
+                             title="@Loc["Nav_Language"]" Dense="true" AnchorOrigin="Origin.BottomRight">
+                        @foreach (var culture in _supportedCultures)
+                        {
+                            var cultureName = culture.Name;
+                            <MudMenuItem OnClick="@(async () => await JS.InvokeVoidAsync("setCulture", cultureName))">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudText Typo="Typo.body2">@GetLanguageNativeName(culture)</MudText>
+                                    @if (System.Globalization.CultureInfo.CurrentUICulture.Name == cultureName)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Color="Color.Success" />
+                                    }
+                                </MudStack>
+                            </MudMenuItem>
+                        }
+                    </MudMenu>
+                }
                 <!-- Selector de color primari -->
                 <MudMenu Icon="@Icons.Material.Filled.Palette" Color="Color.Inherit"
                          title="@Loc["Nav_ColorTheme"]" Dense="true" AnchorOrigin="Origin.BottomRight">
@@ -220,6 +219,7 @@
     private bool   _sessionChecked = false;
     private bool   _darkMode       = false;
     private string _primaryColor   = "#CC0000"; // sobreescrit a OnInitialized des de BrandingService
+    private IReadOnlyList<System.Globalization.CultureInfo> _supportedCultures = [];
 
     // Refs dels menús desplegables
     private MudMenu? _notifMenu;
@@ -254,8 +254,17 @@
         }
     }
 
+    private static string GetLanguageNativeName(System.Globalization.CultureInfo c)
+    {
+        var n = c.NativeName;
+        var i = n.IndexOf('(');
+        return i > 0 ? n[..i].Trim() : n;
+    }
+
     protected override void OnInitialized()
     {
+        _supportedCultures = LocalizationOptions.Value.SupportedUICultures
+            ?.ToList() ?? [];
         _primaryColor = Branding.PrimaryColor;
         var navDark   = DarkenHex(Branding.NavColor, 0.35);
         _theme = new MudTheme

@@ -42,6 +42,9 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
     /// <summary>Retorna els codis d'idioma descoberts als fitxers externs.</summary>
     public IReadOnlyCollection<string> ExternalLanguages => _external.Keys;
 
+    /// <summary>Diccionari de referència complet (català) per crear traduccions noves.</summary>
+    public static IReadOnlyDictionary<string, string> Reference => Ca;
+
     // ── Català (neutral / per defecte) ───────────────────────────────────────
     private static readonly Dictionary<string, string> Ca = new()
     {

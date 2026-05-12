@@ -112,6 +112,13 @@ app.UseStaticFiles();
 app.UseRequestLocalization();
 app.UseAntiforgery();
 
+// Fitxer de referència per crear noves traduccions: /i18n/reference.json
+// Conté totes les claus del diccionari en català (base per a nous idiomes)
+app.MapGet("/i18n/reference.json", () =>
+    Results.Json(AutoCo.Web.Resources.DictionaryLocalizer.Reference
+        .OrderBy(kv => kv.Key)
+        .ToDictionary(kv => kv.Key, kv => kv.Value)));
+
 // manifest.json dinàmic: usa els valors de BrandingService
 app.MapGet("/manifest.json", (BrandingService b) =>
 {
