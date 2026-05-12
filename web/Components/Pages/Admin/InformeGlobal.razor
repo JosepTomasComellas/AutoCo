@@ -10,7 +10,7 @@
 @if (!UserState.IsAdminOrGestor) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera -->
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6 no-print" Wrap="Wrap.Wrap">
     <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
                Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
     <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
@@ -180,10 +180,9 @@ else
             {
                 var b64  = Convert.ToBase64String(bytes);
                 var name = $"informe-global-{DateTime.Now:yyyyMMdd}.xlsx";
-                await JS.InvokeVoidAsync("autocoApp.downloadBase64",
-                    b64,
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    name);
+                await JS.InvokeVoidAsync("downloadBase64File",
+                    b64, name,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             }
         }
         finally { _exporting = false; }

@@ -320,6 +320,7 @@ html, body {
 
 @media print {
     .no-print { display: none !important }
+    .no-print-shadow { box-shadow: none !important }
     .mud-appbar, .mud-main-content > .mud-container > *:first-child { display: none !important }
     .mud-main-content { padding: 0 !important; background: white !important }
     .informe-alumne, .informe-activitat { max-width: 100% }
@@ -329,6 +330,9 @@ html, body {
     .informe-group-header { -webkit-print-color-adjust: exact; print-color-adjust: exact }
     .distrib-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact }
     .informe-page-break { page-break-before: always }
+    /* Informe Global */
+    .grade-high, .grade-mid, .grade-low { -webkit-print-color-adjust: exact; print-color-adjust: exact }
+    .mud-paper { box-shadow: none !important; border: 1px solid #e2e8f0 }
 }
 
 /* ── Informe d'activitat ─────────────────────────────────────────────────── */
