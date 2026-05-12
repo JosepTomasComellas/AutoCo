@@ -23,7 +23,11 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         foreach (var file in Directory.GetFiles(path, "*.json"))
         {
             var lang = Path.GetFileNameWithoutExtension(file);
-            if (string.IsNullOrWhiteSpace(lang)) continue;
+            // Acceptar només codis BCP-47 vàlids: "ca", "es", "fr", "zh-CN"...
+            // Exclou fitxers d'exemple com "ca.override.example"
+            try { _ = CultureInfo.GetCultureInfo(lang); }
+            catch { continue; }
+
             try
             {
                 var json = File.ReadAllText(file);
