@@ -479,9 +479,12 @@ public class ApiClient
 
     public async Task<string?> UploadStudentFotoAsync(int classId, int studentId, IBrowserFile file)
     {
+        if (file is null) return null;
         using var content = new MultipartFormDataContent();
         var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-        content.Add(new StreamContent(stream), "file", file.Name);
+        var part = new StreamContent(stream);
+        part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+        content.Add(part, "file", file.Name);
         var resp = await _http.PostAsync(
             $"/api/classes/{classId}/students/{studentId}/foto", content);
         if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
@@ -511,9 +514,12 @@ public class ApiClient
 
     public async Task<string?> UploadProfessorFotoAsync(int professorId, IBrowserFile file)
     {
+        if (file is null) return null;
         using var content = new MultipartFormDataContent();
         var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
-        content.Add(new StreamContent(stream), "file", file.Name);
+        var part = new StreamContent(stream);
+        part.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+        content.Add(part, "file", file.Name);
         var resp = await _http.PostAsync($"/api/professors/{professorId}/foto", content);
         if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
         using var doc = System.Text.Json.JsonDocument.Parse(

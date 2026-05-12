@@ -203,7 +203,7 @@
 
     private async Task UploadFotoAsync(IBrowserFile file)
     {
-        if (UserState.UserId is null) return;
+        if (file is null || UserState.UserId is null) return;
         Api.SetToken(UserState.Token!);
         var url = await Api.UploadProfessorFotoAsync(UserState.UserId.Value, file);
         if (url is not null)

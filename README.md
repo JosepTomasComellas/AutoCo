@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.7
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.8
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -354,6 +354,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.8
+- **Fix pujada de fotos** — `ApiClient.UploadStudentFotoAsync` i `UploadProfessorFotoAsync`: el `StreamContent` del multipart ara inclou el `Content-Type` correcte de la imatge (`image/jpeg`, `image/png`, `image/webp`); sense aquest header l'API rebia `application/octet-stream` i rebutjava la imatge silenciosament. Afegit `null` guard als quatre handlers de `MudFileUpload` (`Alumnes.razor`, `Perfil.razor`, `ApiClient`) per evitar `NullReferenceException` quan l'usuari elimina la fitxa amb la «×»
 
 ### v2.6.7
 - **Rendiment EF Core** — `EvaluationService.GetFormAsync`: afegit `.ThenInclude(m => m.Student)` a la query principal; elimina la query SQL separada per carregar alumnes del grup (Student ja ve amb el Include). `ResultsService.ComputeResultsAsync`: afegit `.AsNoTracking()` a les dues queries de lectura (activity + evaluations); redueix overhead del change tracker d'EF Core. `EvolucioAlumne.razor`: `_loadingEvolution` ara sempre es posa a `false` via `try/finally` — evita el spinner infinit si l'API llança excepció

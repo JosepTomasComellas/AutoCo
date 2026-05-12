@@ -1007,6 +1007,7 @@
 
     private async Task UploadFotoAsync(StudentDto student, IBrowserFile file)
     {
+        if (file is null) return;
         Api.SetToken(UserState.Token!);
         var url = await Api.UploadStudentFotoAsync(ClassId, student.Id, file);
         if (url is not null)
