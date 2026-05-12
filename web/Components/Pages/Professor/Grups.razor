@@ -23,21 +23,27 @@
     <MudSpacer />
     @if (_activity is not null)
     {
-        <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Tune"
-                   OnClick="() => _showCriteria = !_showCriteria">
-            @Loc["Groups_Criteria"]
-        </MudButton>
+        @if (_canEdit)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Default" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Tune"
+                       OnClick="() => _showCriteria = !_showCriteria">
+                @Loc["Groups_Criteria"]
+            </MudButton>
+        }
         <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small"
                    StartIcon="@Icons.Material.Filled.Download"
                    OnClick="ExportGroupsAsync">
             @Loc["Groups_ExportGroups"]
         </MudButton>
-        <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small"
-                   StartIcon="@Icons.Material.Filled.Upload"
-                   OnClick="() => _showImport = !_showImport">
-            @Loc["Groups_ImportGroups"]
-        </MudButton>
+        @if (_canEdit)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.Upload"
+                       OnClick="() => _showImport = !_showImport">
+                @Loc["Groups_ImportGroups"]
+            </MudButton>
+        }
     }
 </MudStack>
 
@@ -120,20 +126,23 @@
 
 @if (_loading) { <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" /> }
 
-<!-- Nou grup -->
-<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2" Wrap="Wrap.Wrap">
-    <MudTextField @bind-Value="_nomGrup" Label="@Loc["Groups_NewGroupLabel"]" Variant="Variant.Outlined"
-                  Margin="Margin.Dense" Style="max-width:240px" Immediate="true"
-                  OnKeyDown="OnNomGrupKeyDown" />
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
-               StartIcon="@Icons.Material.Filled.Add"
-               OnClick="CreateGroupAsync" Disabled="_saving || string.IsNullOrWhiteSpace(_nomGrup)">
-        @Loc["Groups_CreateGroup"]
-    </MudButton>
-    <MudText Typo="Typo.caption" Color="Color.Secondary">
-        @Loc["Groups_DragInstruction"]
-    </MudText>
-</MudStack>
+<!-- Nou grup (només per al propietari) -->
+@if (_canEdit)
+{
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4" Spacing="2" Wrap="Wrap.Wrap">
+        <MudTextField @bind-Value="_nomGrup" Label="@Loc["Groups_NewGroupLabel"]" Variant="Variant.Outlined"
+                      Margin="Margin.Dense" Style="max-width:240px" Immediate="true"
+                      OnKeyDown="OnNomGrupKeyDown" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="CreateGroupAsync" Disabled="_saving || string.IsNullOrWhiteSpace(_nomGrup)">
+            @Loc["Groups_CreateGroup"]
+        </MudButton>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            @Loc["Groups_DragInstruction"]
+        </MudText>
+    </MudStack>
+}
 
 <MudGrid Spacing="3" Class="@(_draggingStudentId != null ? "is-dragging" : "")">
 
@@ -163,11 +172,14 @@
                 {
                     var sid = s.Id;
                     <div class="dnd-chip dnd-chip--unassigned @(_draggingStudentId == sid ? "dnd-chip--dragging" : "")"
-                         draggable="true"
+                         draggable="@(_canEdit ? "true" : "false")"
                          @ondragstart="() => OnDragStart(sid, null)"
                          @ondragend="OnDragEnd">
-                        <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
-                                 Size="Size.Small" Class="dnd-handle" />
+                        @if (_canEdit)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                                     Size="Size.Small" Class="dnd-handle" />
+                        }
                         <span>@s.NumLlista. @s.Cognoms, @s.Nom</span>
                     </div>
                 }
@@ -197,7 +209,7 @@
 
                     @{ var gidx = _groups.IndexOf(g); }
                     <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
-                        @if (_editingGroupId == gid)
+                        @if (_canEdit && _editingGroupId == gid)
                         {
                             <MudTextField @bind-Value="_editingGroupName"
                                           Variant="Variant.Outlined" Margin="Margin.Dense"
@@ -217,18 +229,21 @@
                                      Style="height:20px;font-size:.7rem">
                                 @g.Members.Count
                             </MudChip>
-                            <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Small"
-                                           title="@Loc["Groups_RenameGroup"]"
-                                           OnClick="() => StartRename(gid, g.Name)" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
-                                           Disabled="gidx <= 0" title="Pujar grup"
-                                           OnClick="() => MoveGroupAsync(gidx, -1)" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
-                                           Disabled="gidx >= _groups.Count - 1" title="Baixar grup"
-                                           OnClick="() => MoveGroupAsync(gidx, 1)" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
-                                           Color="Color.Error" title="Eliminar grup"
-                                           OnClick="() => DeleteGroupAsync(g)" />
+                            @if (_canEdit)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.DriveFileRenameOutline" Size="Size.Small"
+                                               title="@Loc["Groups_RenameGroup"]"
+                                               OnClick="() => StartRename(gid, g.Name)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small"
+                                               Disabled="gidx <= 0" title="Pujar grup"
+                                               OnClick="() => MoveGroupAsync(gidx, -1)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small"
+                                               Disabled="gidx >= _groups.Count - 1" title="Baixar grup"
+                                               OnClick="() => MoveGroupAsync(gidx, 1)" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                               Color="Color.Error" title="Eliminar grup"
+                                               OnClick="() => DeleteGroupAsync(g)" />
+                            }
                         }
                     </MudStack>
 
@@ -237,17 +252,23 @@
                     {
                         var mid = m.Id;
                         <div class="dnd-chip @(_draggingStudentId == mid ? "dnd-chip--dragging" : "")"
-                             draggable="true"
+                             draggable="@(_canEdit ? "true" : "false")"
                              @ondragstart="() => OnDragStart(mid, gid)"
                              @ondragend="OnDragEnd">
-                            <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
-                                     Size="Size.Small" Class="dnd-handle" />
+                            @if (_canEdit)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.DragIndicator"
+                                         Size="Size.Small" Class="dnd-handle" />
+                            }
                             <span style="flex:1">@m.NumLlista. @m.Cognoms, @m.Nom</span>
-                            <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                           Size="Size.Small" Color="Color.Warning"
-                                           title="@Loc["Groups_RemoveMember"]"
-                                           OnClick="() => RemoveMemberAsync(gid, mid)"
-                                           Style="margin:-4px -4px -4px 0;width:24px;height:24px" />
+                            @if (_canEdit)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                               Size="Size.Small" Color="Color.Warning"
+                                               title="@Loc["Groups_RemoveMember"]"
+                                               OnClick="() => RemoveMemberAsync(gid, mid)"
+                                               Style="margin:-4px -4px -4px 0;width:24px;height:24px" />
+                            }
                         </div>
                     }
 
@@ -274,6 +295,9 @@
     private List<StudentDto>  _unassigned = [];
     private bool _loading  = true;
     private bool _saving   = false;
+
+    private bool _canEdit => UserState.IsAdmin ||
+        (_activity is not null && UserState.UserId == _activity.ProfessorId);
     private string _nomGrup = "";
     private bool _showImport    = false;
     private bool _importing     = false;

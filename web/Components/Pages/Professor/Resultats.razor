@@ -112,10 +112,13 @@ else
                         <MudSelectItem T="string" Value='"none"'>@Loc["Results_NoPeer"]</MudSelectItem>
                     </MudSelect>
                 </MudItem>
-                <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
-                    <MudSwitch @bind-Value="_showNotes" Color="Color.Primary"
-                               Label="@Loc["Results_ShowNotes"]" Size="Size.Small" />
-                </MudItem>
+                @if (_canEdit)
+                {
+                    <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                        <MudSwitch @bind-Value="_showNotes" Color="Color.Primary"
+                                   Label="@Loc["Results_ShowNotes"]" Size="Size.Small" />
+                    </MudItem>
+                }
                 <MudItem xs="12" Class="d-flex align-center">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
                         @Loc["Results_CountOf", _filteredStudents.Count, totalAlumnes]
@@ -229,7 +232,7 @@ else
                             <CellTemplate>@context.Item.NumPeerEvaluators</CellTemplate>
                         </TemplateColumn>
                         <PropertyColumn Property="s => s.SelfComment" Title="@Loc["Results_ColStudentComment"]" />
-                        @if (_showNotes)
+                        @if (_showNotes && _canEdit)
                         {
                             <TemplateColumn Title="@Loc["Results_ColTeacherNote"]">
                                 <CellTemplate>
@@ -368,6 +371,9 @@ else
     private bool                     _exporting = false;
     private List<ActivityLogDto>     _log     = [];
     private Dictionary<int, string>  _notes   = [];
+
+    private bool _canEdit => UserState.IsAdmin ||
+        (_results is not null && UserState.UserId == _results.Activity.ProfessorId);
 
     // Filtres
     private string _filterGroup   = "";
