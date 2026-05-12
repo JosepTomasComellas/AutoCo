@@ -37,42 +37,42 @@ else
 {
     <!-- Estadístiques ràpides -->
     <MudGrid Class="mb-4" Spacing="2">
-        <MudItem xs="6" sm="4">
+        <MudItem xs="6" sm="4" md="2">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Secondary" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_classesDtos.Count</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatClasses"]</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="6" sm="4">
+        <MudItem xs="6" sm="4" md="2">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Secondary" Style="font-weight:700">@_moduls.Count</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatModuls"]</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="6" sm="4">
+        <MudItem xs="6" sm="4" md="2">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Info" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Info" Style="font-weight:700">@_totalAlumnes</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatStudents"]</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="6" sm="4">
+        <MudItem xs="6" sm="4" md="2">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Primary" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight:700">@_activities.Count</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_StatActivities"]</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="6" sm="4">
+        <MudItem xs="6" sm="4" md="2">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.LockOpen" Color="Color.Success" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Success" Style="font-weight:700">@_activities.Count(a => a.IsOpen)</MudText>
                 <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Dash_OpenNow"]</MudText>
             </MudPaper>
         </MudItem>
-        <MudItem xs="6" sm="4">
+        <MudItem xs="6" sm="4" md="2">
             <MudPaper Elevation="1" Class="pa-3 text-center">
                 <MudIcon Icon="@Icons.Material.Filled.Group" Color="Color.Warning" Size="Size.Small" />
                 <MudText Typo="Typo.h5" Color="Color.Warning" Style="font-weight:700">@_activities.Sum(a => a.NumGroups)</MudText>

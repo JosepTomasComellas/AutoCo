@@ -96,11 +96,12 @@
             @Loc["Groups_ImportInfo"]
         </MudText>
         <MudFileUpload T="IBrowserFile" FilesChanged="OnFileSelected" Accept=".csv,.txt" Class="mb-3">
-            <ActivatorContent>
-                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.AttachFile">
+            <CustomContent Context="upload">
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.AttachFile"
+                           OnClick="@upload.OpenFilePickerAsync">
                     @(_importFileName ?? Loc["Groups_SelectCSV"].Value)
                 </MudButton>
-            </ActivatorContent>
+            </CustomContent>
         </MudFileUpload>
         @if (_importContent is not null)
         {
@@ -451,7 +452,7 @@
         var membresText = g.Members.Count > 0
             ? $" Els {g.Members.Count} membres quedaran sense grup assignat."
             : "";
-        var confirm = await Dialog.ShowMessageBox(Loc["Groups_DeleteGroupTitle"],
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["Groups_DeleteGroupTitle"],
             Loc["Groups_DeleteGroupMsg", g.Name, membresText].Value,
             yesText: Loc["Action_Delete"], cancelText: Loc["Action_Cancel"]);
         if (confirm != true) return;
@@ -526,7 +527,7 @@
 
     private async Task RemoveMemberAsync(int groupId, int studentId)
     {
-        var confirm = await Dialog.ShowMessageBox(
+        var confirm = await Dialog.ShowMessageBoxAsync(
             Loc["Groups_RemoveMemberTitle"], Loc["Groups_RemoveMemberMsg"].Value,
             yesText: Loc["Groups_RemoveMemberYes"], cancelText: Loc["Action_Cancel"]);
         if (confirm != true) return;

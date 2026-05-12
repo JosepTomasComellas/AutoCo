@@ -219,7 +219,7 @@
     {
         if (_importFile is null) return;
 
-        var confirmed = await Dialog.ShowMessageBox(
+        var confirmed = await Dialog.ShowMessageBoxAsync(
             Loc["Backup_ImportConfirmTitle"].Value,
             Loc["Backup_ImportConfirmMsg"].Value,
             yesText: Loc["Backup_ImportConfirmYes"].Value, cancelText: Loc["Action_Cancel"].Value);
@@ -288,7 +288,7 @@
 
     private async Task RestoreServerBackupAsync(string name)
     {
-        var confirmed = await Dialog.ShowMessageBox(
+        var confirmed = await Dialog.ShowMessageBoxAsync(
             Loc["Backup_RestoreTitle"].Value,
             Loc["Backup_RestoreMsg", name].Value,
             yesText: Loc["Backup_RestoreYes"].Value, cancelText: Loc["Action_Cancel"].Value);
@@ -306,7 +306,7 @@
 
     private async Task DeleteServerBackupAsync(string name)
     {
-        var confirmed = await Dialog.ShowMessageBox(
+        var confirmed = await Dialog.ShowMessageBoxAsync(
             Loc["Backup_DeleteTitle"].Value,
             Loc["Backup_DeleteMsg", name].Value,
             yesText: Loc["Action_Delete"].Value, cancelText: Loc["Action_Cancel"].Value);

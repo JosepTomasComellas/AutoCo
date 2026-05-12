@@ -37,7 +37,7 @@
             </MudText>
             <MudChart ChartType="ChartType.Bar"
                       ChartSeries="@_globalSeries"
-                      XAxisLabels="@_groupLabels"
+                      ChartLabels="@_groupLabels"
                       ChartOptions="@_opts"
                       Width="100%" Height="220px" Class="mb-2" />
 
@@ -55,7 +55,7 @@
             <!-- Detall per criteri amb tab per cada un -->
             <MudDivider Class="mb-3" />
             <MudText Typo="Typo.subtitle2" Class="mb-2">@Loc["ChartDialog_CriteriaDetail"]</MudText>
-            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pt-3">
+            <MudTabs Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
                 @foreach (var c in _chart.CriteriaDetail)
                 {
                     var series  = CriteriaSeries(c);
@@ -64,7 +64,7 @@
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">@cLabel</MudText>
                         <MudChart ChartType="ChartType.Bar"
                                   ChartSeries="@series"
-                                  XAxisLabels="@_groupLabels"
+                                  ChartLabels="@_groupLabels"
                                   ChartOptions="@_opts"
                                   Width="100%" Height="180px" />
                     </MudTabPanel>
@@ -135,14 +135,13 @@
     private bool _loading = true;
 
     private string[]         _groupLabels  = [];
-    private List<ChartSeries> _globalSeries = [];
+    private List<ChartSeries<double>> _globalSeries = [];
 
-    private readonly ChartOptions _opts = new()
+    private readonly BarChartOptions _opts = new()
     {
-        YAxisTicks    = 2,
+        YAxisTicks       = 2,
         MaxNumYAxisTicks = 5,
-        YAxisRequireZeroPoint = true,
-        ChartPalette  = ["#1976d2", "#ef6c00"]
+        ChartPalette     = ["#1976d2", "#ef6c00"]
     };
 
     protected override async Task OnInitializedAsync()
@@ -160,12 +159,12 @@
 
         _globalSeries =
         [
-            new ChartSeries
+            new ChartSeries<double>
             {
                 Name = Loc["ChartDialog_AutoLabel"].Value,
                 Data = _chart.Groups.Select(g => g.AvgAutoEval ?? 0d).ToArray()
             },
-            new ChartSeries
+            new ChartSeries<double>
             {
                 Name = Loc["ChartDialog_CoLabel"].Value,
                 Data = _chart.Groups.Select(g => g.AvgCoEval ?? 0d).ToArray()
@@ -173,14 +172,14 @@
         ];
     }
 
-    private List<ChartSeries> CriteriaSeries(CriteriaGroupChartDto c) =>
+    private List<ChartSeries<double>> CriteriaSeries(CriteriaGroupChartDto c) =>
     [
-        new ChartSeries
+        new ChartSeries<double>
         {
             Name = Loc["ChartDialog_AutoLabel"].Value,
             Data = c.Groups.Select(g => g.AvgAuto ?? 0d).ToArray()
         },
-        new ChartSeries
+        new ChartSeries<double>
         {
             Name = Loc["ChartDialog_CoLabel"].Value,
             Data = c.Groups.Select(g => g.AvgCo ?? 0d).ToArray()

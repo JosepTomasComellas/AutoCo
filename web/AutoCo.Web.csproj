@@ -12,7 +12,7 @@
     <PackageReference Include="ExcelDataReader.DataSet" Version="3.8.0" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.StackExchangeRedis" Version="10.0.*" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.*" />
-    <PackageReference Include="MudBlazor" Version="8.6.0" />
+    <PackageReference Include="MudBlazor" Version="9.4.0" />
     <PackageReference Include="Net.Codecrete.QrCodeGenerator" Version="2.1.0" />
   </ItemGroup>
 

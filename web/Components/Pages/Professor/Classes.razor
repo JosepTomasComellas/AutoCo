@@ -292,7 +292,7 @@
 
     private async Task DeleteAsync(ClassDto c)
     {
-        var confirm = await Dialog.ShowMessageBox(Loc["Classes_DeleteTitle"],
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["Classes_DeleteTitle"],
             Loc["Classes_DeleteConfirm", c.Name].Value,
             yesText: Loc["Classes_DeleteYes"], cancelText: Loc["Action_Cancel"]);
         if (confirm != true) return;

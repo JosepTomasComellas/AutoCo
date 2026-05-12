@@ -283,7 +283,7 @@
 
     private async Task SendAllAsync()
     {
-        var confirm = await Dialog.ShowMessageBox(Loc["Profs_SendAllTitle"].Value,
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["Profs_SendAllTitle"].Value,
             Loc["Profs_SendAllMsg"].Value,
             yesText: Loc["Action_Send"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
@@ -295,7 +295,7 @@
 
     private async Task DeleteAsync(ProfessorDto p)
     {
-        var confirm = await Dialog.ShowMessageBox(Loc["Profs_DeleteTitle"].Value,
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["Profs_DeleteTitle"].Value,
             Loc["Profs_DeleteMsg", p.NomComplet].Value,
             yesText: Loc["Action_Delete"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;

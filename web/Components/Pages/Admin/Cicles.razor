@@ -168,7 +168,7 @@
 
     private async Task DeleteAsync(CicleDto cicle)
     {
-        var confirm = await Dialog.ShowMessageBox(Loc["Cicles_DeleteTitle"].Value,
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["Cicles_DeleteTitle"].Value,
             Loc["Cicles_DeleteConfirm", cicle.Name].Value,
             yesText: Loc["Cicles_DeleteYes"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;

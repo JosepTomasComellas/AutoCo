@@ -44,12 +44,13 @@
                     <MudStack Row="true" Spacing="1">
                         <MudFileUpload T="IBrowserFile" Accept=".jpg,.jpeg,.png,.webp"
                                        FilesChanged="UploadFotoAsync">
-                            <ActivatorContent>
+                            <CustomContent Context="upload">
                                 <MudButton StartIcon="@Icons.Material.Filled.CameraAlt"
-                                           Variant="Variant.Outlined" Size="Size.Small">
+                                           Variant="Variant.Outlined" Size="Size.Small"
+                                           OnClick="@upload.OpenFilePickerAsync">
                                     @Loc["Profile_ChangeFoto"]
                                 </MudButton>
-                            </ActivatorContent>
+                            </CustomContent>
                         </MudFileUpload>
                         @if (UserState.FotoUrl is not null)
                         {

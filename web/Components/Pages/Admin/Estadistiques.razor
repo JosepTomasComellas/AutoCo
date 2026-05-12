@@ -140,7 +140,7 @@ else
 
     private async Task ResetLoginsAsync()
     {
-        var confirm = await Dialog.ShowMessageBox(
+        var confirm = await Dialog.ShowMessageBoxAsync(
             "Reiniciar registre d'accessos",
             "S'esborraran tots els accessos registrats. Les estadístiques de professors, activitats i participació no es veuen afectades. Continuar?",
             yesText: "Esborrar", cancelText: "Cancel·lar");

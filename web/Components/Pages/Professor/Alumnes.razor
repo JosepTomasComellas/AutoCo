@@ -100,13 +100,14 @@
                             <MudStack Spacing="1">
                                 <MudFileUpload T="IBrowserFile" FilesChanged="UploadEditFotoAsync"
                                                Accept=".jpg,.jpeg,.png,.webp" MaximumFileCount="1">
-                                    <ActivatorContent>
+                                    <CustomContent Context="upload">
                                         <MudButton Variant="Variant.Outlined" Size="Size.Small"
                                                    StartIcon="@Icons.Material.Filled.CameraAlt"
-                                                   Color="Color.Warning">
+                                                   Color="Color.Warning"
+                                                   OnClick="@upload.OpenFilePickerAsync">
                                             @Loc["Profile_ChangeFoto"]
                                         </MudButton>
-                                    </ActivatorContent>
+                                    </CustomContent>
                                 </MudFileUpload>
                                 @if (_editFotoUrl is not null)
                                 {
@@ -153,12 +154,13 @@
                         <strong>XLS/XLSX:</strong> llista directa de la web de l'escola
                     </MudText>
                     <MudFileUpload T="IBrowserFile" Accept=".csv,.txt,.xls,.xlsx" FilesChanged="OnImportFileSelected">
-                        <ActivatorContent>
+                        <CustomContent Context="upload">
                             <MudButton Variant="Variant.Outlined" FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.AttachFile">
+                                       StartIcon="@Icons.Material.Filled.AttachFile"
+                                       OnClick="@upload.OpenFilePickerAsync">
                                 @(_importFile is null ? Loc["ClassStudents_SelectFile"].Value : _importFile.Name)
                             </MudButton>
-                        </ActivatorContent>
+                        </CustomContent>
                     </MudFileUpload>
                 </MudCardContent>
                 <MudCardActions Class="px-4 pb-4 gap-2">
@@ -211,12 +213,13 @@
                         @Loc["ClassStudents_ImportFotosHint"]
                     </MudText>
                     <MudFileUpload T="IBrowserFile" Accept=".zip" FilesChanged="OnFotosZipSelected">
-                        <ActivatorContent>
+                        <CustomContent Context="upload">
                             <MudButton Variant="Variant.Outlined" FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.Photo">
+                                       StartIcon="@Icons.Material.Filled.Photo"
+                                       OnClick="@upload.OpenFilePickerAsync">
                                 @(_fotosZipFile is null ? Loc["ClassStudents_SelectZip"].Value : _fotosZipFile.Name)
                             </MudButton>
-                        </ActivatorContent>
+                        </CustomContent>
                     </MudFileUpload>
                 </MudCardContent>
                 <MudCardActions Class="px-4 pb-4">
@@ -356,11 +359,12 @@
                             <MudFileUpload T="IBrowserFile" Accept=".jpg,.jpeg,.png,.webp"
                                            FilesChanged="f => UploadFotoAsync(context.Item, f)"
                                            Style="display:inline-block">
-                                <ActivatorContent>
+                                <CustomContent Context="upload">
                                     <MudIconButton Icon="@Icons.Material.Filled.CameraAlt" Size="Size.Small"
                                                    Color="@(context.Item.FotoUrl is not null ? Color.Success : Color.Default)"
-                                                   title="@Loc["ClassStudents_UploadFoto"]" />
-                                </ActivatorContent>
+                                                   title="@Loc["ClassStudents_UploadFoto"]"
+                                                   OnClick="@upload.OpenFilePickerAsync" />
+                                </CustomContent>
                             </MudFileUpload>
                             <MudIconButton Icon="@Icons.Material.Filled.Email" Size="Size.Small"
                                            Color="Color.Secondary" title="Enviar contrasenya"
@@ -428,7 +432,7 @@
     {
         if (!_selected.Any()) return;
         var ids = _selected.ToList();
-        var confirm = await Dialog.ShowMessageBox(Loc["ClassStudents_SendPwd"].Value,
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["ClassStudents_SendPwd"].Value,
             $"S'enviarà la contrasenya per correu a {ids.Count} alumne{(ids.Count != 1 ? "s" : "")}.",
             yesText: Loc["Action_Send"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
@@ -451,7 +455,7 @@
     {
         if (!_selected.Any()) return;
         var ids = _selected.ToList();
-        var confirm = await Dialog.ShowMessageBox(Loc["ClassStudents_ResetPwd"].Value,
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["ClassStudents_ResetPwd"].Value,
             $"Es generarà una nova contrasenya per a {ids.Count} alumne{(ids.Count != 1 ? "s" : "")}. Les contrasenyes anteriors quedaran invàlides.",
             yesText: Loc["Action_Confirm"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
@@ -474,7 +478,7 @@
     {
         if (!_selected.Any()) return;
         var ids = _selected.ToList();
-        var confirm = await Dialog.ShowMessageBox(Loc["ClassStudents_DeleteTitle"].Value,
+        var confirm = await Dialog.ShowMessageBoxAsync(Loc["ClassStudents_DeleteTitle"].Value,
             $"S'eliminaran {ids.Count} alumne{(ids.Count != 1 ? "s" : "")} i totes les seves avaluacions. Aquesta acció no es pot desfer.",
             yesText: Loc["Action_Delete"].Value, cancelText: Loc["Action_Cancel"].Value);
         if (confirm != true) return;
@@ -918,7 +922,7 @@
 
     private async Task SendAllAsync()
     {
-        var confirm = await Dialog.ShowMessageBox("Confirmar",
+        var confirm = await Dialog.ShowMessageBoxAsync("Confirmar",
             "Enviar nova contrasenya a tots els alumnes?",
             yesText: "Enviar", cancelText: "Cancel·lar");
         if (confirm != true) return;
@@ -930,7 +934,7 @@
 
     private async Task ResetPasswordAsync(StudentDto s)
     {
-        var confirm = await Dialog.ShowMessageBox("Confirmar",
+        var confirm = await Dialog.ShowMessageBoxAsync("Confirmar",
             $"Generar nova contrasenya per a «{s.NomComplet}»?",
             yesText: "Confirmar", cancelText: "Cancel·lar");
         if (confirm != true) return;
