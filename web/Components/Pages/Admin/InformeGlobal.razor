@@ -1,0 +1,198 @@
+@page "/admin/informe-global"
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
+
+<PageTitle>@Loc["Global_Title"] – @Branding.AppName</PageTitle>
+@if (!UserState.IsAdminOrGestor) { Nav.NavigateTo("/"); return; }
+
+<!-- Capçalera -->
+<MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
+    <MudButton StartIcon="@Icons.Material.Filled.ArrowBack" Href="/professor/dashboard"
+               Variant="Variant.Text" Color="Color.Default">Tauler</MudButton>
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+    <MudIcon Icon="@Icons.Material.Filled.Assessment" Color="Color.Primary" Class="mr-1" />
+    <MudText Typo="Typo.h5" Style="font-weight:700">@Loc["Global_Title"]</MudText>
+    <MudSpacer />
+    @if (_report is not null)
+    {
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            @Loc["Global_Generated"]: @_report.GeneratedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+        </MudText>
+    }
+    <MudIconButton Icon="@Icons.Material.Filled.Refresh" Color="Color.Primary"
+                   OnClick="LoadAsync" title="Actualitzar" />
+    <MudButton Variant="Variant.Outlined" Color="Color.Success"
+               StartIcon="@Icons.Material.Filled.TableChart"
+               OnClick="ExportExcelAsync" Disabled="_exporting">
+        @if (_exporting) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+        @Loc["Global_ExportExcel"]
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" Color="Color.Default"
+               StartIcon="@Icons.Material.Filled.Print"
+               OnClick='async () => await JS.InvokeVoidAsync("window.print")'>
+        PDF
+    </MudButton>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" Class="mb-4" />
+}
+else if (_report is null)
+{
+    <MudAlert Severity="Severity.Error">Error carregant l'informe.</MudAlert>
+}
+else
+{
+    <!-- KPIs de resum -->
+    <MudGrid Spacing="2" Class="mb-6">
+        <MudItem xs="6" sm="4" md="2">
+            <MudPaper Elevation="2" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Primary" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Style="font-weight:700;margin:.2rem 0">@_report.TotalClasses</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Global_Classes"]</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MudPaper Elevation="2" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Secondary" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Style="font-weight:700;margin:.2rem 0">@_report.TotalModules</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Global_Modules"]</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MudPaper Elevation="2" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Info" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Style="font-weight:700;margin:.2rem 0">@_report.TotalActivities</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Global_Activities"]</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MudPaper Elevation="2" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.LockOpen" Color="Color.Success" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Style="font-weight:700;margin:.2rem 0">@_report.OpenActivities</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Global_Open"]</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MudPaper Elevation="2" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Warning" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Style="font-weight:700;margin:.2rem 0">@_report.TotalStudents</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Global_Students"]</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="6" sm="4" md="2">
+            <MudPaper Elevation="2" Class="pa-3 text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Percent" Color="Color.Error" Size="Size.Small" />
+                <MudText Typo="Typo.h5" Style="font-weight:700;margin:.2rem 0">@_report.AvgParticipation.ToString("F1")%</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@Loc["Global_Participation"]</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Detall per cicle / classe -->
+    @foreach (var cicle in _report.Cicles)
+    {
+        <MudPaper Elevation="2" Class="pa-4 mb-4">
+            <MudText Typo="Typo.subtitle1" Style="font-weight:700;margin-bottom:.75rem">
+                <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Small" Class="mr-1" />
+                @cicle.NomCicle
+            </MudText>
+            <MudTable Items="cicle.Classes" Hover="true" Dense="true" Striped="true"
+                      Breakpoint="Breakpoint.Sm" Class="no-print-shadow">
+                <HeaderContent>
+                    <MudTh>@Loc["Global_ColClass"]</MudTh>
+                    <MudTh Style="text-align:center">@Loc["Global_ColYear"]</MudTh>
+                    <MudTh>@Loc["Global_ColProfs"]</MudTh>
+                    <MudTh Style="text-align:center">@Loc["Global_ColMods"]</MudTh>
+                    <MudTh Style="text-align:center">@Loc["Global_ColActs"]</MudTh>
+                    <MudTh Style="text-align:center">@Loc["Global_ColStudents"]</MudTh>
+                    <MudTh Style="text-align:center">@Loc["Global_ColPart"]</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        @if (UserState.IsAdmin)
+                        {
+                            <MudLink Href="@($"/professor/alumnes/{context.ClassId}")"
+                                     Color="Color.Default" Style="font-weight:500">
+                                @context.NomClasse
+                            </MudLink>
+                        }
+                        else
+                        {
+                            <span style="font-weight:500">@context.NomClasse</span>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:center">
+                        <MudText Typo="Typo.caption">@(context.AcademicYear ?? "—")</MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.caption">@(string.Join(", ", context.ProfessorsNoms))</MudText>
+                    </MudTd>
+                    <MudTd Style="text-align:center">@context.NumModules</MudTd>
+                    <MudTd Style="text-align:center">@context.NumActivities</MudTd>
+                    <MudTd Style="text-align:center">@context.NumStudents</MudTd>
+                    <MudTd Style="text-align:center">
+                        @if (context.NumActivities == 0)
+                        {
+                            <span style="color:var(--mud-palette-text-secondary)">—</span>
+                        }
+                        else
+                        {
+                            <span class="@ParticipationClass(context.AvgParticipation)">
+                                @context.AvgParticipation.ToString("F1")%
+                            </span>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+}
+
+@code {
+    private GlobalReportDto? _report   = null;
+    private bool             _loading  = true;
+    private bool             _exporting = false;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        Api.SetToken(UserState.Token!);
+        _report  = await Api.GetGlobalReportAsync();
+        _loading = false;
+    }
+
+    private async Task ExportExcelAsync()
+    {
+        _exporting = true;
+        Api.SetToken(UserState.Token!);
+        try
+        {
+            var bytes = await Api.GetGlobalReportExcelAsync();
+            if (bytes is not null)
+            {
+                var b64  = Convert.ToBase64String(bytes);
+                var name = $"informe-global-{DateTime.Now:yyyyMMdd}.xlsx";
+                await JS.InvokeVoidAsync("autocoApp.downloadBase64",
+                    b64,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    name);
+            }
+        }
+        finally { _exporting = false; }
+    }
+
+    private static string ParticipationClass(double pct) => pct switch
+    {
+        >= 80 => "grade-high",
+        >= 50 => "grade-mid",
+        _     => "grade-low"
+    };
+}

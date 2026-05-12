@@ -16,10 +16,12 @@ public class UserStateService
     public string? RefreshToken { get; private set; }
     public int     FotoVersion  { get; private set; } = 0;
 
-    public bool IsLoggedIn   => Token is not null;
-    public bool IsProfessor  => Role is "Professor" or "Admin";
-    public bool IsStudent    => Role == "Student";
-    public bool IsAdmin      => Role == "Admin";
+    public bool IsLoggedIn       => Token is not null;
+    public bool IsProfessor      => Role is "Professor" or "Admin" or "Gestor";
+    public bool IsStudent        => Role == "Student";
+    public bool IsAdmin          => Role == "Admin";
+    public bool IsGestor         => Role == "Gestor";
+    public bool IsAdminOrGestor  => Role is "Admin" or "Gestor";
 
     public event Action? OnChange;
     /// <summary>S'invoca quan l'API retorna 401 (token caducat o invàlid).</summary>

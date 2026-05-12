@@ -52,7 +52,8 @@
                         <MudTextField @bind-Value="_cognoms" Label="@Loc["Label_Surname"]" Variant="Variant.Outlined" />
                     </MudItem>
                 </MudGrid>
-                <MudCheckBox @bind-Value="_isAdmin" Label="@Loc["Profs_IsAdmin"]" Color="Color.Warning" Class="mt-2" />
+                <MudCheckBox @bind-Value="_isAdmin"  Label="@Loc["Profs_IsAdmin"]"  Color="Color.Warning" Class="mt-2" />
+                <MudCheckBox @bind-Value="_isGestor" Label="@Loc["Profs_IsGestor"]" Color="Color.Info"    Class="mt-1" />
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
                     @Loc["Profs_AutoPassword"]
                 </MudText>
@@ -92,11 +93,11 @@
         <MudStack Spacing="2">
             @foreach (var p in _professors)
             {
-                <MudCard Elevation="1" Style="@(p.IsAdmin ? "border-left:3px solid var(--mud-palette-warning)" : "border-left:3px solid var(--mud-palette-divider)")">
+                <MudCard Elevation="1" Style="@(p.IsAdmin ? "border-left:3px solid var(--mud-palette-warning)" : p.IsGestor ? "border-left:3px solid var(--mud-palette-info)" : "border-left:3px solid var(--mud-palette-divider)")">
                     <MudExpansionPanel>
                         <TitleContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%">
-                                <MudAvatar Color="@(p.IsAdmin ? Color.Warning : Color.Default)"
+                                <MudAvatar Color="@(p.IsAdmin ? Color.Warning : p.IsGestor ? Color.Info : Color.Default)"
                                            Variant="Variant.Filled" Size="Size.Medium"
                                            Style="font-size:.85rem;font-weight:700;flex-shrink:0">
                                     @if (p.FotoUrl is not null)
@@ -117,6 +118,11 @@
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Warning"
                                                      Variant="Variant.Filled" Style="height:20px">Admin</MudChip>
+                                        }
+                                        @if (p.IsGestor)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                                                     Variant="Variant.Filled" Style="height:20px">Gestor</MudChip>
                                         }
                                     </MudStack>
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -227,7 +233,8 @@
     private string _email   = "";
     private string _nom     = "";
     private string _cognoms = "";
-    private bool   _isAdmin = false;
+    private bool   _isAdmin  = false;
+    private bool   _isGestor = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -260,14 +267,14 @@
         _saving = true;
         Api.SetToken(UserState.Token!);
         var p = await Api.CreateProfessorAsync(new CreateProfessorRequest(
-            _email.Trim(), _nom.Trim(), _cognoms.Trim(), _isAdmin));
+            _email.Trim(), _nom.Trim(), _cognoms.Trim(), _isAdmin, _isGestor));
         if (p is not null)
         {
             _professors.Add(p);
             _professors = [.. _professors.OrderBy(x => x.Cognoms)];
             _selectedClass[p.Id]    = 0;
             _professorClasses[p.Id] = [];
-            _email = ""; _nom = ""; _cognoms = ""; _isAdmin = false;
+            _email = ""; _nom = ""; _cognoms = ""; _isAdmin = false; _isGestor = false;
             Snackbar.Add(Loc["Profs_Created", p.NomComplet].Value, Severity.Success);
         }
         else Snackbar.Add(Loc["Profs_CreateError"].Value, Severity.Error);

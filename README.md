@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.15
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.16
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -194,6 +194,7 @@ ActivityTemplate (per professor, criteris JSON)
 | Rol | Accés |
 |-----|-------|
 | **Admin** | Tot. Gestiona professors, veu totes les classes i activitats, còpies de seguretat |
+| **Gestor** | Veu totes les classes, activitats, estadístiques i l'Informe Global. Modifica únicament les classes que té assignades |
 | **Professor** | Les seves pròpies classes, mòduls, activitats i resultats |
 | **Alumne** | Les activitats del seu grup. Pot avaluar mentre l'activitat és oberta |
 
@@ -388,6 +389,11 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.16
+- **Rol Gestor** — nou rol intermedi entre Admin i Professor: veu totes les classes, activitats, estadístiques i l'Informe Global de Direcció, però només pot modificar les classes i activitats que té assignades; `IsGestor` al model de professor, JWT role `"Gestor"`, toggle a la gestió de professors
+- **Informe Global de Direcció** (`/admin/informe-global`) — accessible a Admin i Gestor; KPIs de resum (classes, mòduls, activitats, obertes, alumnes, participació mitjana); taula per cicle amb detall per classe (professorat, mòduls, activitats, alumnes, participació acolorida); exportació Excel (.xlsx) i impressió/PDF
+- **API**: `GET /api/results/global` i `GET /api/results/global/excel`; nous DTOs `GlobalReportDto`, `CicleReportDto`, `ClassReportDto`
 
 ### v2.6.15
 - **`<PageTitle>` dinàmic a totes les pàgines** — les 20 pàgines restants (Admin, Alumne, Professor) injecten `BrandingService` i substitueixen el literal `AutoCo` per `@Branding.AppName`; ara el títol de la pestanya del navegador reflecteix `BRAND_APP_NAME` configurable en totes les pàgines de l'aplicació

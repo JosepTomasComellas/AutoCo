@@ -59,7 +59,8 @@
                   InputType="InputType.Password" Variant="Variant.Outlined"
                   Adornment="Adornment.End" AdornmentIcon="@_pwdIcon"
                   OnAdornmentClick="() => _showPwd = !_showPwd" />
-    <MudCheckBox @bind-Value="_isAdmin" Label="@Loc["EditProf_IsAdmin"]" Color="Color.Primary" />
+    <MudCheckBox @bind-Value="_isAdmin"  Label="@Loc["EditProf_IsAdmin"]"  Color="Color.Warning" />
+    <MudCheckBox @bind-Value="_isGestor" Label="@Loc["Profs_IsGestor"]"   Color="Color.Info" />
     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_saving">
         @Loc["EditProf_Save"]
     </MudButton>
@@ -73,7 +74,8 @@
     private string _nom     = "";
     private string _cognoms = "";
     private string _newPwd  = "";
-    private bool   _isAdmin = false;
+    private bool   _isAdmin  = false;
+    private bool   _isGestor = false;
     private bool   _saving  = false;
     private bool   _showPwd = false;
     private string? _fotoUrl;
@@ -85,7 +87,8 @@
         _email   = Professor.Email;
         _nom     = Professor.Nom;
         _cognoms = Professor.Cognoms;
-        _isAdmin = Professor.IsAdmin;
+        _isAdmin  = Professor.IsAdmin;
+        _isGestor = Professor.IsGestor;
         _newPwd  = "";
         _fotoUrl = Professor.FotoUrl;
     }
@@ -99,7 +102,8 @@
         var updated = await Api.UpdateProfessorAsync(Professor.Id, new UpdateProfessorRequest(
             _email.Trim(), _nom.Trim(), _cognoms.Trim(),
             _isAdmin,
-            string.IsNullOrWhiteSpace(_newPwd) ? null : _newPwd.Trim()));
+            string.IsNullOrWhiteSpace(_newPwd) ? null : _newPwd.Trim(),
+            _isGestor));
         _saving = false;
         if (updated is not null)
         {

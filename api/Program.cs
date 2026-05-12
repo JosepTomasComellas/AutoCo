@@ -311,8 +311,11 @@ static int GetUserId(ClaimsPrincipal user) =>
 static bool IsAdmin(ClaimsPrincipal user) =>
     user.IsInRole("Admin");
 
+static bool IsAdminOrGestor(ClaimsPrincipal user) =>
+    user.IsInRole("Admin") || user.IsInRole("Gestor");
+
 static bool IsProfessor(ClaimsPrincipal user) =>
-    user.IsInRole("Professor") || user.IsInRole("Admin");
+    user.IsInRole("Professor") || user.IsInRole("Admin") || user.IsInRole("Gestor");
 
 // Retorna els ClassIds assignats al professor; null si és admin (accés total).
 static Task<HashSet<int>> GetProfClassIdsAsync(int profId, AppDbContext db) =>
@@ -484,7 +487,7 @@ app.MapGet("/api/professors/me", async (AppDbContext db, ClaimsPrincipal user) =
     var prof = await db.Professors.FindAsync(GetUserId(user));
     if (prof is null) return Results.NotFound();
     return Results.Ok(new ProfessorDto(prof.Id, prof.Email, prof.Nom, prof.Cognoms,
-        prof.NomComplet, prof.IsAdmin, prof.CreatedAt));
+        prof.NomComplet, prof.IsAdmin, prof.CreatedAt, IsGestor: prof.IsGestor));
 }).RequireAuthorization();
 
 app.MapPut("/api/professors/me", async (UpdateOwnProfileRequest req, AppDbContext db, ClaimsPrincipal user) =>
@@ -508,7 +511,7 @@ app.MapPut("/api/professors/me", async (UpdateOwnProfileRequest req, AppDbContex
     prof.Cognoms = req.Cognoms.Trim();
     await db.SaveChangesAsync();
     return Results.Ok(new ProfessorDto(prof.Id, prof.Email, prof.Nom, prof.Cognoms,
-        prof.NomComplet, prof.IsAdmin, prof.CreatedAt));
+        prof.NomComplet, prof.IsAdmin, prof.CreatedAt, IsGestor: prof.IsGestor));
 }).RequireAuthorization();
 
 app.MapPost("/api/professors/{professorId:int}/send-credentials", async (
@@ -643,7 +646,7 @@ app.MapGet("/api/classes", async (IClassService svc, AppDbContext db, ClaimsPrin
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var all = await svc.GetAllAsync();
-    if (IsAdmin(user)) return Results.Ok(all);
+    if (IsAdminOrGestor(user)) return Results.Ok(all);
     var ids = await GetProfClassIdsAsync(GetUserId(user), db);
     return Results.Ok(all.Where(c => ids.Contains(c.Id)).ToList());
 }).RequireAuthorization();
@@ -651,7 +654,7 @@ app.MapGet("/api/classes", async (IClassService svc, AppDbContext db, ClaimsPrin
 app.MapGet("/api/classes/{id:int}", async (int id, IClassService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), id, db)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdminOrGestor(user), id, db)) return Results.Forbid();
     var c = await svc.GetByIdAsync(id);
     return c is null ? Results.NotFound() : Results.Ok(c);
 }).RequireAuthorization();
@@ -693,7 +696,7 @@ app.MapGet("/api/classes/{classId:int}/students", async (
     int page = 1, int size = 500) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdminOrGestor(user), classId, db)) return Results.Forbid();
     var (items, total) = await svc.GetStudentsPagedAsync(classId, page, size);
     return Results.Ok(new PagedResult<StudentDto>(items, total, page, size));
 }).RequireAuthorization();
@@ -773,7 +776,7 @@ app.MapGet("/api/classes/{classId:int}/modules", async (int classId,
     IModuleService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdminOrGestor(user), classId, db)) return Results.Forbid();
     var list = await svc.GetByClassAsync(classId);
     return Results.Ok(list);
 }).RequireAuthorization();
@@ -782,8 +785,8 @@ app.MapGet("/api/classes/{classId:int}/modules/{id:int}", async (int classId, in
     IModuleService svc, AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
-    var m = await svc.GetByIdAsync(id, GetUserId(user), IsAdmin(user));
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdminOrGestor(user), classId, db)) return Results.Forbid();
+    var m = await svc.GetByIdAsync(id, GetUserId(user), IsAdminOrGestor(user));
     return m is null ? Results.NotFound() : Results.Ok(m);
 }).RequireAuthorization();
 
@@ -855,7 +858,7 @@ app.MapGet("/api/activities", async (IActivityService svc, ClaimsPrincipal user,
     int page = 1, int size = 500, bool includeArchived = false) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
+    var profId = IsAdminOrGestor(user) ? (int?)null : GetUserId(user);
     if (includeArchived)
     {
         var all = await svc.GetAllAsync(profId, includeArchived: true);
@@ -869,7 +872,7 @@ app.MapGet("/api/activities/{id:int}", async (int id, IActivityService svc,
     ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var profId = IsProfessor(user) && !IsAdmin(user) ? GetUserId(user) : (int?)null;
+    var profId = IsAdminOrGestor(user) ? (int?)null : GetUserId(user);
     var a = await svc.GetByIdAsync(id, profId);
     return a is null ? Results.NotFound() : Results.Ok(a);
 }).RequireAuthorization();
@@ -1235,7 +1238,7 @@ app.MapGet("/api/results/{activityId:int}", async (int activityId,
     IResultsService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var r = await svc.GetResultsAsync(activityId, GetUserId(user), IsAdmin(user));
+    var r = await svc.GetResultsAsync(activityId, GetUserId(user), IsAdminOrGestor(user));
     return r is null ? Results.NotFound() : Results.Ok(r);
 }).RequireAuthorization();
 
@@ -1243,7 +1246,7 @@ app.MapGet("/api/results/{activityId:int}/chart", async (int activityId,
     IResultsService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var r = await svc.GetChartAsync(activityId, GetUserId(user), IsAdmin(user));
+    var r = await svc.GetChartAsync(activityId, GetUserId(user), IsAdminOrGestor(user));
     return r is null ? Results.NotFound() : Results.Ok(r);
 }).RequireAuthorization();
 
@@ -1251,7 +1254,7 @@ app.MapGet("/api/results/{activityId:int}/csv", async (int activityId,
     IResultsService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.ExportCsvAsync(activityId, GetUserId(user), IsAdmin(user));
+    var result = await svc.ExportCsvAsync(activityId, GetUserId(user), IsAdminOrGestor(user));
     if (result is null) return Results.NotFound();
     var (content, fileName) = result.Value;
     return Results.File(content, "text/csv; charset=utf-8", fileName);
@@ -1261,7 +1264,7 @@ app.MapGet("/api/results/{activityId:int}/excel", async (int activityId,
     IResultsService svc, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
-    var result = await svc.ExportExcelAsync(activityId, GetUserId(user), IsAdmin(user));
+    var result = await svc.ExportExcelAsync(activityId, GetUserId(user), IsAdminOrGestor(user));
     if (result is null) return Results.NotFound();
     var (content, fileName) = result.Value;
     return Results.File(content,
@@ -1275,7 +1278,7 @@ app.MapGet("/api/results/module/{moduleId:int}/evolution", async (
     if (!IsProfessor(user)) return Results.Forbid();
     var classId = await db.Modules.Where(m => m.Id == moduleId).Select(m => m.ClassId).FirstOrDefaultAsync();
     if (classId == 0) return Results.NotFound();
-    if (!await HasClassAccessAsync(GetUserId(user), IsAdmin(user), classId, db)) return Results.Forbid();
+    if (!await HasClassAccessAsync(GetUserId(user), IsAdminOrGestor(user), classId, db)) return Results.Forbid();
     var r = await svc.GetModuleEvolutionAsync(moduleId, studentId);
     return r is null ? Results.NotFound() : Results.Ok(r);
 }).RequireAuthorization();
@@ -1353,7 +1356,7 @@ app.MapGet("/api/health", async (AppDbContext db, StackExchange.Redis.IConnectio
 
 app.MapGet("/api/admin/stats", async (AppDbContext db, ClaimsPrincipal user) =>
 {
-    if (!IsAdmin(user)) return Results.Forbid();
+    if (!IsAdminOrGestor(user)) return Results.Forbid();
 
     var since30  = DateTime.UtcNow.AddDays(-30);
     var since6mo = DateTime.UtcNow.AddMonths(-6);
@@ -1428,7 +1431,7 @@ app.MapGet("/api/admin/stats", async (AppDbContext db, ClaimsPrincipal user) =>
             login?.Last30 ?? 0,
             myIds.Count,
             Math.Round(parts.Count > 0 ? parts.Average() : 0, 1),
-            login?.LastAccess);
+            login?.LastAccess, p.IsGestor);
     }).ToList();
 
     return Results.Ok(new AdminStatsDto(stats, monthlyLogins, monthlyActivities));
@@ -1439,6 +1442,198 @@ app.MapDelete("/api/admin/stats/logins", async (AppDbContext db, ClaimsPrincipal
     if (!IsAdmin(user)) return Results.Forbid();
     await db.ProfessorLogins.ExecuteDeleteAsync();
     return Results.NoContent();
+}).RequireAuthorization().RequireRateLimiting("admin");
+
+// ── Informe global (Admin + Gestor) ──────────────────────────────────────────
+
+app.MapGet("/api/results/global", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdminOrGestor(user)) return Results.Forbid();
+
+    var classes = await db.Classes
+        .Include(c => c.Cicle)
+        .OrderBy(c => c.Cicle.Name).ThenBy(c => c.Name)
+        .ToListAsync();
+
+    var classIds = classes.Select(c => c.Id).ToList();
+
+    // Mòduls per classe
+    var moduleCounts = await db.Modules
+        .Where(m => classIds.Contains(m.ClassId))
+        .GroupBy(m => m.ClassId)
+        .Select(g => new { ClassId = g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.ClassId, x => x.Count);
+
+    // Activitats per classe (via mòdul)
+    var activityCounts = await db.Activities
+        .Join(db.Modules, a => a.ModuleId, m => m.Id, (a, m) => new { m.ClassId, a.Id, a.IsOpen })
+        .Where(x => classIds.Contains(x.ClassId))
+        .GroupBy(x => x.ClassId)
+        .Select(g => new { ClassId = g.Key, Count = g.Count(), Open = g.Count(x => x.IsOpen) })
+        .ToListAsync();
+    var activityCountMap = activityCounts.ToDictionary(x => x.ClassId, x => x.Count);
+    var openCountMap     = activityCounts.ToDictionary(x => x.ClassId, x => x.Open);
+
+    // Alumnes per classe
+    var studentCounts = await db.Students
+        .Where(s => classIds.Contains(s.ClassId))
+        .GroupBy(s => s.ClassId)
+        .Select(g => new { ClassId = g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.ClassId, x => x.Count);
+
+    // Professors per classe (via ProfessorClass + Module)
+    var profByClass = await db.ProfessorClasses
+        .Include(pc => pc.Professor)
+        .Where(pc => classIds.Contains(pc.ClassId))
+        .GroupBy(pc => pc.ClassId)
+        .Select(g => new { ClassId = g.Key, Noms = g.Select(x => x.Professor.NomComplet).ToList() })
+        .ToListAsync();
+    var profMap = profByClass.ToDictionary(x => x.ClassId, x => x.Noms);
+
+    // Participació per classe: membres vs. autoavaluacions enviades (IsSelf)
+    var membersPerClass = await db.GroupMembers
+        .Join(db.Groups, gm => gm.GroupId, g => g.Id, (gm, g) => new { g.ActivityId, gm.StudentId })
+        .Join(db.Activities, x => x.ActivityId, a => a.Id, (x, a) => new { a.ModuleId, x.StudentId })
+        .Join(db.Modules, x => x.ModuleId, m => m.Id, (x, m) => new { m.ClassId, x.StudentId })
+        .Where(x => classIds.Contains(x.ClassId))
+        .GroupBy(x => x.ClassId)
+        .Select(g => new { ClassId = g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.ClassId, x => x.Count);
+
+    var submittedPerClass = await db.Evaluations
+        .Where(e => e.IsSelf)
+        .Join(db.Activities, e => e.ActivityId, a => a.Id, (e, a) => new { a.ModuleId })
+        .Join(db.Modules, x => x.ModuleId, m => m.Id, (x, m) => new { m.ClassId })
+        .Where(x => classIds.Contains(x.ClassId))
+        .GroupBy(x => x.ClassId)
+        .Select(g => new { ClassId = g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.ClassId, x => x.Count);
+
+    // Construïm per cicle
+    var cicleGroups = classes.GroupBy(c => c.CicleId);
+    var cicleReports = cicleGroups.Select(cg =>
+    {
+        var cicle   = cg.First().Cicle;
+        var clsList = cg.Select(c =>
+        {
+            var members   = membersPerClass.GetValueOrDefault(c.Id);
+            var submitted = submittedPerClass.GetValueOrDefault(c.Id);
+            var avgPart   = members > 0 ? Math.Round((double)submitted / members * 100, 1) : 0.0;
+            return new ClassReportDto(
+                c.Id, c.Name, c.AcademicYear,
+                profMap.GetValueOrDefault(c.Id) ?? [],
+                moduleCounts.GetValueOrDefault(c.Id),
+                activityCountMap.GetValueOrDefault(c.Id),
+                studentCounts.GetValueOrDefault(c.Id),
+                avgPart);
+        }).OrderBy(x => x.NomClasse).ToList();
+        return new CicleReportDto(cicle?.Id ?? 0, cicle?.Name ?? "General", clsList);
+    }).OrderBy(x => x.NomCicle).ToList();
+
+    var report = new GlobalReportDto(
+        GeneratedAt:     DateTime.UtcNow,
+        TotalClasses:    classes.Count,
+        TotalModules:    moduleCounts.Values.Sum(),
+        TotalActivities: activityCountMap.Values.Sum(),
+        TotalStudents:   studentCounts.Values.Sum(),
+        OpenActivities:  openCountMap.Values.Sum(),
+        AvgParticipation: cicleReports
+            .SelectMany(c => c.Classes)
+            .Where(c => c.NumActivities > 0)
+            .Select(c => c.AvgParticipation)
+            .DefaultIfEmpty(0)
+            .Average(),
+        Cicles: cicleReports);
+
+    return Results.Ok(report);
+}).RequireAuthorization().RequireRateLimiting("admin");
+
+app.MapGet("/api/results/global/excel", async (AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdminOrGestor(user)) return Results.Forbid();
+
+    // Obtenim el report reutilitzant la mateixa lògica (simplificat)
+    var classes = await db.Classes
+        .Include(c => c.Cicle)
+        .OrderBy(c => c.Cicle.Name).ThenBy(c => c.Name)
+        .ToListAsync();
+    var classIds = classes.Select(c => c.Id).ToList();
+
+    var moduleCounts     = await db.Modules.Where(m => classIds.Contains(m.ClassId))
+        .GroupBy(m => m.ClassId).Select(g => new { g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.Key, x => x.Count);
+    var activityList     = await db.Activities
+        .Join(db.Modules, a => a.ModuleId, m => m.Id, (a, m) => new { m.ClassId, a.IsOpen })
+        .Where(x => classIds.Contains(x.ClassId))
+        .GroupBy(x => x.ClassId).Select(g => new { g.Key, Count = g.Count(), Open = g.Count(x => x.IsOpen) })
+        .ToListAsync();
+    var studentCounts    = await db.Students.Where(s => classIds.Contains(s.ClassId))
+        .GroupBy(s => s.ClassId).Select(g => new { g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.Key, x => x.Count);
+    var profMap          = (await db.ProfessorClasses.Include(pc => pc.Professor)
+        .Where(pc => classIds.Contains(pc.ClassId))
+        .ToListAsync()).GroupBy(pc => pc.ClassId)
+        .ToDictionary(g => g.Key, g => string.Join(", ", g.Select(x => x.Professor.NomComplet)));
+    var membersPerClass  = await db.GroupMembers
+        .Join(db.Groups, gm => gm.GroupId, g => g.Id, (gm, g) => new { g.ActivityId, gm.StudentId })
+        .Join(db.Activities, x => x.ActivityId, a => a.Id, (x, a) => new { a.ModuleId, x.StudentId })
+        .Join(db.Modules, x => x.ModuleId, m => m.Id, (x, m) => new { m.ClassId })
+        .Where(x => classIds.Contains(x.ClassId))
+        .GroupBy(x => x.ClassId).Select(g => new { g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.Key, x => x.Count);
+    var submittedPerClass = await db.Evaluations.Where(e => e.IsSelf)
+        .Join(db.Activities, e => e.ActivityId, a => a.Id, (e, a) => new { a.ModuleId })
+        .Join(db.Modules, x => x.ModuleId, m => m.Id, (x, m) => new { m.ClassId })
+        .Where(x => classIds.Contains(x.ClassId))
+        .GroupBy(x => x.ClassId).Select(g => new { g.Key, Count = g.Count() })
+        .ToDictionaryAsync(x => x.Key, x => x.Count);
+
+    using var wb  = new ClosedXML.Excel.XLWorkbook();
+    var ws = wb.Worksheets.Add("Informe Global");
+
+    var headers = new[] { "Cicle", "Classe", "Any acadèmic", "Professors",
+        "Mòduls", "Activitats", "Obertes", "Alumnes", "Participació (%)" };
+    for (int i = 0; i < headers.Length; i++)
+    {
+        var cell = ws.Cell(1, i + 1);
+        cell.Value = headers[i];
+        cell.Style.Font.Bold = true;
+        cell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromArgb(0x1e293b);
+        cell.Style.Font.FontColor       = ClosedXML.Excel.XLColor.White;
+    }
+
+    int row = 2;
+    foreach (var c in classes.OrderBy(c => c.Cicle?.Name ?? "").ThenBy(c => c.Name))
+    {
+        var actInfo   = activityList.FirstOrDefault(a => a.Key == c.Id);
+        var members   = membersPerClass.GetValueOrDefault(c.Id);
+        var submitted = submittedPerClass.GetValueOrDefault(c.Id);
+        var avgPart   = members > 0 ? Math.Round((double)submitted / members * 100, 1) : 0.0;
+
+        ws.Cell(row, 1).Value = c.Cicle?.Name ?? "General";
+        ws.Cell(row, 2).Value = c.Name;
+        ws.Cell(row, 3).Value = c.AcademicYear ?? "";
+        ws.Cell(row, 4).Value = profMap.GetValueOrDefault(c.Id) ?? "";
+        ws.Cell(row, 5).Value = moduleCounts.GetValueOrDefault(c.Id);
+        ws.Cell(row, 6).Value = actInfo?.Count ?? 0;
+        ws.Cell(row, 7).Value = actInfo?.Open ?? 0;
+        ws.Cell(row, 8).Value = studentCounts.GetValueOrDefault(c.Id);
+        var partCell          = ws.Cell(row, 9);
+        partCell.Value        = avgPart;
+        partCell.Style.Fill.BackgroundColor = avgPart >= 80
+            ? ClosedXML.Excel.XLColor.FromArgb(0xd1fae5)
+            : avgPart >= 50
+            ? ClosedXML.Excel.XLColor.FromArgb(0xfef3c7)
+            : ClosedXML.Excel.XLColor.FromArgb(0xfee2e2);
+        row++;
+    }
+    ws.Columns().AdjustToContents();
+
+    using var ms = new System.IO.MemoryStream();
+    wb.SaveAs(ms);
+    var fileName = $"informe-global-{DateTime.Now:yyyyMMdd}.xlsx";
+    return Results.File(ms.ToArray(),
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
 }).RequireAuthorization().RequireRateLimiting("admin");
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1832,7 +2027,7 @@ app.MapPut("/api/admin/log-level", async (
 app.MapGet("/api/admin/audit", async (AppDbContext db, ClaimsPrincipal user,
     int page = 1, int size = 50) =>
 {
-    if (!IsAdmin(user)) return Results.Forbid();
+    if (!IsAdminOrGestor(user)) return Results.Forbid();
     var q     = db.AdminAuditLogs.OrderByDescending(l => l.CreatedAt);
     var total = await q.CountAsync();
     var items = await q.Skip((page - 1) * size).Take(size)

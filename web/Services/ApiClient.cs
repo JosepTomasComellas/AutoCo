@@ -422,6 +422,18 @@ public class ApiClient
     public Task<LogLevelDto?> SetLogLevelAsync(string level) =>
         PutAsync<LogLevelDto>("/api/admin/log-level", new SetLogLevelRequest(level));
 
+    // ── Informe global (admin + gestor) ──────────────────────────────────────
+
+    public Task<GlobalReportDto?> GetGlobalReportAsync() =>
+        GetAsync<GlobalReportDto>("/api/results/global");
+
+    public async Task<byte[]?> GetGlobalReportExcelAsync()
+    {
+        var resp = await _http.GetAsync("/api/results/global/excel");
+        if (!resp.IsSuccessStatusCode) return null;
+        return await resp.Content.ReadAsByteArrayAsync();
+    }
+
     // ── Estadístiques (admin) ─────────────────────────────────────────────────
 
     public Task<AdminStatsDto?> GetAdminStatsAsync() =>

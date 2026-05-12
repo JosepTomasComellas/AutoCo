@@ -34,7 +34,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
         db.ProfessorLogins.Add(new AutoCo.Api.Data.Models.ProfessorLogin { ProfessorId = professor.Id });
         await db.SaveChangesAsync();
 
-        var role         = professor.IsAdmin ? "Admin" : "Professor";
+        var role         = professor.IsAdmin ? "Admin" : professor.IsGestor ? "Gestor" : "Professor";
         var jwt          = GenerateToken(professor.Id.ToString(), professor.NomComplet, role);
         var refreshToken = await StoreRefreshTokenAsync(professor.Id, role);
         return new LoginResponse(jwt, professor.NomComplet, role, professor.Id,
@@ -72,7 +72,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
         {
             var prof = await db.Professors.FindAsync(id);
             if (prof is null) { await cache.RemoveAsync($"autoco:refresh:{refreshToken}"); return null; }
-            role      = prof.IsAdmin ? "Admin" : "Professor";
+            role      = prof.IsAdmin ? "Admin" : prof.IsGestor ? "Gestor" : "Professor";
             nomComplet = prof.NomComplet;
             fotoUrl    = photos.GetProfessorFotoUrl(prof.Id);
         }

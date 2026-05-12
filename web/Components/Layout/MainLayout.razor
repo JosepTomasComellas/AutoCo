@@ -79,9 +79,9 @@
                             }
                         </ChildContent>
                     </MudMenu>
-                    @if (UserState.IsAdmin)
+                    @if (UserState.IsAdminOrGestor)
                     {
-                        <!-- Menú d'administració -->
+                        <!-- Menú d'administració / gestió -->
                         <MudMenu @ref="_adminMenu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
                             <ActivatorContent>
                                 <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings"
@@ -89,25 +89,34 @@
                                                OnClick="OpenAdminMenuAsync" />
                             </ActivatorContent>
                             <ChildContent>
-                                <MudMenuItem Href="/admin/professors" Icon="@Icons.Material.Filled.People">
-                                    @Loc["Dash_Teachers"]
-                                </MudMenuItem>
-                                <MudMenuItem Href="/admin/cicles" Icon="@Icons.Material.Filled.School">
-                                    @Loc["Cicles_Title"]
-                                </MudMenuItem>
-                                <MudMenuItem Href="/admin/criteris" Icon="@Icons.Material.Filled.Checklist">
-                                    @Loc["DefCriteria_MenuLabel"]
-                                </MudMenuItem>
-                                <MudDivider />
-                                <MudMenuItem Href="/admin/backup" Icon="@Icons.Material.Filled.CloudDone">
-                                    @Loc["Dash_Backups"]
+                                @if (UserState.IsAdmin)
+                                {
+                                    <MudMenuItem Href="/admin/professors" Icon="@Icons.Material.Filled.People">
+                                        @Loc["Dash_Teachers"]
+                                    </MudMenuItem>
+                                    <MudMenuItem Href="/admin/cicles" Icon="@Icons.Material.Filled.School">
+                                        @Loc["Cicles_Title"]
+                                    </MudMenuItem>
+                                    <MudMenuItem Href="/admin/criteris" Icon="@Icons.Material.Filled.Checklist">
+                                        @Loc["DefCriteria_MenuLabel"]
+                                    </MudMenuItem>
+                                    <MudDivider />
+                                    <MudMenuItem Href="/admin/backup" Icon="@Icons.Material.Filled.CloudDone">
+                                        @Loc["Dash_Backups"]
+                                    </MudMenuItem>
+                                }
+                                <MudMenuItem Href="/admin/informe-global" Icon="@Icons.Material.Filled.Assessment">
+                                    @Loc["Global_MenuLabel"]
                                 </MudMenuItem>
                                 <MudMenuItem Href="/admin/estadistiques" Icon="@Icons.Material.Filled.BarChart">
                                     @Loc["Dash_Statistics"]
                                 </MudMenuItem>
-                                <MudMenuItem Href="/admin/sistema" Icon="@Icons.Material.Filled.Tune">
-                                    @Loc["Dash_System"]
-                                </MudMenuItem>
+                                @if (UserState.IsAdmin)
+                                {
+                                    <MudMenuItem Href="/admin/sistema" Icon="@Icons.Material.Filled.Tune">
+                                        @Loc["Dash_System"]
+                                    </MudMenuItem>
+                                }
                                 <MudMenuItem Href="/admin/auditoria" Icon="@Icons.Material.Filled.ManageSearch">
                                     @Loc["Dash_Audit"]
                                 </MudMenuItem>

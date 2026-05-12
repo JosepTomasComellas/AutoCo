@@ -17,19 +17,19 @@ public record LogoutRequest(string Token);
 // ─── Professors ──────────────────────────────────────────────────────────────
 public record ProfessorDto(
     int Id, string Email, string Nom, string Cognoms, string NomComplet,
-    bool IsAdmin, DateTime CreatedAt, string? FotoUrl = null);
+    bool IsAdmin, DateTime CreatedAt, string? FotoUrl = null, bool IsGestor = false);
 
 public record CreateProfessorRequest(
     [Required][MaxLength(200)][EmailAddress] string Email,
     [Required][MaxLength(100)] string Nom,
     [Required][MaxLength(200)] string Cognoms,
-    bool IsAdmin);
+    bool IsAdmin, bool IsGestor = false);
 
 public record UpdateProfessorRequest(
     [Required][MaxLength(200)][EmailAddress] string Email,
     [Required][MaxLength(100)] string Nom,
     [Required][MaxLength(200)] string Cognoms,
-    bool IsAdmin, string? NewPassword);
+    bool IsAdmin, string? NewPassword, bool IsGestor = false);
 
 public record SendCredentialsResult(bool Sent, string? Reason);
 public record SendAllResult(int Sent, int Skipped, List<string> Details);
@@ -203,7 +203,7 @@ public record BackupDto(
 
 public record ProfessorBackupDto(
     int Id, string Email, string Nom, string Cognoms,
-    bool IsAdmin, string PasswordHash, DateTime CreatedAt);
+    bool IsAdmin, string PasswordHash, DateTime CreatedAt, bool IsGestor = false);
 
 public record CicleBackupDto(int Id, string Name, DateTime CreatedAt);
 public record ProfessorClassBackupDto(int ProfessorId, int ClassId);
@@ -286,7 +286,7 @@ public record ProfessorStatsDto(
     int Id, string NomComplet, string Email, bool IsAdmin,
     int LoginsLast30, int TotalActivities,
     double AvgParticipation,
-    DateTime? LastAccess);
+    DateTime? LastAccess, bool IsGestor = false);
 
 public record MonthlyStatDto(int Year, int Month, int Count);
 
@@ -334,3 +334,24 @@ public record AdminAuditLogDto(int Id, string Action, string? ActorName, string?
 
 // ─── Notificacions in-app ─────────────────────────────────────────────────────
 public record NotificationDto(int ProfessorId, string Type, string Message, string? Href, DateTime CreatedAt);
+
+// ─── Informe global (Gestor / Admin) ─────────────────────────────────────────
+public record GlobalReportDto(
+    DateTime GeneratedAt,
+    int TotalClasses,
+    int TotalModules,
+    int TotalActivities,
+    int TotalStudents,
+    int OpenActivities,
+    double AvgParticipation,
+    List<CicleReportDto> Cicles);
+
+public record CicleReportDto(
+    int CicleId, string NomCicle,
+    List<ClassReportDto> Classes);
+
+public record ClassReportDto(
+    int ClassId, string NomClasse, string? AcademicYear,
+    List<string> ProfessorsNoms,
+    int NumModules, int NumActivities, int NumStudents,
+    double AvgParticipation);

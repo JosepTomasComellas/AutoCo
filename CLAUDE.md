@@ -133,6 +133,7 @@ Puntuació: **escala E/D/C/B/A** (estreles 1–5 = valors 1, 3.5, 5, 7.5, 10).
 ## Rols i autenticació
 
 - **Admin** — professor amb `IsAdmin=true`. Gestiona professors, cicles i veu tot (totes les classes).
+- **Gestor** — professor amb `IsGestor=true`. Veu tot (totes les classes, estadístiques, Informe Global), però modifica únicament les classes que té assignades via `ProfessorClass`. JWT role `"Gestor"`. `IsAdminOrGestor` per a lectures; `IsAdmin` per a escritures admin-only.
 - **Professor** — veu i gestiona únicament les classes que li han estat assignades via `ProfessorClass`.
 - **Alumne** — accedeix amb email + contrasenya. Pot avaluar quan l'activitat és oberta.
 
@@ -225,3 +226,5 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Criteris per defecte configurables: taula `DefaultCriteria` a la BD; `GET /api/criteria/defaults` (professors) + `PUT /api/criteria/defaults` (admin); `GET /api/criteria` llegeix BD amb fallback a `Constants.cs`; `SeedDefaultCriteriaAsync` usa BD en comptes de `Constants.cs`; pàgina `/admin/criteris` per editar des de la UI
 - Arxivat d'activitats: `Activity.IsArchived` (BIT, default 0); `POST /api/activities/{id}/archive` fa toggle; `GET /api/activities?includeArchived=true` retorna totes; per defecte s'exclouen les arxivades; archivar força tancament (`IsOpen=false`); al Dashboard: switch «Arxivades» carrega sota demanda; `OnArchived` callback a `ActivityCard` mou l'activitat entre llistes sense recarregar
 - Backup v2.1: inclou `Cicles` i `ProfessorClasses`; `ImportCoreAsync` esborra `ProfessorClasses` i `Cicles` (en ordre FK), recrea cicles primer, remapeja `CicleId` de les classes, i recrea assignacions amb mapeig d'IDs; backups antics sense `Cicles` creen un cicle «General» automàticament
+- Rol Gestor: `Professor.IsGestor` (BIT, default 0); JWT role `"Gestor"`; `IsAdminOrGestor(user)` per a lectures globals (classes, activitats, stats, audit, informe global); `IsAdmin(user)` per a escritures admin-only; `UserStateService`: `IsGestor`, `IsAdminOrGestor`; toggle al formulari d'edició de professor; menú de navegació mostra seccions d'admin a `IsAdminOrGestor`, però les accions destructives (Professors, Cicles, Backup, Sistema) queden sota `IsAdmin`
+- Informe Global: `GET /api/results/global` agrega per cicle→classe: modules, activities, students, avg participation; `GET /api/results/global/excel` retorna xlsx (ClosedXML, color-coded); pàgina `/admin/informe-global` amb 6 KPIs + taula per cicle; accessible a Admin i Gestor

@@ -9,7 +9,7 @@
 @implements IAsyncDisposable
 
 <PageTitle>Estadístiques d'ús – AutoCo</PageTitle>
-@if (!UserState.IsAdmin) { Nav.NavigateTo("/"); return; }
+@if (!UserState.IsAdminOrGestor) { Nav.NavigateTo("/"); return; }
 
 <!-- Capçalera -->
 <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6" Wrap="Wrap.Wrap">
