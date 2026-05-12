@@ -82,14 +82,14 @@
 
 <div class="topbar no-print">
   <h1>📋 AutoCo — Guia del Professor</h1>
-  <span class="version">v2.5.23 · Salesians de Sarrià, Dept. d'Informàtica</span>
+  <span class="version">v2.6.5 · Salesians de Sarrià, Dept. d'Informàtica</span>
   <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
 <div class="container">
 
   <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
-  <p style="font-size:1.1rem;color:#64748b;margin-bottom:32px">Sistema d'avaluació entre iguals · Guia del professor · v2.5.23</p>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:32px">Sistema d'avaluació entre iguals · Guia del professor · v2.6.5</p>
 
   <!-- TAULA DE CONTINGUTS -->
   <nav class="toc">
@@ -206,14 +206,16 @@
       <tr><td><strong>Classe</strong></td><td>Mostra només les activitats d'una classe concreta</td></tr>
       <tr><td><strong>Mòdul</strong></td><td>Mostra només les activitats d'un mòdul concret</td></tr>
       <tr><td><strong>Només obertes</strong></td><td>Commutador per veure únicament les activitats en curs</td></tr>
+      <tr><td><strong>Arxivades</strong></td><td>Commutador per carregar i mostrar les activitats arxivades (es carreguen de l'API en activar-lo)</td></tr>
     </table>
     <p>El comptador inferior mostra quantes activitats coincideixen amb els filtres actuals del total disponible.</p>
 
     <h3>Seccions d'activitats</h3>
-    <p>Les activitats es mostren en dues seccions diferenciades:</p>
+    <p>Les activitats es mostren en seccions diferenciades:</p>
     <ul>
       <li><span class="badge badge-green">Obertes</span> — Activitats en curs, visibles als alumnes per avaluar</li>
       <li><span class="badge badge-gray">Tancades</span> — Activitats finalitzades o no iniciades</li>
+      <li><span class="badge badge-gray">Arxivades</span> — Activitats guardades sense eliminar; visibles només en activar el switch "Arxivades"</li>
     </ul>
 
     <h3>Botons principals</h3>
@@ -373,6 +375,7 @@
       <tr><td>📄 <strong>Duplicar</strong></td><td>Crea una còpia de l'activitat a la mateixa classe i mòdul</td></tr>
       <tr><td>🔄 <strong>Duplicar a una altra classe</strong></td><td>Crea una còpia a una classe i mòdul diferent (útil per a grups paral·lels)</td></tr>
       <tr><td>📜 <strong>Registre</strong></td><td>Historial d'accions: qui ha obert, tancat o enviat avaluació i en quin moment</td></tr>
+      <tr><td>📦 <strong>Arxivar / Desarxivar</strong></td><td>Arxiva l'activitat: desapareix del tauler principal però es conserva. Archivar una activitat oberta la tanca automàticament. Es pot desarxivar en qualsevol moment</td></tr>
       <tr><td>🗑️ <strong>Eliminar</strong></td><td>Elimina l'activitat. Tens <strong>5 segons</strong> per desfer l'acció</td></tr>
     </table>
 
@@ -427,6 +430,7 @@
     <p>Cada activitat pot usar els <strong>criteris globals</strong> per defecte o tenir criteris <strong>personalitzats</strong>:</p>
 
     <h4>Criteris globals per defecte</h4>
+    <p>Els criteris per defecte s'apliquen automàticament a les noves activitats. L'administrador pot modificar-los des de <strong>Menú Admin → Criteris per defecte</strong>. Els criteris habituals (si no s'han personalitzat) són:</p>
     <table>
       <tr><th>Criteri</th><th>Descripció</th></tr>
       <tr><td>Probitat</td><td>Honestedat i integritat en el treball</td></tr>
@@ -644,7 +648,7 @@
   </section>
 
   <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
-    AutoCo v2.5.23 · Salesians de Sarrià, Departament d'Informàtica · 2026
+    AutoCo v2.6.5 · Salesians de Sarrià, Departament d'Informàtica · 2026
   </footer>
 
 </div>

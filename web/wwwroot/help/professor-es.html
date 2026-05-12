@@ -58,14 +58,14 @@
 
 <div class="topbar">
   <h1>📋 AutoCo — Guía del Profesor</h1>
-  <span class="version">v2.5.23 · Salesians de Sarrià, Dept. de Informática</span>
+  <span class="version">v2.6.5 · Salesians de Sarrià, Dept. de Informática</span>
   <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
 <div class="container">
 
   <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
-  <p style="font-size:1.1rem;color:#64748b;margin-bottom:32px">Sistema de evaluación entre iguales · Guía del profesor · v2.5.23</p>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:32px">Sistema de evaluación entre iguales · Guía del profesor · v2.6.5</p>
 
   <nav class="toc">
     <h2>📑 Índice</h2>
@@ -161,6 +161,7 @@
       <tr><td><strong>Clase</strong></td><td>Muestra solo actividades de una clase concreta</td></tr>
       <tr><td><strong>Módulo</strong></td><td>Muestra solo actividades de un módulo concreto</td></tr>
       <tr><td><strong>Solo abiertas</strong></td><td>Conmutador para ver únicamente las actividades en curso</td></tr>
+      <tr><td><strong>Archivadas</strong></td><td>Conmutador para cargar y mostrar las actividades archivadas (se cargan de la API al activarlo)</td></tr>
     </table>
   </section>
 
@@ -254,6 +255,7 @@
       <tr><td>📄 <strong>Duplicar</strong></td><td>Crea una copia en la misma clase y módulo</td></tr>
       <tr><td>🔄 <strong>Duplicar a otra clase</strong></td><td>Crea una copia en una clase y módulo diferente</td></tr>
       <tr><td>📜 <strong>Registro</strong></td><td>Historial de acciones sobre la actividad</td></tr>
+      <tr><td>📦 <strong>Archivar / Desarchivar</strong></td><td>Archiva la actividad: desaparece del panel pero se conserva. Archivar una actividad abierta la cierra automáticamente. Se puede desarchivar en cualquier momento</td></tr>
       <tr><td>🗑️ <strong>Eliminar</strong></td><td>Elimina la actividad. Tienes <strong>5 segundos</strong> para deshacer</td></tr>
     </table>
     <h3>Programación automática</h3>
@@ -278,6 +280,7 @@
     <p>Arrastra y suelta alumnos entre grupos para asignarlos. Puedes moverlos entre grupos o devolverlos al pool sin asignar.</p>
     <h3>Criterios de evaluación</h3>
     <h4>Criterios globales por defecto</h4>
+    <p>Los criterios por defecto se aplican automáticamente a las nuevas actividades. El administrador puede modificarlos desde <strong>Menú Admin → Criterios por defecto</strong>. Los criterios habituales son:</p>
     <table>
       <tr><th>Criterio</th><th>Descripción</th></tr>
       <tr><td>Probidad</td><td>Honestidad e integridad en el trabajo</td></tr>
@@ -418,7 +421,7 @@
   </section>
 
   <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
-    AutoCo v2.5.23 · Salesians de Sarrià, Departament d'Informàtica · 2026
+    AutoCo v2.6.5 · Salesians de Sarrià, Departament d'Informàtica · 2026
   </footer>
 
 </div>

@@ -53,14 +53,14 @@
 
 <div class="topbar">
   <h1>🔧 AutoCo — Guia de l'Administrador</h1>
-  <span class="version">v2.5.23 · Salesians de Sarrià, Dept. d'Informàtica</span>
+  <span class="version">v2.6.5 · Salesians de Sarrià, Dept. d'Informàtica</span>
   <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
 <div class="container">
 
   <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
-  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema d'avaluació entre iguals · Guia de l'administrador · v2.5.23</p>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema d'avaluació entre iguals · Guia de l'administrador · v2.6.5</p>
 
   <div class="box box-admin" style="margin-bottom:32px">
     <strong>🔧 Document complementari</strong>
@@ -75,7 +75,9 @@
     <ol>
       <li><a href="#menu-admin">El menú d'administració</a></li>
       <li><a href="#professors">Gestió de professors</a></li>
+      <li><a href="#cicles">Cicles formatius</a></li>
       <li><a href="#classes-admin">Gestió de classes (rol admin)</a></li>
+      <li><a href="#criteris">Criteris d'avaluació per defecte</a></li>
       <li><a href="#backup">Còpies de seguretat</a></li>
       <li><a href="#estadistiques">Estadístiques globals</a></li>
       <li><a href="#sistema">Sistema</a></li>
@@ -89,7 +91,9 @@
     <p>Com a administrador, a la barra de navegació trobaràs la icona d'<strong>engranatge</strong> <span class="badge badge-purple">Admin</span> que desplega el menú d'administració:</p>
     <table>
       <tr><th>Opció</th><th>Descripció</th></tr>
-      <tr><td>👨‍🏫 <strong>Professors</strong></td><td>Gestió de comptes de professors del sistema</td></tr>
+      <tr><td>👨‍🏫 <strong>Professors</strong></td><td>Gestió de comptes de professors i assignació de classes</td></tr>
+      <tr><td>🎓 <strong>Cicles</strong></td><td>Gestió dels cicles formatius que agrupen les classes</td></tr>
+      <tr><td>✅ <strong>Criteris per defecte</strong></td><td>Configura els criteris d'avaluació que s'apliquen a les noves activitats</td></tr>
       <tr><td>💾 <strong>Còpies</strong></td><td>Còpies de seguretat: exportar i restaurar</td></tr>
       <tr><td>📊 <strong>Estadístiques</strong></td><td>Estadístiques globals agregades de tot el sistema</td></tr>
       <tr><td>⚙️ <strong>Sistema</strong></td><td>Configuració del sistema: nivell de log, renovació de curs</td></tr>
@@ -128,13 +132,38 @@
     <p>L'eliminació és permanent. Les classes i activitats del professor eliminat <strong>es conserven</strong> al sistema i queden sense professor assignat (les pot gestionar un altre administrador).</p>
   </section>
 
-  <!-- 3. CLASSES (ADMIN) -->
+  <!-- 3. CICLES -->
+  <section class="section" id="cicles">
+    <h2 class="section-title">3. Cicles formatius</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Cicles"</strong>. Els cicles formatius agrupen les classes per família professional o itinerari (p.ex. DAM, ASIX, SMX, Batxillerat).</p>
+
+    <h3>Llistat de cicles</h3>
+    <p>La taula mostra tots els cicles amb el nom i el nombre de classes associades. Un cicle <strong>«General»</strong> es crea automàticament per a classes sense cicle assignat.</p>
+
+    <h3>Crear un cicle</h3>
+    <p>Omple el camp <strong>Nom</strong> (obligatori, p.ex. "DAM 2025-2026") i confirma. El cicle apareix immediatament a la llista i al selector de classes.</p>
+
+    <h3>Editar un cicle</h3>
+    <p>Fes clic a la icona d'edició per canviar-ne el nom. El canvi és immediat i es reflecteix a totes les vistes on apareix el cicle.</p>
+
+    <h3>Eliminar un cicle</h3>
+    <p>Només és possible si el cicle no té cap classe assignada. Si té classes, primer cal reassignar-les a un altre cicle o eliminar-les.</p>
+
+    <h3>Assignació de professors a classes</h3>
+    <p>Des de la pàgina de <strong>Professors</strong>, pots assignar a cada professor les classes que pot gestionar. Cada professor veu i gestiona únicament les classes que li han estat assignades. Els administradors veuen totes les classes.</p>
+    <div class="box box-info">
+      <strong>💡 Professors sense classes assignades</strong> no veuen res al seu tauler. Recorda assignar-los almenys una classe abans que puguin treballar.
+    </div>
+  </section>
+
+  <!-- 4. CLASSES (ADMIN) -->
   <section class="section" id="classes-admin">
-    <h2 class="section-title">3. Gestió de classes (rol admin)</h2>
+    <h2 class="section-title">4. Gestió de classes (rol admin)</h2>
     <p>Com a administrador, a la pàgina de classes <strong>pots crear noves classes</strong> (els professors normals no poden). El formulari de creació apareix a la part esquerra de la pàgina:</p>
     <table>
       <tr><th>Camp</th><th>Descripció</th></tr>
       <tr><td><strong>Nom de la classe</strong></td><td>Identificador de la classe (p.ex. "DAW1", "ASIX2")</td></tr>
+      <tr><td><strong>Cicle</strong></td><td>Cicle formatiu al qual pertany la classe (obligatori; selecciona entre els cicles creats)</td></tr>
       <tr><td><strong>Any acadèmic</strong></td><td>Opcional. Permet diferenciar edicions (p.ex. "2025-2026")</td></tr>
     </table>
     <p>Les classes creades per l'administrador son visibles a tots els professors del sistema.</p>
@@ -143,9 +172,33 @@
     <p>Des de la pàgina d'alumnes d'una classe, el botó <strong>"Enviar credencials a tots"</strong> (exclusiu d'admin) envia per correu les credencials d'accés a tots els alumnes de la classe en un sol clic.</p>
   </section>
 
-  <!-- 4. CÒPIES -->
+  <!-- 5. CRITERIS PER DEFECTE -->
+  <section class="section" id="criteris">
+    <h2 class="section-title">5. Criteris d'avaluació per defecte</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Criteris per defecte"</strong>. Configura el conjunt de criteris que s'apliquen automàticament a totes les noves activitats del sistema.</p>
+
+    <h3>Com funciona</h3>
+    <p>Quan un professor crea una nova activitat, els criteris d'avaluació s'hereten automàticament d'aquesta configuració. Si la taula és buida, el sistema usa un conjunt de criteris bàsics predefinits com a fallback.</p>
+    <div class="box box-info">
+      <strong>💡 Els canvis no afecten activitats existents.</strong>
+      Modificar els criteris per defecte no modifica els criteris de les activitats ja creades, que poden tenir la seva pròpia configuració personalitzada.
+    </div>
+
+    <h3>Gestió dels criteris</h3>
+    <ul>
+      <li><strong>Afegir criteri</strong>: introdueix la clau interna (sense espais, p.ex. <code>creativitat</code>), l'etiqueta visible (p.ex. "Creativitat") i el pes relatiu.</li>
+      <li><strong>Reordenar</strong>: arrossega els criteris per canviar-ne l'ordre de presentació als alumnes.</li>
+      <li><strong>Pes</strong>: valor enter (≥ 1). Un criteri amb pes 2 compta el doble en la nota global ponderada.</li>
+      <li><strong>Eliminar</strong>: botó de paperera al costat de cada criteri.</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>⚠️ La clau (Key) ha de ser única</strong> dins del conjunt de criteris i no pot contenir espais. És un identificador intern; l'etiqueta és el text visible als alumnes.
+    </div>
+  </section>
+
+  <!-- 6. CÒPIES -->
   <section class="section" id="backup">
-    <h2 class="section-title">4. Còpies de seguretat</h2>
+    <h2 class="section-title">6. Còpies de seguretat</h2>
     <p>Accedeix des del menú d'administració → <strong>"Còpies"</strong>. Permet exportar totes les dades del sistema i restaurar-les en cas de necessitat.</p>
 
     <h3>Exportar còpia de seguretat (ZIP)</h3>
@@ -171,9 +224,9 @@
     <p>La llista inferior mostra les còpies de seguretat emmagatzemades al servidor. Pots descarregar qualsevol d'elles per desar-la localment.</p>
   </section>
 
-  <!-- 5. ESTADÍSTIQUES -->
+  <!-- 7. ESTADÍSTIQUES -->
   <section class="section" id="estadistiques">
-    <h2 class="section-title">5. Estadístiques globals</h2>
+    <h2 class="section-title">7. Estadístiques globals</h2>
     <p>Accedeix des del menú d'administració → <strong>"Estadístiques"</strong>. Mostra indicadors agregats de tot el sistema:</p>
     <ul>
       <li>Total de professors, classes, alumnes, mòduls i activitats al sistema</li>
@@ -183,9 +236,9 @@
     <p>Útil per a tenir una visió de conjunt de l'ús de l'aplicació al centre.</p>
   </section>
 
-  <!-- 6. SISTEMA -->
+  <!-- 8. SISTEMA -->
   <section class="section" id="sistema">
-    <h2 class="section-title">6. Sistema</h2>
+    <h2 class="section-title">8. Sistema</h2>
     <p>Accedeix des del menú d'administració → <strong>"Sistema"</strong>. Conté dues funcions de manteniment del sistema.</p>
 
     <h3>Nivell de log en calent</h3>
@@ -214,9 +267,9 @@
     </div>
   </section>
 
-  <!-- 7. AUDITORIA -->
+  <!-- 9. AUDITORIA -->
   <section class="section" id="auditoria">
-    <h2 class="section-title">7. Auditoria</h2>
+    <h2 class="section-title">9. Auditoria</h2>
     <p>Accedeix des del menú d'administració → <strong>"Auditoria"</strong>. Registre de totes les accions d'administració realitzades al sistema.</p>
 
     <h3>Informació de cada entrada</h3>
@@ -241,7 +294,7 @@
   </section>
 
   <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
-    AutoCo v2.5.23 · Salesians de Sarrià, Departament d'Informàtica · 2026
+    AutoCo v2.6.5 · Salesians de Sarrià, Departament d'Informàtica · 2026
   </footer>
 
 </div>

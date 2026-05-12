@@ -51,14 +51,14 @@
 
 <div class="topbar">
   <h1>🔧 AutoCo — Guía del Administrador</h1>
-  <span class="version">v2.5.23 · Salesians de Sarrià, Dept. de Informática</span>
+  <span class="version">v2.6.5 · Salesians de Sarrià, Dept. de Informática</span>
   <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
 <div class="container">
 
   <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
-  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema de evaluación entre iguales · Guía del administrador · v2.5.23</p>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema de evaluación entre iguales · Guía del administrador · v2.6.5</p>
 
   <div class="box box-admin" style="margin-bottom:32px">
     <strong>🔧 Documento complementario</strong>
@@ -73,7 +73,9 @@
     <ol>
       <li><a href="#menu-admin">El menú de administración</a></li>
       <li><a href="#profesores">Gestión de profesores</a></li>
+      <li><a href="#ciclos">Ciclos formativos</a></li>
       <li><a href="#clases-admin">Gestión de clases (rol admin)</a></li>
+      <li><a href="#criterios">Criterios de evaluación por defecto</a></li>
       <li><a href="#backup">Copias de seguridad</a></li>
       <li><a href="#estadisticas">Estadísticas globales</a></li>
       <li><a href="#sistema">Sistema</a></li>
@@ -86,7 +88,9 @@
     <p>Como administrador, en la barra de navegación encontrarás el icono de <strong>engranaje</strong> <span class="badge badge-purple">Admin</span> que despliega el menú de administración:</p>
     <table>
       <tr><th>Opción</th><th>Descripción</th></tr>
-      <tr><td>👨‍🏫 <strong>Profesores</strong></td><td>Gestión de cuentas de profesores del sistema</td></tr>
+      <tr><td>👨‍🏫 <strong>Profesores</strong></td><td>Gestión de cuentas de profesores y asignación de clases</td></tr>
+      <tr><td>🎓 <strong>Ciclos</strong></td><td>Gestión de los ciclos formativos que agrupan las clases</td></tr>
+      <tr><td>✅ <strong>Criterios por defecto</strong></td><td>Configura los criterios de evaluación que se aplican a las nuevas actividades</td></tr>
       <tr><td>💾 <strong>Copias</strong></td><td>Copias de seguridad: exportar y restaurar</td></tr>
       <tr><td>📊 <strong>Estadísticas</strong></td><td>Estadísticas globales agregadas de todo el sistema</td></tr>
       <tr><td>⚙️ <strong>Sistema</strong></td><td>Configuración del sistema: nivel de log, renovación de curso</td></tr>
@@ -108,24 +112,70 @@
     <div class="box box-warn">
       <strong>⚠️ Al menos un administrador debe estar activo en todo momento.</strong>
     </div>
+    <h3>Asignación de clases a profesores</h3>
+    <p>Desde la ficha de cada profesor puedes asignarle las clases que puede gestionar. Cada profesor ve y gestiona únicamente las clases que le han sido asignadas. Los administradores ven todas las clases.</p>
+    <div class="box box-info">
+      <strong>💡 Profesores sin clases asignadas</strong> no ven nada en su panel. Recuerda asignarles al menos una clase antes de que puedan trabajar.
+    </div>
     <h3>Eliminar un profesor</h3>
     <p>La eliminación es permanente. Las clases y actividades del profesor eliminado <strong>se conservan</strong> en el sistema.</p>
   </section>
 
+  <section class="section" id="ciclos">
+    <h2 class="section-title">3. Ciclos formativos</h2>
+    <p>Accede desde el menú de administración → <strong>"Ciclos"</strong>. Los ciclos formativos agrupan las clases por familia profesional o itinerario (p.ej. DAM, ASIX, SMX, Bachillerato).</p>
+
+    <h3>Listado de ciclos</h3>
+    <p>La tabla muestra todos los ciclos con el nombre y el número de clases asociadas. Un ciclo <strong>«General»</strong> se crea automáticamente para clases sin ciclo asignado.</p>
+
+    <h3>Crear un ciclo</h3>
+    <p>Rellena el campo <strong>Nombre</strong> (obligatorio, p.ej. "DAM 2025-2026") y confirma. El ciclo aparece inmediatamente en la lista y en el selector de clases.</p>
+
+    <h3>Editar un ciclo</h3>
+    <p>Haz clic en el icono de edición para cambiar el nombre. El cambio se refleja en todas las vistas donde aparece el ciclo.</p>
+
+    <h3>Eliminar un ciclo</h3>
+    <p>Solo es posible si el ciclo no tiene ninguna clase asignada. Si tiene clases, primero hay que reasignarlas a otro ciclo o eliminarlas.</p>
+  </section>
+
   <section class="section" id="clases-admin">
-    <h2 class="section-title">3. Gestión de clases (rol admin)</h2>
+    <h2 class="section-title">4. Gestión de clases (rol admin)</h2>
     <p>Como administrador, en la página de clases <strong>puedes crear nuevas clases</strong> (los profesores normales no pueden):</p>
     <table>
       <tr><th>Campo</th><th>Descripción</th></tr>
       <tr><td><strong>Nombre de la clase</strong></td><td>Identificador de la clase (p.ej. "DAW1", "ASIX2")</td></tr>
+      <tr><td><strong>Ciclo</strong></td><td>Ciclo formativo al que pertenece la clase (obligatorio)</td></tr>
       <tr><td><strong>Año académico</strong></td><td>Opcional. Permite diferenciar ediciones (p.ej. "2025-2026")</td></tr>
     </table>
     <h3>Enviar credenciales a todos los alumnos</h3>
     <p>Desde la página de alumnos de una clase, el botón <strong>"Enviar credenciales a todos"</strong> (exclusivo de admin) envía por correo las credenciales a todos los alumnos de la clase en un solo clic.</p>
   </section>
 
+  <section class="section" id="criterios">
+    <h2 class="section-title">5. Criterios de evaluación por defecto</h2>
+    <p>Accede desde el menú de administración → <strong>"Criterios por defecto"</strong>. Configura el conjunto de criterios que se aplican automáticamente a todas las nuevas actividades del sistema.</p>
+
+    <h3>Cómo funciona</h3>
+    <p>Cuando un profesor crea una nueva actividad, los criterios de evaluación se heredan automáticamente de esta configuración. Si la tabla está vacía, el sistema usa un conjunto de criterios básicos predefinidos como fallback.</p>
+    <div class="box box-info">
+      <strong>💡 Los cambios no afectan actividades existentes.</strong>
+      Modificar los criterios por defecto no modifica los criterios de las actividades ya creadas, que pueden tener su propia configuración personalizada.
+    </div>
+
+    <h3>Gestión de los criterios</h3>
+    <ul>
+      <li><strong>Añadir criterio</strong>: introduce la clave interna (sin espacios, p.ej. <code>creatividad</code>), la etiqueta visible (p.ej. "Creatividad") y el peso relativo.</li>
+      <li><strong>Reordenar</strong>: arrastra los criterios para cambiar el orden de presentación a los alumnos.</li>
+      <li><strong>Peso</strong>: valor entero (≥ 1). Un criterio con peso 2 cuenta el doble en la nota global ponderada.</li>
+      <li><strong>Eliminar</strong>: botón de papelera junto a cada criterio.</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>⚠️ La clave (Key) debe ser única</strong> dentro del conjunto de criterios y no puede contener espacios. Es un identificador interno; la etiqueta es el texto visible a los alumnos.
+    </div>
+  </section>
+
   <section class="section" id="backup">
-    <h2 class="section-title">4. Copias de seguridad</h2>
+    <h2 class="section-title">6. Copias de seguridad</h2>
     <h3>Exportar copia de seguridad (ZIP)</h3>
     <p>El sistema genera un fichero ZIP que incluye:</p>
     <ul>
@@ -145,12 +195,12 @@
   </section>
 
   <section class="section" id="estadisticas">
-    <h2 class="section-title">5. Estadísticas globales</h2>
+    <h2 class="section-title">7. Estadísticas globales</h2>
     <p>Muestra indicadores agregados de todo el sistema: total de profesores, clases, alumnos, módulos y actividades; actividades abiertas y cerradas; tasa de participación global.</p>
   </section>
 
   <section class="section" id="sistema">
-    <h2 class="section-title">6. Sistema</h2>
+    <h2 class="section-title">8. Sistema</h2>
     <h3>Nivel de log en caliente</h3>
     <p>Cambia el nivel de detalle de los registros sin reiniciar ningún servicio:</p>
     <table>
@@ -173,7 +223,7 @@
   </section>
 
   <section class="section" id="auditoria">
-    <h2 class="section-title">7. Auditoría</h2>
+    <h2 class="section-title">9. Auditoría</h2>
     <p>Registro de todas las acciones de administración realizadas en el sistema.</p>
     <table>
       <tr><th>Campo</th><th>Descripción</th></tr>
@@ -189,7 +239,7 @@
   </section>
 
   <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
-    AutoCo v2.5.23 · Salesians de Sarrià, Departament d'Informàtica · 2026
+    AutoCo v2.6.5 · Salesians de Sarrià, Departament d'Informàtica · 2026
   </footer>
 
 </div>
