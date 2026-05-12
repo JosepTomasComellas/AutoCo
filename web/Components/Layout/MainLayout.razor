@@ -40,13 +40,14 @@
                 @if (UserState.IsProfessor)
                 {
                     <!-- Campana de notificacions -->
-                    <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                    <MudMenu @ref="_notifMenu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
                              Dense="true" MaxHeight="400">
                         <ActivatorContent>
                             <MudBadge Content="@(_notifs.Count > 0 ? (object)_notifs.Count : null)"
                                       Color="Color.Error" Overlap="true" Dot="@(_notifs.Count == 0)">
                                 <MudIconButton Icon="@Icons.Material.Filled.Notifications"
-                                               Color="Color.Inherit" title="@Loc["Nav_Notifications"]" />
+                                               Color="Color.Inherit" title="@Loc["Nav_Notifications"]"
+                                               OnClick="OpenNotifMenuAsync" />
                             </MudBadge>
                         </ActivatorContent>
                         <ChildContent>
@@ -79,10 +80,11 @@
                     @if (UserState.IsAdmin)
                     {
                         <!-- Menú d'administració -->
-                        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                        <MudMenu @ref="_adminMenu" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
                             <ActivatorContent>
                                 <MudIconButton Icon="@Icons.Material.Filled.AdminPanelSettings"
-                                               Color="Color.Inherit" title="@Loc["Nav_AdminMenu"]" />
+                                               Color="Color.Inherit" title="@Loc["Nav_AdminMenu"]"
+                                               OnClick="OpenAdminMenuAsync" />
                             </ActivatorContent>
                             <ChildContent>
                                 <MudMenuItem Href="/admin/professors" Icon="@Icons.Material.Filled.People">
@@ -217,6 +219,10 @@
     private bool   _sessionChecked = false;
     private bool   _darkMode       = false;
     private string _primaryColor   = "#CC0000";
+
+    // Refs dels menús desplegables
+    private MudMenu? _notifMenu;
+    private MudMenu? _adminMenu;
 
     // Notificacions in-app
     private List<NotificationDto> _notifs = [];
@@ -445,4 +451,10 @@
         await Api.ClearNotificationsAsync();
         _notifs.Clear();
     }
+
+    private Task OpenNotifMenuAsync(MouseEventArgs e)
+        => _notifMenu?.OpenMenuAsync(e, false) ?? Task.CompletedTask;
+
+    private Task OpenAdminMenuAsync(MouseEventArgs e)
+        => _adminMenu?.OpenMenuAsync(e, false) ?? Task.CompletedTask;
 }
