@@ -3,14 +3,15 @@
 @inject NavigationManager Nav
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 
-<PageTitle>Restablir contrasenya – AutoCo</PageTitle>
+<PageTitle>@Loc["Reset_Title"] – @Branding.AppName</PageTitle>
 
 <div style="min-height:80vh;display:flex;align-items:center;justify-content:center">
     <MudContainer MaxWidth="MaxWidth.ExtraSmall">
         <MudPaper Elevation="4" Style="overflow:hidden;border-radius:12px">
 
-            <div style="background:#1e293b;padding:1.5rem 2rem;display:flex;align-items:center;gap:1rem">
+            <div style="@($"background:{Branding.NavColor};padding:1.5rem 2rem;display:flex;align-items:center;gap:1rem")">
                 <MudIcon Icon="@Icons.Material.Filled.LockReset"
                          Style="color:rgba(255,255,255,.9);font-size:2rem;flex-shrink:0" />
                 <MudStack Spacing="0">

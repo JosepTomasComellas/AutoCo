@@ -4,9 +4,10 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 @using AutoCo.Shared
 
-<PageTitle>Informe activitat – AutoCo</PageTitle>
+<PageTitle>Informe activitat – @Branding.AppName</PageTitle>
 @if (!UserState.IsProfessor) { Nav.NavigateTo("/"); return; }
 
 <!-- Barra d'acció (s'oculta en imprimir) -->
@@ -62,7 +63,7 @@ else
         <!-- ── Capçalera ──────────────────────────────────────────────────── -->
         <div class="informe-header">
             <div class="informe-logo-area">
-                <img src="/images/logo2.png" height="40" alt="AutoCo" />
+                <img src="@Branding.LogoUrl" height="40" alt="@Branding.AppShortName" />
             </div>
             <div class="informe-titol-area">
                 <div class="informe-titol">@Loc["InformeAct_Title"]</div>

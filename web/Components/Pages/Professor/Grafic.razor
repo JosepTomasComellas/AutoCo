@@ -4,6 +4,7 @@
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject IStringLocalizer<SharedResources> Loc
+@inject AutoCo.Web.Services.BrandingService Branding
 @implements IAsyncDisposable
 
 <PageTitle>Gràfic – AutoCo</PageTitle>
@@ -154,8 +155,8 @@ else
             await JS.InvokeVoidAsync("autocoCharts.renderBar", "chart-groups",
                 groupLabels,
                 new[] {
-                    new { label = Loc["Chart_AutoEvalLabel"].Value, data = autoData, color = "#CC0000" },
-                    new { label = Loc["Chart_CoEvalLabel"].Value,   data = coData,   color = "#1e293b" }
+                    new { label = Loc["Chart_AutoEvalLabel"].Value, data = autoData, color = Branding.PrimaryColor },
+                    new { label = Loc["Chart_CoEvalLabel"].Value,   data = coData,   color = Branding.NavColor }
                 });
 
             // Gràfic per criteri

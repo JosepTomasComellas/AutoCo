@@ -5,6 +5,7 @@
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
 @inject IDialogService Dialog
+@inject AutoCo.Web.Services.BrandingService Branding
 @implements IAsyncDisposable
 
 <PageTitle>Estadístiques d'ús – AutoCo</PageTitle>
@@ -197,7 +198,7 @@ else
                 new[]
                 {
                     new { label = "Accessos professors", data = loginData,    color = "#1d4ed8" },
-                    new { label = "Activitats creades",  data = activityData, color = "#CC0000" }
+                    new { label = "Activitats creades",  data = activityData, color = Branding.PrimaryColor }
                 });
 
             _chartDrawn = true;

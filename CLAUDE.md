@@ -90,8 +90,10 @@ Per a producció real, canviar:
 - `I18N_PATH` — ruta als fitxers JSON de traducció (per defecte `/app/i18n`, muntat via volum `./config/i18n`)
 - `BRAND_APP_NAME` / `BRAND_APP_SHORT_NAME` — nom de l'app al títol i manifest PWA
 - `BRAND_ORG_NAME` / `BRAND_ORG_DEPT` — textos del peu de pàgina
-- `BRAND_PRIMARY_COLOR` / `BRAND_NAV_COLOR` — colors principals de la UI
+- `BRAND_PRIMARY_COLOR` / `BRAND_NAV_COLOR` — colors principals de la UI; `BrandingService` calcula automàticament `PrimaryColorDark` i `NavColorDark` (DarkenHex)
 - Logo: fitxer `./config/branding/logo.png` → muntat a `/app/wwwroot/branding/logo.png`; `BrandingService` detecta si existeix
+- Imatge de fons: fitxer `./config/branding/background.png` (o `.jpg`) → muntat a `/app/wwwroot/branding/`; `BgImageCssValue` retorna `url(...)` per usar a CSS
+- `App.razor` injecta CSS custom properties al `<head>` (`:root { --brand-primary, --brand-primary-dk, --brand-nav, --brand-nav-dk, --brand-bg-image }`) via `<style>` DESPRÉS del `<link site.css>` per sobreescriure; cal `(MarkupString)` per evitar encoding HTML de `url(...)`
 
 ## Model de dades
 

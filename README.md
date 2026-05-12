@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.8
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.14
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -388,6 +388,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.14
+- **Branding complet** — cobertura completa de les variables `BRAND_*` per tota la interfície: imatge de fons configurable (fitxer `background.png` o `background.jpg` a `./config/branding/`); pàgines d'autenticació (login professor, login alumne, restabliment de contrasenya) amb `NavColor` dinàmic; informes PDF (`InformeAlumne`, `InformeActivitat`) amb logo i colors de marca; gràfics (`Grafic.razor`, `Estadistiques.razor`) amb colors de branding; `App.razor` injecta CSS custom properties (`:root { --brand-primary, --brand-nav, --brand-bg-image... }`) al `<head>` per propagar el branding a tot el CSS; `site.css` usa les variables en comptes de colors codificats; `BrandingService` ampliada amb `PrimaryColorDark`, `NavColorDark` i `BgImageCssValue`
 
 ### v2.6.13
 - **Selector d'idioma dinàmic** — el menú de llengua ara llegeix `RequestLocalizationOptions.SupportedUICultures` i mostra automàticament tots els idiomes disponibles, incloent els carregats des de `config/i18n/`; usa `CultureInfo.NativeName` per al text (català, español, français…); s'amaga si només hi ha un idioma
