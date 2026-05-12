@@ -381,6 +381,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 
 ## Changelog
 
+### v2.6.11
+- **Fix crash loop i18n** — `DictionaryLocalizer` valida cada nom de fitxer amb `CultureInfo.GetCultureInfo` abans de carregar-lo; fitxers d'exemple com `ca.override.example.json` ja no provoquen `CultureNotFoundException` a l'arrencada
+
 ### v2.6.10
 - **Traduccions externes sense recompilar** — `DictionaryLocalizer` carrega fitxers `*.json` de `/app/i18n` (muntat via `./config/i18n`); fitxer per a idioma conegut (`ca.json`, `es.json`) fa override parcial; fitxer d'idioma nou (`fr.json`...) s'afegeix automàticament a `supportedCultures`; fallback al català per claus absents. Fitxers d'exemple inclosos a `config/i18n/`
 
