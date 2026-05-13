@@ -192,6 +192,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         try
         {
             // Esborrar en ordre de dependències FK
+            await db.ActivityLogs.ExecuteDeleteAsync();   // no té FK — cal esborrar explícitament
             await db.EvaluationScores.ExecuteDeleteAsync();
             await db.Evaluations.ExecuteDeleteAsync();
             await db.ProfessorNotes.ExecuteDeleteAsync();
