@@ -321,15 +321,28 @@
 
         UserState.OnSessionExpired += HandleSessionExpired;
         UserState.OnChange         += HandleUserStateChanged;
+        Presence.OnKicked          += HandleKickedAsync;
     }
 
     public async ValueTask DisposeAsync()
     {
         UserState.OnSessionExpired -= HandleSessionExpired;
         UserState.OnChange         -= HandleUserStateChanged;
+        Presence.OnKicked          -= HandleKickedAsync;
         if (_notifHandler is not null && UserState.UserId.HasValue)
             NotifBroadcast.Unsubscribe(UserState.UserId.Value, _notifHandler);
         await Presence.DisposeAsync();
+    }
+
+    private async Task HandleKickedAsync()
+    {
+        await InvokeAsync(async () =>
+        {
+            try { await Api.LogoutAsync(); } catch { }
+            try { await LocalStorage.DeleteAsync("autoco_session"); } catch { }
+            UserState.Logout();
+            Nav.NavigateTo("/", forceLoad: true);
+        });
     }
 
     private void HandleUserStateChanged()

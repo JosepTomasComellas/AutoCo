@@ -316,6 +316,11 @@ else
             }
         }
 
+        // Envia senyal de kick al circuit concret (força logout al navegador)
+        if (u.CircuitId is not null)
+            await Redis.GetSubscriber().PublishAsync(
+                RedisChannel.Literal($"autoco:kick:{u.CircuitId}"), "kick");
+
         Snackbar.Add($"Sessió de «{u.DisplayName}» tancada.", Severity.Info);
         await LoadAsync(showSpinner: false);
         StateHasChanged();
