@@ -336,13 +336,17 @@
 
     private async Task HandleKickedAsync()
     {
-        await InvokeAsync(async () =>
+        try
         {
-            try { await Api.LogoutAsync(); } catch { }
-            try { await LocalStorage.DeleteAsync("autoco_session"); } catch { }
-            UserState.Logout();
-            Nav.NavigateTo("/", forceLoad: true);
-        });
+            await InvokeAsync(async () =>
+            {
+                try { await Api.LogoutAsync(); } catch { }
+                try { await LocalStorage.DeleteAsync("autoco_session"); } catch { }
+                UserState.Logout();
+                try { Nav.NavigateTo("/", forceLoad: false); } catch { }
+            });
+        }
+        catch { }
     }
 
     private void HandleUserStateChanged()
