@@ -498,13 +498,51 @@ app.MapDelete("/api/professors/{id:int}", async (int id, IProfessorService svc,
     }
 }).RequireAuthorization();
 
+app.MapPost("/api/professors/{id:int}/toggle-disabled", async (int id, AppDbContext db,
+    ClaimsPrincipal user, StackExchange.Redis.IConnectionMultiplexer redis,
+    IDistributedCache cache) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    var target = await db.Professors.FindAsync(id);
+    if (target is null) return Results.NotFound();
+    if (target.IsAdmin) return Results.BadRequest(new { error = "No es pot deshabilitar un administrador." });
+
+    target.IsDisabled = !target.IsDisabled;
+    await db.SaveChangesAsync();
+
+    if (target.IsDisabled)
+    {
+        // Invalida tots els refresh tokens actius del professor
+        var redisDb = redis.GetDatabase();
+        var server  = redis.GetServer(redis.GetEndPoints()[0]);
+        var keys    = server.Keys(pattern: $"autoco:refresh:*");
+        foreach (var key in keys)
+        {
+            var val = await redisDb.StringGetAsync(key);
+            if (val.HasValue && val.ToString().StartsWith($"{id}:"))
+                await redisDb.KeyDeleteAsync(key);
+        }
+        // Invalida sessions online actives del professor
+        var onlineKeys = server.Keys(pattern: $"autoco:online:prof:{id}:*");
+        foreach (var key in onlineKeys)
+            await redisDb.KeyDeleteAsync(key);
+    }
+
+    await AuditAsync(db, target.IsDisabled ? "professor.disabled" : "professor.enabled",
+        GetUserId(user), user.FindFirstValue(ClaimTypes.Name),
+        $"Id:{target.Id} Email:{target.Email}");
+
+    return Results.Ok(target.IsDisabled);
+}).RequireAuthorization();
+
 app.MapGet("/api/professors/me", async (AppDbContext db, ClaimsPrincipal user) =>
 {
     if (!IsProfessor(user)) return Results.Forbid();
     var prof = await db.Professors.FindAsync(GetUserId(user));
     if (prof is null) return Results.NotFound();
     return Results.Ok(new ProfessorDto(prof.Id, prof.Email, prof.Nom, prof.Cognoms,
-        prof.NomComplet, prof.IsAdmin, prof.CreatedAt, IsGestor: prof.IsGestor));
+        prof.NomComplet, prof.IsAdmin, prof.CreatedAt, IsGestor: prof.IsGestor,
+        IsDisabled: prof.IsDisabled));
 }).RequireAuthorization();
 
 app.MapPut("/api/professors/me", async (UpdateOwnProfileRequest req, AppDbContext db, ClaimsPrincipal user) =>
@@ -528,7 +566,8 @@ app.MapPut("/api/professors/me", async (UpdateOwnProfileRequest req, AppDbContex
     prof.Cognoms = req.Cognoms.Trim();
     await db.SaveChangesAsync();
     return Results.Ok(new ProfessorDto(prof.Id, prof.Email, prof.Nom, prof.Cognoms,
-        prof.NomComplet, prof.IsAdmin, prof.CreatedAt, IsGestor: prof.IsGestor));
+        prof.NomComplet, prof.IsAdmin, prof.CreatedAt, IsGestor: prof.IsGestor,
+        IsDisabled: prof.IsDisabled));
 }).RequireAuthorization();
 
 app.MapPost("/api/professors/{professorId:int}/send-credentials", async (

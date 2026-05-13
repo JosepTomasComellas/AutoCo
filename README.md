@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.25
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.26
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -202,6 +202,10 @@ AdminAuditLog    (registre d'accions sensibles, sense FK)
 ---
 
 ## Changelog
+
+### v2.6.26
+- **Kick de sessió** (`/admin/connexions`): botó per tancar qualsevol sessió activa (esborra clau Redis online + invalida refresh tokens del professor); no es pot expulsar la sessió pròpia
+- **Deshabilitar compte de professor** (`/admin/professors`): toggle per bloquejar/desbloquejar l'accés d'un professor (camp `IsDisabled` a la BD); bloqueja login i renovació de token JWT; esborra sessions online i refresh tokens actius; no aplicable a administradors
 
 ### v2.6.25
 - **Connexions actives — millores**: IP real del client (fix `X-Forwarded-For` per xarxa Docker), múltiples sessions del mateix usuari com a entrades separades (clau Redis per `circuitId`), comptadors «N sessions · M usuaris», badge «Multi-sessió», botó de refresc manual; fix heartbeat per a sessions iniciades sense localStorage previ

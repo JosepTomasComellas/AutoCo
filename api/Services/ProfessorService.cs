@@ -40,7 +40,8 @@ public class ProfessorService(AppDbContext db, IEmailService email, IPhotoServic
             Nom          = req.Nom.Trim(),
             Cognoms      = req.Cognoms.Trim(),
             IsAdmin      = req.IsAdmin,
-            IsGestor     = req.IsGestor
+            IsGestor     = req.IsGestor,
+            IsDisabled   = req.IsDisabled
         };
         db.Professors.Add(professor);
         await db.SaveChangesAsync();
@@ -55,8 +56,9 @@ public class ProfessorService(AppDbContext db, IEmailService email, IPhotoServic
         professor.Email   = req.Email.Trim().ToLower();
         professor.Nom     = req.Nom.Trim();
         professor.Cognoms = req.Cognoms.Trim();
-        professor.IsAdmin  = req.IsAdmin;
-        professor.IsGestor = req.IsGestor;
+        professor.IsAdmin    = req.IsAdmin;
+        professor.IsGestor   = req.IsGestor;
+        professor.IsDisabled = req.IsDisabled;
 
         if (!string.IsNullOrWhiteSpace(req.NewPassword))
             professor.PasswordHash = PasswordHelper.Hash(req.NewPassword);
@@ -117,6 +119,6 @@ public class ProfessorService(AppDbContext db, IEmailService email, IPhotoServic
 
     private ProfessorDto ToDto(Professor p) => new(
         p.Id, p.Email, p.Nom, p.Cognoms, p.NomComplet, p.IsAdmin, p.CreatedAt,
-        photos.GetProfessorFotoUrl(p.Id), p.IsGestor);
+        photos.GetProfessorFotoUrl(p.Id), p.IsGestor, p.IsDisabled);
 
 }

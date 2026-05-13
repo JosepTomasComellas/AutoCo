@@ -5,12 +5,14 @@ namespace AutoCo.Web.Services;
 
 public record OnlineUserSnapshot(
     int Id, string DisplayName, string Role, string? PhotoUrl,
-    int? ClassId, string? ClassName, long ConnectedAt, string? IpAddress = null);
+    int? ClassId, string? ClassName, long ConnectedAt,
+    string? IpAddress = null, string? CircuitId = null);
 
 public sealed class OnlinePresenceService(IConnectionMultiplexer redis) : IAsyncDisposable
 {
     private readonly IDatabase _db       = redis.GetDatabase();
     private readonly string    _circuitId = Guid.NewGuid().ToString("N")[..8];
+    public  string CircuitId => _circuitId;
     private Timer?   _timer;
     private string?  _key;
 
@@ -22,7 +24,7 @@ public sealed class OnlinePresenceService(IConnectionMultiplexer redis) : IAsync
         _key = $"autoco:online:{prefix}:{id}:{_circuitId}";
         var json = JsonSerializer.Serialize(new OnlineUserSnapshot(
             id, displayName, role, photoUrl, classId, className,
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), ipAddress));
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), ipAddress, _circuitId));
         _ = _db.StringSetAsync(_key, json, TimeSpan.FromSeconds(30));
         _timer = new Timer(
             state => { _ = _db.StringSetAsync(_key!, json, TimeSpan.FromSeconds(30)); },

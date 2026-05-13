@@ -30,6 +30,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
             .FirstOrDefaultAsync(p => p.Email == req.Email.Trim().ToLower());
         if (professor is null || !PasswordHelper.Verify(req.Password, professor.PasswordHash))
             return null;
+        if (professor.IsDisabled) return null;
 
         db.ProfessorLogins.Add(new AutoCo.Api.Data.Models.ProfessorLogin { ProfessorId = professor.Id });
         await db.SaveChangesAsync();
@@ -72,7 +73,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
         if (role is "Professor" or "Admin")
         {
             var prof = await db.Professors.FindAsync(id);
-            if (prof is null) { await cache.RemoveAsync($"autoco:refresh:{refreshToken}"); return null; }
+            if (prof is null || prof.IsDisabled) { await cache.RemoveAsync($"autoco:refresh:{refreshToken}"); return null; }
             role      = prof.IsAdmin ? "Admin" : prof.IsGestor ? "Gestor" : "Professor";
             nomComplet = prof.NomComplet;
             fotoUrl    = photos.GetProfessorFotoUrl(prof.Id);

@@ -93,7 +93,7 @@
         <MudStack Spacing="2">
             @foreach (var p in _professors)
             {
-                <MudCard Elevation="1" Style="@(p.IsAdmin ? "border-left:3px solid var(--mud-palette-warning)" : p.IsGestor ? "border-left:3px solid var(--mud-palette-info)" : "border-left:3px solid var(--mud-palette-divider)")">
+                <MudCard Elevation="1" Style="@(p.IsDisabled ? "border-left:3px solid var(--mud-palette-error);opacity:.65" : p.IsAdmin ? "border-left:3px solid var(--mud-palette-warning)" : p.IsGestor ? "border-left:3px solid var(--mud-palette-info)" : "border-left:3px solid var(--mud-palette-divider)")">
                     <MudExpansionPanel>
                         <TitleContent>
                             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Style="width:100%">
@@ -124,6 +124,11 @@
                                             <MudChip T="string" Size="Size.Small" Color="Color.Info"
                                                      Variant="Variant.Filled" Style="height:20px">Gestor</MudChip>
                                         }
+                                        @if (p.IsDisabled)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Error"
+                                                     Variant="Variant.Filled" Style="height:20px">@Loc["Profs_Disabled"]</MudChip>
+                                        }
                                     </MudStack>
                                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
                                         <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -138,6 +143,14 @@
                                                    Size="Size.Small" Color="Color.Secondary"
                                                    title="@Loc["Profs_SendCreds"]"
                                                    OnClick="() => SendCredentialsAsync(p)" />
+                                    @if (!p.IsAdmin)
+                                    {
+                                        <MudIconButton Icon="@(p.IsDisabled ? Icons.Material.Filled.LockOpen : Icons.Material.Filled.Lock)"
+                                                       Size="Size.Small"
+                                                       Color="@(p.IsDisabled ? Color.Success : Color.Warning)"
+                                                       title="@(p.IsDisabled ? Loc["Profs_Enable"].Value : Loc["Profs_Disable"].Value)"
+                                                       OnClick="() => ToggleDisabledAsync(p)" />
+                                    }
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                    Size="Size.Small" Color="Color.Error"
                                                    title="@Loc["Card_Delete"]"
@@ -311,6 +324,28 @@
         await Api.DeleteProfessorAsync(p.Id);
         _professors.RemoveAll(x => x.Id == p.Id);
         Snackbar.Add(Loc["Profs_Deleted"].Value, Severity.Info);
+    }
+
+    private async Task ToggleDisabledAsync(ProfessorDto p)
+    {
+        var action = p.IsDisabled ? Loc["Profs_Enable"].Value : Loc["Profs_Disable"].Value;
+        var confirm = await Dialog.ShowMessageBoxAsync(action,
+            p.IsDisabled ? Loc["Profs_EnableMsg", p.NomComplet].Value
+                         : Loc["Profs_DisableMsg", p.NomComplet].Value,
+            yesText: action, cancelText: Loc["Action_Cancel"].Value);
+        if (confirm != true) return;
+        Api.SetToken(UserState.Token!);
+        var result = await Api.ToggleProfessorDisabledAsync(p.Id);
+        if (result is not null)
+        {
+            var newDisabled = result.Value;
+            var idx = _professors.FindIndex(x => x.Id == p.Id);
+            if (idx >= 0)
+                _professors[idx] = p with { IsDisabled = newDisabled == true };
+            Snackbar.Add(newDisabled == true ? Loc["Profs_DisabledOk", p.NomComplet].Value
+                                            : Loc["Profs_EnabledOk",  p.NomComplet].Value, Severity.Info);
+        }
+        else Snackbar.Add(Loc["Error_Generic"].Value, Severity.Error);
     }
 
     private async Task OnProfessorSaved(ProfessorDto updated)

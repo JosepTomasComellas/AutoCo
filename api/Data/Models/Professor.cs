@@ -9,6 +9,7 @@ public class Professor
     public string  Cognoms      { get; set; } = null!;
     public bool    IsAdmin      { get; set; }
     public bool    IsGestor     { get; set; }
+    public bool    IsDisabled   { get; set; }
     public DateTime CreatedAt   { get; set; } = DateTime.UtcNow;
 
     public string NomComplet => $"{Nom} {Cognoms}";

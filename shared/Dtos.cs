@@ -18,19 +18,20 @@ public record LogoutRequest(string Token);
 // ─── Professors ──────────────────────────────────────────────────────────────
 public record ProfessorDto(
     int Id, string Email, string Nom, string Cognoms, string NomComplet,
-    bool IsAdmin, DateTime CreatedAt, string? FotoUrl = null, bool IsGestor = false);
+    bool IsAdmin, DateTime CreatedAt, string? FotoUrl = null, bool IsGestor = false,
+    bool IsDisabled = false);
 
 public record CreateProfessorRequest(
     [Required][MaxLength(200)][EmailAddress] string Email,
     [Required][MaxLength(100)] string Nom,
     [Required][MaxLength(200)] string Cognoms,
-    bool IsAdmin, bool IsGestor = false);
+    bool IsAdmin, bool IsGestor = false, bool IsDisabled = false);
 
 public record UpdateProfessorRequest(
     [Required][MaxLength(200)][EmailAddress] string Email,
     [Required][MaxLength(100)] string Nom,
     [Required][MaxLength(200)] string Cognoms,
-    bool IsAdmin, string? NewPassword, bool IsGestor = false);
+    bool IsAdmin, string? NewPassword, bool IsGestor = false, bool IsDisabled = false);
 
 public record SendCredentialsResult(bool Sent, string? Reason);
 public record SendAllResult(int Sent, int Skipped, List<string> Details);

@@ -324,6 +324,9 @@ public class ApiClient
     public Task<bool> DeleteProfessorAsync(int id) =>
         DeleteAsync($"/api/professors/{id}");
 
+    public Task<bool?> ToggleProfessorDisabledAsync(int id) =>
+        PostAsync<bool?>($"/api/professors/{id}/toggle-disabled", null);
+
     public Task<List<CriteriaDto>?> GetCriteriaAsync() =>
         GetAsync<List<CriteriaDto>>("/api/criteria");
 

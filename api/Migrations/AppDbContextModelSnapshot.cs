@@ -447,6 +447,9 @@ namespace AutoCo.Api.Migrations
                     b.Property<bool>("IsGestor")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsDisabled")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Nom")
                         .IsRequired()
                         .HasMaxLength(100)

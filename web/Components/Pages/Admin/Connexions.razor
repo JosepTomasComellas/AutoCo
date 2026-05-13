@@ -3,6 +3,9 @@
 @inject IConnectionMultiplexer Redis
 @inject UserStateService UserState
 @inject NavigationManager Nav
+@inject IDialogService Dialog
+@inject ISnackbar Snackbar
+@inject AutoCo.Web.Services.OnlinePresenceService Presence
 @inject AutoCo.Web.Services.BrandingService Branding
 @using System.Text.Json
 @using AutoCo.Web.Services
@@ -105,6 +108,7 @@ else
     private bool   _refreshing          = false;
     private int    _secondsSinceRefresh = 0;
     private Timer? _timer;
+    private string _ownCircuitId        => Presence.CircuitId;
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,6 +182,7 @@ else
 
     private RenderFragment UserCard(OnlineUserSnapshot u) => __builder =>
     {
+        var isSelf = u.CircuitId is not null && u.CircuitId == _ownCircuitId;
         <MudCard Elevation="1">
             <MudCardContent>
                 <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
@@ -219,8 +224,20 @@ else
                                     Multi-sessió
                                 </MudChip>
                             }
+                            @if (isSelf)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Success">Tu</MudChip>
+                            }
                         </MudStack>
                     </MudStack>
+                    @if (!isSelf && UserState.IsAdmin)
+                    {
+                        <MudTooltip Text="Tancar sessió">
+                            <MudIconButton Icon="@Icons.Material.Filled.ExitToApp"
+                                           Size="Size.Small" Color="Color.Error"
+                                           OnClick="() => KickAsync(u)" />
+                        </MudTooltip>
+                    }
                 </MudStack>
             </MudCardContent>
         </MudCard>
@@ -267,6 +284,41 @@ else
         return parts.Length >= 2
             ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
             : name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+    }
+
+    private async Task KickAsync(OnlineUserSnapshot u)
+    {
+        var confirm = await Dialog.ShowMessageBoxAsync("Tancar sessió",
+            $"Tancar la sessió de «{u.DisplayName}»?",
+            yesText: "Tancar sessió", cancelText: "Cancel·lar");
+        if (confirm != true) return;
+
+        var redisDb = Redis.GetDatabase();
+        var server  = Redis.GetServer(Redis.GetEndPoints().First());
+
+        // Elimina la clau online de la sessió concreta
+        if (u.CircuitId is not null)
+        {
+            var prefix  = u.Role == "Student" ? "stu" : "prof";
+            var onlineKey = $"autoco:online:{prefix}:{u.Id}:{u.CircuitId}";
+            await redisDb.KeyDeleteAsync(onlineKey);
+        }
+
+        // Invalida els refresh tokens de l'usuari (professor)
+        if (u.Role != "Student")
+        {
+            var refreshKeys = server.Keys(pattern: "autoco:refresh:*");
+            foreach (var key in refreshKeys)
+            {
+                var val = await redisDb.StringGetAsync(key);
+                if (val.HasValue && val.ToString().StartsWith($"{u.Id}:"))
+                    await redisDb.KeyDeleteAsync(key);
+            }
+        }
+
+        Snackbar.Add($"Sessió de «{u.DisplayName}» tancada.", Severity.Info);
+        await LoadAsync(showSpinner: false);
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()

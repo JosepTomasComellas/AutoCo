@@ -468,6 +468,13 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Profs_Updated"]     = "Professor «{0}» actualitzat.",
         ["Profs_CreateError"] = "Error en crear el professor. Comprova que el correu no estigui duplicat.",
         ["Profs_FieldsRequired"] = "Correu, Nom i Cognoms són obligatoris.",
+        ["Profs_Disabled"]    = "Deshabilitat",
+        ["Profs_Disable"]     = "Deshabilitar",
+        ["Profs_Enable"]      = "Habilitar",
+        ["Profs_DisableMsg"]  = "Deshabilitar el compte de «{0}»? No podrà iniciar sessió.",
+        ["Profs_EnableMsg"]   = "Habilitar el compte de «{0}»? Tornarà a poder iniciar sessió.",
+        ["Profs_DisabledOk"]  = "Compte de «{0}» deshabilitat.",
+        ["Profs_EnabledOk"]   = "Compte de «{0}» habilitat.",
 
         // ── Admin: Backup ─────────────────────────────────────────────────────
         ["Backup_Title"]          = "Còpies de seguretat",
@@ -1296,6 +1303,13 @@ public sealed class DictionaryLocalizer : IStringLocalizer<SharedResources>
         ["Profs_Updated"]     = "Profesor «{0}» actualizado.",
         ["Profs_CreateError"] = "Error al crear el profesor. Comprueba que el correo no esté duplicado.",
         ["Profs_FieldsRequired"] = "Correo, Nombre y Apellidos son obligatorios.",
+        ["Profs_Disabled"]    = "Deshabilitado",
+        ["Profs_Disable"]     = "Deshabilitar",
+        ["Profs_Enable"]      = "Habilitar",
+        ["Profs_DisableMsg"]  = "¿Deshabilitar la cuenta de «{0}»? No podrá iniciar sesión.",
+        ["Profs_EnableMsg"]   = "¿Habilitar la cuenta de «{0}»? Podrá volver a iniciar sesión.",
+        ["Profs_DisabledOk"]  = "Cuenta de «{0}» deshabilitada.",
+        ["Profs_EnabledOk"]   = "Cuenta de «{0}» habilitada.",
 
         // ── Admin: Backup ─────────────────────────────────────────────────────
         ["Backup_Title"]          = "Copias de seguridad",
