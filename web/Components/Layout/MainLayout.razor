@@ -313,14 +313,24 @@
             }
         };
         UserState.OnSessionExpired += HandleSessionExpired;
+        UserState.OnChange         += HandleUserStateChanged;
     }
 
     public async ValueTask DisposeAsync()
     {
         UserState.OnSessionExpired -= HandleSessionExpired;
+        UserState.OnChange         -= HandleUserStateChanged;
         if (_notifHandler is not null && UserState.UserId.HasValue)
             NotifBroadcast.Unsubscribe(UserState.UserId.Value, _notifHandler);
         await Presence.DisposeAsync();
+    }
+
+    private void HandleUserStateChanged()
+    {
+        if (UserState.IsLoggedIn && UserState.UserId.HasValue)
+            Presence.Start(UserState.UserId.Value, UserState.NomComplet ?? "",
+                UserState.Role ?? "Professor", UserState.FotoUrl,
+                UserState.ClassId, UserState.ClassName);
     }
 
     private async void HandleSessionExpired()
