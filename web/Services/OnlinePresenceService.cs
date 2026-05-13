@@ -22,9 +22,9 @@ public sealed class OnlinePresenceService(IConnectionMultiplexer redis) : IAsync
         var json = JsonSerializer.Serialize(new OnlineUserSnapshot(
             id, displayName, role, photoUrl, classId, className,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
-        _ = _db.StringSetAsync(_key, json, TimeSpan.FromSeconds(20));
+        _ = _db.StringSetAsync(_key, json, TimeSpan.FromSeconds(30));
         _timer = new Timer(
-            _ => _ = _db.StringSetAsync(_key, json, TimeSpan.FromSeconds(20)),
+            state => { _ = _db.StringSetAsync(_key!, json, TimeSpan.FromSeconds(30)); },
             null, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(10));
     }
 

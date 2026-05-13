@@ -16,11 +16,19 @@
     return;
 }
 
-<MudText Typo="Typo.h5" Class="mb-4">
-    <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Class="mr-2" Style="vertical-align:middle" />
-    Connexions actives
-    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">@_total</MudChip>
-</MudText>
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4" Wrap="Wrap.Wrap">
+    <MudText Typo="Typo.h5">
+        <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Class="mr-2" Style="vertical-align:middle" />
+        Connexions actives
+        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">@_total</MudChip>
+    </MudText>
+    <MudTooltip Text="Actualitzar ara">
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                       Color="Color.Primary" Variant="Variant.Outlined"
+                       OnClick="ManualRefreshAsync"
+                       Disabled="_refreshing" />
+    </MudTooltip>
+</MudStack>
 
 @if (_loading)
 {
@@ -73,7 +81,7 @@ else
 }
 
 <MudText Typo="Typo.caption" Color="Color.Tertiary" Class="mt-4 d-block">
-    Actualitzat fa @_secondsSinceRefresh s · S'actualitza cada 10 s · Lag màxim ~20 s
+    Actualitzat fa @_secondsSinceRefresh s · S'actualitza automàticament cada 10 s
 </MudText>
 
 @code {
@@ -82,27 +90,37 @@ else
     private Dictionary<string, List<OnlineUserSnapshot>> _studentsByClass = [];
     private int    _total               = 0;
     private bool   _loading             = true;
+    private bool   _refreshing          = false;
     private int    _secondsSinceRefresh = 0;
     private Timer? _timer;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadAsync();
-        _timer = new Timer(async _ =>
+        await LoadAsync(showSpinner: true);
+        _timer = new Timer(async state =>
         {
             _secondsSinceRefresh++;
             if (_secondsSinceRefresh >= 10)
             {
                 _secondsSinceRefresh = 0;
-                await LoadAsync();
+                await LoadAsync(showSpinner: false);
             }
             await InvokeAsync(StateHasChanged);
         }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
     }
 
-    private async Task LoadAsync()
+    private async Task ManualRefreshAsync()
     {
-        _loading = true;
+        _refreshing = true;
+        _secondsSinceRefresh = 0;
+        await LoadAsync(showSpinner: false);
+        _refreshing = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadAsync(bool showSpinner)
+    {
+        if (showSpinner) _loading = true;
         try
         {
             var server = Redis.GetServer(Redis.GetEndPoints().First());
