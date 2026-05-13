@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.23
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.24
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -202,6 +202,9 @@ AdminAuditLog    (registre d'accions sensibles, sense FK)
 ---
 
 ## Changelog
+
+### v2.6.24
+- **Connexions actives** (`/admin/connexions`): pantalla d'administració que mostra en temps real els usuaris connectats (heartbeat Redis 10 s / TTL 20 s), agrupats per rol (Admin/Gestor/Professor) i, per als alumnes, per classe; disponible per a Admin i Gestor
 
 ### v2.6.23
 - **MSSQL extern opcional**: `docker-compose.yml` base sense servei `db`; nou `docker-compose.db.yml` afegeix MSSQL intern; `COMPOSE_FILE` al `.env` activa el mode intern; `DB_CONNECTION` cadena de connexió explícita; `deploy/server-update.sh` auto-migra configuració anterior a v2.6.23

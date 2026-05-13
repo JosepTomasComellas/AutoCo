@@ -15,6 +15,8 @@ public class UserStateService
     public string? FotoUrl      { get; private set; }
     public string? RefreshToken { get; private set; }
     public int     FotoVersion  { get; private set; } = 0;
+    public int?    ClassId      { get; private set; }
+    public string? ClassName    { get; private set; }
 
     public bool IsLoggedIn       => Token is not null;
     public bool IsProfessor      => Role is "Professor" or "Admin" or "Gestor";
@@ -35,6 +37,8 @@ public class UserStateService
         UserId       = login.UserId;
         FotoUrl      = login.FotoUrl;
         RefreshToken = login.RefreshToken;
+        ClassId      = login.ClassId;
+        ClassName    = login.ClassName;
         OnChange?.Invoke();
     }
 
@@ -54,6 +58,8 @@ public class UserStateService
         FotoUrl      = null;
         RefreshToken = null;
         FotoVersion  = 0;
+        ClassId      = null;
+        ClassName    = null;
         OnChange?.Invoke();
     }
 

@@ -1,0 +1,225 @@
+@page "/admin/connexions"
+@implements IAsyncDisposable
+@inject IConnectionMultiplexer Redis
+@inject UserStateService UserState
+@inject NavigationManager Nav
+@inject AutoCo.Web.Services.BrandingService Branding
+@using System.Text.Json
+@using AutoCo.Web.Services
+@using StackExchange.Redis
+
+<PageTitle>Connexions actives — @Branding.AppName</PageTitle>
+
+@if (!UserState.IsAdminOrGestor)
+{
+    Nav.NavigateTo("/", forceLoad: false);
+    return;
+}
+
+<MudText Typo="Typo.h5" Class="mb-4">
+    <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Class="mr-2" Style="vertical-align:middle" />
+    Connexions actives
+    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">@_total</MudChip>
+</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+}
+else
+{
+    @if (_professors.Any())
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2">
+            <MudIcon Icon="@Icons.Material.Filled.School" Size="Size.Small" Class="mr-1" />
+            Professors (@_professors.Count)
+        </MudText>
+        <MudGrid Spacing="2" Class="mb-4">
+            @foreach (var u in _professors)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    @UserCard(u)
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    @if (_studentsByClass.Any())
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-2 mt-4">
+            <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Small" Class="mr-1" />
+            Alumnes (@_students.Count)
+        </MudText>
+        @foreach (var group in _studentsByClass.OrderBy(g => g.Key))
+        {
+            <MudText Typo="Typo.subtitle2" Class="mb-1 mt-3" Color="Color.Secondary">
+                @group.Key (@group.Value.Count)
+            </MudText>
+            <MudGrid Spacing="2" Class="mb-2">
+                @foreach (var u in group.Value)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        @UserCard(u)
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    }
+
+    @if (_total == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">No hi ha cap usuari connectat en aquest moment.</MudAlert>
+    }
+}
+
+<MudText Typo="Typo.caption" Color="Color.Tertiary" Class="mt-4 d-block">
+    Actualitzat fa @_secondsSinceRefresh s · S'actualitza cada 10 s · Lag màxim ~20 s
+</MudText>
+
+@code {
+    private List<OnlineUserSnapshot> _professors     = [];
+    private List<OnlineUserSnapshot> _students       = [];
+    private Dictionary<string, List<OnlineUserSnapshot>> _studentsByClass = [];
+    private int    _total               = 0;
+    private bool   _loading             = true;
+    private int    _secondsSinceRefresh = 0;
+    private Timer? _timer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+        _timer = new Timer(async _ =>
+        {
+            _secondsSinceRefresh++;
+            if (_secondsSinceRefresh >= 10)
+            {
+                _secondsSinceRefresh = 0;
+                await LoadAsync();
+            }
+            await InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try
+        {
+            var server = Redis.GetServer(Redis.GetEndPoints().First());
+            var keys   = server.Keys(pattern: "autoco:online:*").ToList();
+            var db     = Redis.GetDatabase();
+
+            var all = new List<OnlineUserSnapshot>();
+            foreach (var key in keys)
+            {
+                var val = await db.StringGetAsync(key);
+                if (val.IsNull) continue;
+                try
+                {
+                    var snap = JsonSerializer.Deserialize<OnlineUserSnapshot>(val.ToString());
+                    if (snap is not null) all.Add(snap);
+                }
+                catch { /* JSON invàlid, ignora */ }
+            }
+
+            _professors     = all.Where(u => u.Role != "Student")
+                                 .OrderBy(u => RoleOrder(u.Role))
+                                 .ThenBy(u => u.DisplayName)
+                                 .ToList();
+            _students       = all.Where(u => u.Role == "Student")
+                                 .OrderBy(u => u.ClassName)
+                                 .ThenBy(u => u.DisplayName)
+                                 .ToList();
+            _studentsByClass = _students
+                .GroupBy(u => u.ClassName ?? "Sense classe")
+                .ToDictionary(g => g.Key, g => g.ToList());
+            _total = all.Count;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private RenderFragment UserCard(OnlineUserSnapshot u) => __builder =>
+    {
+        <MudCard Elevation="1">
+            <MudCardContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                    <MudAvatar Size="Size.Medium">
+                        @if (u.PhotoUrl is not null)
+                        {
+                            <MudImage Src="@u.PhotoUrl" Style="width:100%;height:100%;object-fit:cover" />
+                        }
+                        else
+                        {
+                            @Initials(u.DisplayName)
+                        }
+                    </MudAvatar>
+                    <MudStack Spacing="0" Style="min-width:0;flex:1">
+                        <MudText Typo="Typo.body2"
+                                 Style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                            @u.DisplayName
+                        </MudText>
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            <MudChip T="string" Size="Size.Small" Color="@RoleColor(u.Role)">
+                                @RoleLabel(u.Role)
+                            </MudChip>
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary">
+                                @RelativeTime(u.ConnectedAt)
+                            </MudText>
+                        </MudStack>
+                    </MudStack>
+                </MudStack>
+            </MudCardContent>
+        </MudCard>
+    };
+
+    private static int RoleOrder(string role) => role switch
+    {
+        "Admin"     => 0,
+        "Gestor"    => 1,
+        "Professor" => 2,
+        _           => 3
+    };
+
+    private static string RelativeTime(long connectedAt)
+    {
+        var elapsed = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - connectedAt;
+        if (elapsed < 60)   return "ara mateix";
+        if (elapsed < 3600) return $"fa {elapsed / 60} min";
+        var h = elapsed / 3600;
+        var m = (elapsed % 3600) / 60;
+        return m > 0 ? $"fa {h} h {m} min" : $"fa {h} h";
+    }
+
+    private static string RoleLabel(string role) => role switch
+    {
+        "Admin"     => "Admin",
+        "Gestor"    => "Gestor",
+        "Professor" => "Professor",
+        "Student"   => "Alumne",
+        _           => role
+    };
+
+    private static Color RoleColor(string role) => role switch
+    {
+        "Admin"     => Color.Error,
+        "Gestor"    => Color.Warning,
+        "Professor" => Color.Primary,
+        _           => Color.Default
+    };
+
+    private static string Initials(string name)
+    {
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length >= 2
+            ? $"{parts[0][0]}{parts[1][0]}".ToUpper()
+            : name.Length > 0 ? name[0].ToString().ToUpper() : "?";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_timer is not null) await _timer.DisposeAsync();
+    }
+}

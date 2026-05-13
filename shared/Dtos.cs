@@ -10,7 +10,8 @@ public record ProfessorLoginRequest(string Email, string Password);
 public record StudentLoginRequest(string Email, string Password);
 public record LoginResponse(
     string Token, string NomComplet, string Role, int UserId,
-    string? FotoUrl = null, string? RefreshToken = null);
+    string? FotoUrl = null, string? RefreshToken = null,
+    int? ClassId = null, string? ClassName = null);
 public record RefreshRequest(string Token);
 public record LogoutRequest(string Token);
 

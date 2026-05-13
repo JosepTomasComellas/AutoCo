@@ -90,6 +90,9 @@ builder.Services.AddHostedService<NotificationRedisSubscriber>();
 // Branding corporatiu (variables BRAND_* + logo via volum ./config/branding)
 builder.Services.AddSingleton<BrandingService>();
 
+// Presència online (heartbeat Redis 10s / TTL 20s) per a /admin/connexions
+builder.Services.AddScoped<OnlinePresenceService>();
+
 // HTTP client cap a l'API
 builder.Services.AddHttpClient<ApiClient>(client =>
 {

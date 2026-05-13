@@ -1,5 +1,5 @@
 @inherits LayoutComponentBase
-@implements IDisposable
+@implements IAsyncDisposable
 @inject UserStateService UserState
 @inject NavigationManager Nav
 @inject ProtectedLocalStorage LocalStorage
@@ -8,6 +8,7 @@
 @inject ApiClient Api
 @inject NotificationBroadcastService NotifBroadcast
 @inject AutoCo.Web.Services.BrandingService Branding
+@inject OnlinePresenceService Presence
 @inject IOptions<Microsoft.AspNetCore.Builder.RequestLocalizationOptions> LocalizationOptions
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
@@ -119,6 +120,9 @@
                                 }
                                 <MudMenuItem Href="/admin/auditoria" Icon="@Icons.Material.Filled.ManageSearch">
                                     @Loc["Dash_Audit"]
+                                </MudMenuItem>
+                                <MudMenuItem Href="/admin/connexions" Icon="@Icons.Material.Filled.PeopleAlt">
+                                    @Loc["Connexions_MenuLabel"]
                                 </MudMenuItem>
                             </ChildContent>
                         </MudMenu>
@@ -311,11 +315,12 @@
         UserState.OnSessionExpired += HandleSessionExpired;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         UserState.OnSessionExpired -= HandleSessionExpired;
         if (_notifHandler is not null && UserState.UserId.HasValue)
             NotifBroadcast.Unsubscribe(UserState.UserId.Value, _notifHandler);
+        await Presence.DisposeAsync();
     }
 
     private async void HandleSessionExpired()
@@ -403,6 +408,12 @@
 
         _sessionChecked = true;
 
+        // Iniciar heartbeat de presència online
+        if (UserState.IsLoggedIn && UserState.UserId.HasValue)
+            Presence.Start(UserState.UserId.Value, UserState.NomComplet ?? "",
+                UserState.Role ?? "Professor", UserState.FotoUrl,
+                UserState.ClassId, UserState.ClassName);
+
         // Carregar notificacions in-app si és professor
         if (UserState.IsProfessor && UserState.UserId.HasValue)
         {
@@ -462,6 +473,7 @@
 
     private async Task Logout()
     {
+        await Presence.StopAsync();
         try { await Api.LogoutAsync(); } catch { }
         try { await LocalStorage.DeleteAsync("autoco_session"); } catch { }
         UserState.Logout();

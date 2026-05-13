@@ -44,6 +44,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
     public async Task<LoginResponse?> StudentLoginAsync(StudentLoginRequest req)
     {
         var student = await db.Students
+            .Include(s => s.Class)
             .FirstOrDefaultAsync(s => s.Email == req.Email.Trim().ToLower());
         if (student is null || !PasswordHelper.Verify(req.Password, student.PasswordHash))
             return null;
@@ -52,7 +53,7 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
             new Claim("classId", student.ClassId.ToString()));
         var refreshToken = await StoreRefreshTokenAsync(student.Id, "Student");
         return new LoginResponse(jwt, student.NomComplet, "Student", student.Id,
-            null, refreshToken);
+            null, refreshToken, student.ClassId, student.Class?.Name);
     }
 
     public async Task<LoginResponse?> RefreshAsync(string refreshToken)
@@ -78,10 +79,15 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
         }
         else
         {
-            var student = await db.Students.FindAsync(id);
+            var student = await db.Students.Include(s => s.Class).FirstOrDefaultAsync(s => s.Id == id);
             if (student is null) { await cache.RemoveAsync($"autoco:refresh:{refreshToken}"); return null; }
             nomComplet = student.NomComplet;
             extra      = [new Claim("classId", student.ClassId.ToString())];
+            await cache.RemoveAsync($"autoco:refresh:{refreshToken}");
+            var newJwt2          = GenerateToken(id.ToString(), nomComplet, role, extra);
+            var newRefreshToken2 = await StoreRefreshTokenAsync(id, role);
+            return new LoginResponse(newJwt2, nomComplet, role, id, null, newRefreshToken2,
+                student.ClassId, student.Class?.Name);
         }
 
         // Rotació: invalida el token vell, emet token nou
