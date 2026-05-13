@@ -80,6 +80,7 @@
       <li><a href="#estadisticas">Estadísticas globales</a></li>
       <li><a href="#sistema">Sistema</a></li>
       <li><a href="#auditoria">Auditoría</a></li>
+      <li><a href="#connexions">Conexiones activas</a></li>
     </ol>
   </nav>
 
@@ -95,6 +96,7 @@
       <tr><td>📊 <strong>Estadísticas</strong></td><td>Estadísticas globales agregadas de todo el sistema</td></tr>
       <tr><td>⚙️ <strong>Sistema</strong></td><td>Configuración del sistema: nivel de log, renovación de curso</td></tr>
       <tr><td>🔍 <strong>Auditoría</strong></td><td>Registro de todas las acciones de administración</td></tr>
+      <tr><td>🟢 <strong>Conexiones activas</strong></td><td>Usuarios conectados en tiempo real: rol, IP de origen y sesiones múltiples</td></tr>
     </table>
   </section>
 
@@ -238,8 +240,44 @@
     </div>
   </section>
 
+  <!-- 10. CONEXIONES ACTIVAS -->
+  <section class="section" id="connexions">
+    <h2 class="section-title">10. Conexiones activas</h2>
+    <p>Accede desde el menú de administración → <strong>"Conexiones activas"</strong>. Disponible para administradores y gestores. Muestra en tiempo real todos los usuarios conectados a la aplicación.</p>
+
+    <h3>Información de cada conexión</h3>
+    <table>
+      <tr><th>Campo</th><th>Descripción</th></tr>
+      <tr><td><strong>Nombre</strong></td><td>Nombre completo del usuario conectado</td></tr>
+      <tr><td><strong>Rol</strong></td><td>Admin, Gestor, Profesor o Alumno (código de colores)</td></tr>
+      <tr><td><strong>Tiempo</strong></td><td>Tiempo transcurrido desde la conexión inicial ("ahora mismo", "hace X min"…)</td></tr>
+      <tr><td><strong>IP de origen</strong></td><td>Dirección IP del dispositivo cliente</td></tr>
+    </table>
+
+    <h3>Agrupación</h3>
+    <ul>
+      <li><strong>Profesores</strong>: Admins, Gestores y Profesores juntos, ordenados por rol y nombre.</li>
+      <li><strong>Alumnos</strong>: agrupados por clase, ordenados alfabéticamente.</li>
+    </ul>
+
+    <h3>Múltiples sesiones</h3>
+    <p>Si un mismo usuario tiene dos o más ventanas o pestañas abiertas, aparece una entrada por cada sesión (circuito Blazor). El contador de la cabecera muestra «<strong>N sesiones · M usuarios</strong>» cuando el número de sesiones supera el de usuarios únicos, y las tarjetas afectadas muestran el badge <span class="badge badge-purple">Multi-sesión</span>.</p>
+
+    <h3>Actualización automática</h3>
+    <ul>
+      <li>Cada navegador envía un <em>heartbeat</em> a Redis cada <strong>10 segundos</strong>; las sesiones desaparecidas se eliminan automáticamente a los 30 s.</li>
+      <li>La página se actualiza automáticamente cada <strong>10 s</strong>.</li>
+      <li>El botón <strong>↺ Actualizar ahora</strong> fuerza una recarga inmediata.</li>
+    </ul>
+
+    <div class="box box-info">
+      <strong>💡 Lag máximo ~30 s.</strong>
+      Un usuario que cierre el navegador sin hacer logout puede permanecer en la lista hasta 30 segundos.
+    </div>
+  </section>
+
   <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
-    AutoCo v2.6.5 · Salesians de Sarrià, Departament d'Informàtica · 2026
+    AutoCo v2.6.25 · Salesians de Sarrià, Departament d'Informàtica · 2026
   </footer>
 
 </div>

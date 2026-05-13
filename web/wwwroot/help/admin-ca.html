@@ -82,6 +82,7 @@
       <li><a href="#estadistiques">Estadístiques globals</a></li>
       <li><a href="#sistema">Sistema</a></li>
       <li><a href="#auditoria">Auditoria</a></li>
+      <li><a href="#connexions">Connexions actives</a></li>
     </ol>
   </nav>
 
@@ -98,6 +99,7 @@
       <tr><td>📊 <strong>Estadístiques</strong></td><td>Estadístiques globals agregades de tot el sistema</td></tr>
       <tr><td>⚙️ <strong>Sistema</strong></td><td>Configuració del sistema: nivell de log, renovació de curs</td></tr>
       <tr><td>🔍 <strong>Auditoria</strong></td><td>Registre de totes les accions d'administració</td></tr>
+      <tr><td>🟢 <strong>Connexions actives</strong></td><td>Usuaris connectats en temps real: rol, IP d'origen i sessions múltiples</td></tr>
     </table>
   </section>
 
@@ -293,8 +295,44 @@
     </div>
   </section>
 
+  <!-- 10. CONNEXIONS ACTIVES -->
+  <section class="section" id="connexions">
+    <h2 class="section-title">10. Connexions actives</h2>
+    <p>Accedeix des del menú d'administració → <strong>"Connexions actives"</strong>. Disponible per a administradors i gestors. Mostra en temps real tots els usuaris connectats a l'aplicació.</p>
+
+    <h3>Informació de cada connexió</h3>
+    <table>
+      <tr><th>Camp</th><th>Descripció</th></tr>
+      <tr><td><strong>Nom</strong></td><td>Nom complet de l'usuari connectat</td></tr>
+      <tr><td><strong>Rol</strong></td><td>Admin, Gestor, Professor o Alumne (codi de colors)</td></tr>
+      <tr><td><strong>Temps</strong></td><td>Temps transcorregut des de la connexió inicial ("ara mateix", "fa X min"…)</td></tr>
+      <tr><td><strong>IP d'origen</strong></td><td>Adreça IP del dispositiu client</td></tr>
+    </table>
+
+    <h3>Agrupació</h3>
+    <ul>
+      <li><strong>Professors</strong>: Admin, Gestors i Professors junts, ordenats per rol i nom.</li>
+      <li><strong>Alumnes</strong>: agrupats per classe, ordenats alfabèticament.</li>
+    </ul>
+
+    <h3>Múltiples sessions</h3>
+    <p>Si un mateix usuari té dues o més finestres o pestanyes obertes, apareix una entrada per a cada sessió (circuit Blazor). El comptador de la capçalera mostra «<strong>N sessions · M usuaris</strong>» quan el nombre de sessions supera el d'usuaris únics, i les targetes afectades mostren el badge <span class="badge badge-purple">Multi-sessió</span>.</p>
+
+    <h3>Actualització automàtica</h3>
+    <ul>
+      <li>Cada navegador envia un <em>heartbeat</em> a Redis cada <strong>10 segons</strong>; les sessions desaparegudes s'eliminen automàticament als 30 s.</li>
+      <li>La pàgina s'actualitza automàticament cada <strong>10 s</strong>.</li>
+      <li>El botó <strong>↺ Actualitzar ara</strong> força una recàrrega immediata.</li>
+    </ul>
+
+    <div class="box box-info">
+      <strong>💡 Lag màxim ~30 s.</strong>
+      Un usuari que tanqui el navegador sense fer logout pot romandre a la llista fins a 30 segons.
+    </div>
+  </section>
+
   <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
-    AutoCo v2.6.5 · Salesians de Sarrià, Departament d'Informàtica · 2026
+    AutoCo v2.6.25 · Salesians de Sarrià, Departament d'Informàtica · 2026
   </footer>
 
 </div>
