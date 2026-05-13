@@ -1,5 +1,6 @@
 using AutoCo.Web;
 using AutoCo.Web.Services;
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Localization;
@@ -95,6 +96,7 @@ builder.Services.AddSingleton<BrandingService>();
 
 // Presència online (heartbeat Redis 10s / TTL 20s) per a /admin/connexions
 builder.Services.AddScoped<OnlinePresenceService>();
+builder.Services.AddScoped<CircuitHandler, CircuitPresenceHandler>();
 
 // HTTP client cap a l'API
 builder.Services.AddHttpClient<ApiClient>(client =>
