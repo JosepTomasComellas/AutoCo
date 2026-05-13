@@ -3,64 +3,19 @@ networks:
     driver: bridge
 
 volumes:
-  db-data:      # Volum Docker per a SQL Server (NTFS via WSL2 no és compatible amb SQLPAL)
-  # pg-data:    # Descomenta si uses PostgreSQL en Docker (vegeu servei db-postgres més avall)
   redis-data:   # Volum per a Redis (persistència AOF)
   dp-keys:      # Claus de DataProtection del web (antiforgery, ProtectedLocalStorage)
   api-dp-keys:  # Claus de DataProtection de l'API
   api-backups:  # Còpies de seguretat JSON (exportació/importació)
   fotos-data:   # Fotos d'alumnes i professors (compartit entre api i web)
 
+# ── Base de dades ──────────────────────────────────────────────────────────────
+# Per MSSQL intern (Docker): afegeix al .env →  COMPOSE_FILE=docker-compose.yml:docker-compose.db.yml
+# Per MSSQL extern:          configura DB_CONNECTION al .env i no afegeixis COMPOSE_FILE.
+# Per PostgreSQL:            DB_PROVIDER=PostgreSQL + DB_CONNECTION=Host=...
+# Consulta .env.example per a exemples de connexió.
+
 services:
-
-  db:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: autoco-db
-    environment:
-      ACCEPT_EULA:        "Y"
-      MSSQL_SA_PASSWORD:  "${MSSQL_SA_PASSWORD}"
-      MSSQL_PID:          "Express"
-    expose:
-      - "1433"
-    volumes:
-      - db-data:/var/opt/mssql
-      - ./backups:/var/opt/mssql/backup   # Còpies de seguretat accessibles al sistema de fitxers
-    networks:
-      - autoco-net
-    healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd",
-             "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}",
-             "-Q", "SELECT 1", "-No"]
-      interval: 10s
-      timeout:  5s
-      retries:  12
-      start_period: 30s
-    restart: unless-stopped
-
-  # ── PostgreSQL (alternativa a MSSQL) ──────────────────────────────────────
-  # Per activar: descomenta aquest servei i el volum pg-data a dalt.
-  # A l'api, canvia DB_PROVIDER=PostgreSQL i la ConnectionString corresponent.
-  # Per a PostgreSQL EXTERN (fora del Docker), ignora aquest bloc i configura
-  # directament la ConnectionString al servei api.
-  #
-  # db-postgres:
-  #   image: postgres:16-alpine
-  #   container_name: autoco-db-postgres
-  #   environment:
-  #     POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
-  #     POSTGRES_DB:       "AutoCoAvaluacio"
-  #   expose:
-  #     - "5432"
-  #   volumes:
-  #     - pg-data:/var/lib/postgresql/data
-  #   networks:
-  #     - autoco-net
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
-  #     interval: 10s
-  #     timeout:  5s
-  #     retries:  10
-  #   restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -89,15 +44,7 @@ services:
       ASPNETCORE_ENVIRONMENT:          Production
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
       DB_PROVIDER:                     "${DB_PROVIDER:-SqlServer}"
-      # ── Connexió MSSQL (per defecte) ──────────────────────────────────────
-      ConnectionStrings__DefaultConnection: >
-        Server=db;Database=AutoCoAvaluacio;
-        User Id=sa;Password=${MSSQL_SA_PASSWORD};
-        TrustServerCertificate=True
-      # ── Connexió PostgreSQL (descomenta i ajusta si DB_PROVIDER=PostgreSQL)
-      # ConnectionStrings__DefaultConnection: >
-      #   Host=db-postgres;Database=AutoCoAvaluacio;
-      #   Username=postgres;Password=${POSTGRES_PASSWORD}
+      ConnectionStrings__DefaultConnection: "${DB_CONNECTION}"
       JwtSettings__Secret:          "${JWT_SECRET}"
       JwtSettings__ExpiryHours:     "${JWT_EXPIRY_HOURS}"
       Admin__Email:                 "${ADMIN_EMAIL}"
@@ -127,8 +74,6 @@ services:
     networks:
       - autoco-net
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:

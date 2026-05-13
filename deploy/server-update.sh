@@ -43,6 +43,31 @@ get_env_val() {
         | sed "s/^['\"]//;s/['\"]$//"
 }
 
+# ── Auto-migració v2.6.22 → v2.6.23 ──────────────────────────────────────────
+# Si el .env té MSSQL_SA_PASSWORD però no DB_CONNECTION ni COMPOSE_FILE,
+# és una instal·lació anterior a v2.6.23 que usava MSSQL intern.
+# Afegim automàticament les noves variables necessàries.
+migrate_env_if_needed() {
+    local db_conn sa_pass compose_file
+    db_conn=$(get_env_val "DB_CONNECTION")
+    sa_pass=$(get_env_val "MSSQL_SA_PASSWORD")
+    compose_file=$(get_env_val "COMPOSE_FILE")
+
+    if [ -z "$db_conn" ] && [ -n "$sa_pass" ] && [ -z "$compose_file" ]; then
+        echo ""
+        echo "  [MIGRANT] Configuració anterior a v2.6.23 detectada."
+        echo "            Afegint COMPOSE_FILE i DB_CONNECTION al .env..."
+        {
+            printf '\n# Afegit automàticament per server-update.sh (migració v2.6.23)\n'
+            printf 'COMPOSE_FILE=docker-compose.yml:docker-compose.db.yml\n'
+            printf 'DB_CONNECTION=Server=db;Database=AutoCoAvaluacio;User Id=sa;Password=%s;TrustServerCertificate=True\n' "${sa_pass}"
+        } >> .env
+        echo "  ✓ .env actualitzat. Pots revisar i ajustar els valors si cal."
+    fi
+}
+
+migrate_env_if_needed
+
 # ── Validació del fitxer .env ─────────────────────────────────────────────────
 validate_env() {
     local errors=0
@@ -66,13 +91,22 @@ validate_env() {
         return 0
     }
 
-    # Variables obligatòries
-    _check_required "MSSQL_SA_PASSWORD" "CanviaAquestaContrasenya_2024!"          || errors=$((errors+1))
-    _check_required "JWT_SECRET"        "CanviaAquestSecret_MiniM32Caracters_2024" || errors=$((errors+1))
-    _check_required "ADMIN_EMAIL"       "CorreuElectronic@domini"                 || errors=$((errors+1))
-    _check_required "ADMIN_PASSWORD"    "CanviaAquestaContrasenya123!"            || errors=$((errors+1))
-    _check_required "ADMIN_NOM"         "Nom"                                     || errors=$((errors+1))
-    _check_required "ADMIN_COGNOMS"     "Cognoms"                                 || errors=$((errors+1))
+    # DB_CONNECTION: sempre obligatori
+    _check_required "DB_CONNECTION" "" || errors=$((errors+1))
+
+    # MSSQL_SA_PASSWORD: obligatori si s'usa MSSQL intern (COMPOSE_FILE inclou docker-compose.db.yml)
+    local compose_file
+    compose_file=$(get_env_val "COMPOSE_FILE")
+    if echo "${compose_file}" | grep -q "docker-compose.db.yml"; then
+        _check_required "MSSQL_SA_PASSWORD" "CanviaAquestaContrasenya_2024!" || errors=$((errors+1))
+    fi
+
+    # Variables sempre obligatòries
+    _check_required "JWT_SECRET"     "CanviaAquestSecret_MiniM32Caracters_2024" || errors=$((errors+1))
+    _check_required "ADMIN_EMAIL"    "CorreuElectronic@domini"                  || errors=$((errors+1))
+    _check_required "ADMIN_PASSWORD" "CanviaAquestaContrasenya123!"             || errors=$((errors+1))
+    _check_required "ADMIN_NOM"      "Nom"                                      || errors=$((errors+1))
+    _check_required "ADMIN_COGNOMS"  "Cognoms"                                  || errors=$((errors+1))
 
     # JWT_SECRET: longitud mínima 32 caràcters
     val=$(get_env_val "JWT_SECRET")

@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.22
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.23
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -150,7 +150,7 @@ AutoCo/
 
 | Servei | Imatge | Port | Descripció |
 |--------|--------|------|------------|
-| `db` | SQL Server 2022 Express | intern | Base de dades principal |
+| `db` | SQL Server 2022 Express | intern | Base de dades MSSQL intern (opcional, via `docker-compose.db.yml`) |
 | `redis` | Redis 7 Alpine | intern | Caché de resultats + backplane SignalR |
 | `api` | ASP.NET Core 10 | intern | API REST + JWT |
 | `web` | ASP.NET Core 10 | intern | Blazor Server + MudBlazor |
@@ -265,7 +265,10 @@ Copia `.env.example` a `.env` i ajusta els valors:
 
 | Variable | Descripció | Obligatori |
 |----------|------------|:----------:|
-| `MSSQL_SA_PASSWORD` | Contrasenya SQL Server (mínim 8 car., majúsc., número i símbol) | ✓ |
+| `COMPOSE_FILE` | Fitxers compose actius; inclou `docker-compose.db.yml` per usar MSSQL intern | MSSQL intern |
+| `DB_CONNECTION` | Cadena de connexió completa (MSSQL o PostgreSQL) | ✓ |
+| `MSSQL_SA_PASSWORD` | Contrasenya SQL Server (mínim 8 car., majúsc., número i símbol) | MSSQL intern |
+| `DB_PROVIDER` | Motor de BD: `SqlServer` (per defecte) o `PostgreSQL` | |
 | `JWT_SECRET` | Secret JWT (mínim 32 caràcters) | ✓ |
 | `JWT_EXPIRY_HOURS` | Durada del token en hores (per defecte: 8) | |
 | `ADMIN_EMAIL` | Correu de l'administrador inicial | ✓ |
@@ -389,6 +392,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.23
+- **MSSQL extern opcional**: `docker-compose.yml` base sense servei `db`; nou `docker-compose.db.yml` afegeix MSSQL intern; `COMPOSE_FILE` al `.env` activa el mode intern sense tocar scripts; `DB_CONNECTION` cadena de connexió explícita; `deploy/server-update.sh` auto-migra configuració anterior a v2.6.23 (detecta `MSSQL_SA_PASSWORD` sense `DB_CONNECTION` i afegeix les variables automàticament)
 
 ### v2.6.22
 - **Dual-engine MSSQL + PostgreSQL**: variable `DB_PROVIDER=SqlServer` (per defecte) o `DB_PROVIDER=PostgreSQL`; MSSQL continua usant `Migrate()` + patches idempotents; PostgreSQL usa `EnsureCreated()` (crea tot l'esquema des del model EF Core); `Npgsql.EntityFrameworkCore.PostgreSQL 10.0.1` afegit; `SeedData` fa seed del Cicle «General» per a qualsevol proveïdor; `AUTO_CLOSE OFF` condicionat a MSSQL; servei `db-postgres` documentat i comentat al `docker-compose.yml`

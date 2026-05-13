@@ -1,0 +1,43 @@
+# ── MSSQL intern (overlay) ────────────────────────────────────────────────────
+# Afegeix el servei SQL Server 2022 Express al docker-compose base.
+#
+# Activar: afegeix al .env →
+#   COMPOSE_FILE=docker-compose.yml:docker-compose.db.yml
+#   MSSQL_SA_PASSWORD=LaContrasenya
+#   DB_CONNECTION=Server=db;Database=AutoCoAvaluacio;User Id=sa;Password=LaContrasenya;TrustServerCertificate=True
+#
+# Consulta .env.example per a exemples complets.
+
+volumes:
+  db-data:      # Volum Docker per a SQL Server (NTFS via WSL2 no és compatible amb SQLPAL)
+
+services:
+
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: autoco-db
+    environment:
+      ACCEPT_EULA:        "Y"
+      MSSQL_SA_PASSWORD:  "${MSSQL_SA_PASSWORD}"
+      MSSQL_PID:          "Express"
+    expose:
+      - "1433"
+    volumes:
+      - db-data:/var/opt/mssql
+      - ./backups:/var/opt/mssql/backup   # Còpies de seguretat accessibles al sistema de fitxers
+    networks:
+      - autoco-net
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd",
+             "-S", "localhost", "-U", "sa", "-P", "${MSSQL_SA_PASSWORD}",
+             "-Q", "SELECT 1", "-No"]
+      interval: 10s
+      timeout:  5s
+      retries:  12
+      start_period: 30s
+    restart: unless-stopped
+
+  api:
+    depends_on:
+      db:
+        condition: service_healthy
