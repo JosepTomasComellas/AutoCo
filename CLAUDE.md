@@ -52,16 +52,20 @@ AutoCo/
 ├── AutoCo.Tests/               # Tests unitaris xUnit (ResultsService, EF Core InMemory)
 ├── nginx/                      # Proxy invers SSL (auto-signat o certificat propi)
 ├── deploy/                     # Scripts de desplegament
-└── docker-compose.yml          # Orquestració: db + redis + api + web + nginx
+├── docker-compose.yml          # Orquestració base (redis + api + web + nginx; sense db)
+└── docker-compose.db.yml       # Overlay MSSQL intern (afegeix servei db + depends_on)
 ```
 
 ## Desplegament
 
 ```bash
-# Construir i aixecar tots els serveis
+# MSSQL intern (per defecte, via COMPOSE_FILE al .env):
 docker compose up --build
 
-# Actualitzar servidor (recomanat)
+# MSSQL extern (sense COMPOSE_FILE al .env):
+docker compose up --build
+
+# Actualitzar servidor (recomanat; gestiona COMPOSE_FILE automàticament)
 bash /docker/AutoCo/deploy/server-update.sh
 ```
 
@@ -72,19 +76,21 @@ bash /docker/AutoCo/deploy/server-update.sh
 
 | Servei | Imatge | Descripció |
 |--------|--------|------------|
-| `db` | SQL Server 2022 Express | Base de dades principal |
+| `db` | SQL Server 2022 Express | MSSQL intern (opcional; activat per `COMPOSE_FILE=...:docker-compose.db.yml`) |
 | `redis` | Redis 7 Alpine | Caché, backplane SignalR, OTP reset contrasenya |
 | `api` | ASP.NET Core 10 | API REST + JWT |
 | `web` | ASP.NET Core 10 | Blazor Server + MudBlazor |
 | `nginx` | nginx Alpine | Proxy SSL, WebSocket Blazor |
 
-La `api` espera que `db` i `redis` estiguin healthy abans d'arrencar.
+La `api` espera `redis` (i `db` si s'usa l'overlay MSSQL intern) healthy abans d'arrencar.
 
 ## Configuració (variables d'entorn via .env)
 
 Per a producció real, canviar:
+- `COMPOSE_FILE` — `docker-compose.yml:docker-compose.db.yml` per MSSQL intern; absent per MSSQL extern
+- `DB_CONNECTION` — cadena de connexió completa (MSSQL o PostgreSQL); **sempre obligatori**
+- `MSSQL_SA_PASSWORD` — contrasenya SQL Server (només si s'usa MSSQL intern)
 - `JWT_SECRET` — secret JWT (mínim 32 caràcters)
-- `MSSQL_SA_PASSWORD` — contrasenya SQL Server
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — credencials de l'administrador inicial
 - `DEFAULT_LANGUAGE` — idioma per defecte de la UI (`ca`, `es`, o qualsevol codi de `config/i18n/`; per defecte `ca`)
 - `I18N_PATH` — ruta als fitxers JSON de traducció (per defecte `/app/i18n`, muntat via volum `./config/i18n`)
@@ -228,3 +234,4 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Backup v2.1: inclou `Cicles` i `ProfessorClasses`; `ImportCoreAsync` esborra `ProfessorClasses` i `Cicles` (en ordre FK), recrea cicles primer, remapeja `CicleId` de les classes, i recrea assignacions amb mapeig d'IDs; backups antics sense `Cicles` creen un cicle «General» automàticament
 - Rol Gestor: `Professor.IsGestor` (BIT, default 0); JWT role `"Gestor"`; `IsAdminOrGestor(user)` per a lectures globals (classes, activitats, stats, audit, informe global); `IsAdmin(user)` per a escritures admin-only; `UserStateService`: `IsGestor`, `IsAdminOrGestor`; toggle al formulari d'edició de professor; menú de navegació mostra seccions d'admin a `IsAdminOrGestor`, però les accions destructives (Professors, Cicles, Backup, Sistema) queden sota `IsAdmin`
 - Informe Global: `GET /api/results/global` agrega per cicle→classe: modules, activities, students, avg participation; `GET /api/results/global/excel` retorna xlsx (ClosedXML, color-coded); pàgina `/admin/informe-global` amb 6 KPIs + taula per cicle; accessible a Admin i Gestor
+- Docker compose split: `docker-compose.yml` base (sense `db`); `docker-compose.db.yml` overlay (afegeix servei MSSQL intern + `api.depends_on.db`); `COMPOSE_FILE=docker-compose.yml:docker-compose.db.yml` al `.env` activa MSSQL intern; `DB_CONNECTION` cadena de connexió explícita (sempre obligatori); `deploy/server-update.sh` auto-migra config anterior a v2.6.23 (detecta `MSSQL_SA_PASSWORD` sense `DB_CONNECTION` i afegeix variables automàticament); `MSSQL_SA_PASSWORD` en validació condicionada a presència de `docker-compose.db.yml` al `COMPOSE_FILE`
