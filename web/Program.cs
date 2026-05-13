@@ -106,10 +106,16 @@ builder.Services.AddHttpClient<ApiClient>(client =>
 
 var app = builder.Build();
 
-app.UseForwardedHeaders(new ForwardedHeadersOptions
+// Confiar en tots els proxies intermedis (nginx Docker).
+// Per defecte ASP.NET Core només confia en loopback; cal buidar les llistes
+// perquè 172.18.x.x (xarxa Docker) no hi és i ignoraria X-Forwarded-For.
+var fwdOpts = new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
-});
+};
+fwdOpts.KnownNetworks.Clear();
+fwdOpts.KnownProxies.Clear();
+app.UseForwardedHeaders(fwdOpts);
 
 if (!app.Environment.IsDevelopment())
     app.UseExceptionHandler("/Error");
