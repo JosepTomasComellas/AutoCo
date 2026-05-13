@@ -187,6 +187,13 @@ else
                                 @RelativeTime(u.ConnectedAt)
                             </MudText>
                         </MudStack>
+                        @if (u.IpAddress is not null)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Tertiary"
+                                     Style="font-family:monospace;font-size:.7rem">
+                                @u.IpAddress
+                            </MudText>
+                        }
                     </MudStack>
                 </MudStack>
             </MudCardContent>

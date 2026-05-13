@@ -5,7 +5,7 @@ namespace AutoCo.Web.Services;
 
 public record OnlineUserSnapshot(
     int Id, string DisplayName, string Role, string? PhotoUrl,
-    int? ClassId, string? ClassName, long ConnectedAt);
+    int? ClassId, string? ClassName, long ConnectedAt, string? IpAddress = null);
 
 public sealed class OnlinePresenceService(IConnectionMultiplexer redis) : IAsyncDisposable
 {
@@ -14,14 +14,14 @@ public sealed class OnlinePresenceService(IConnectionMultiplexer redis) : IAsync
     private string?  _key;
 
     public void Start(int id, string displayName, string role, string? photoUrl,
-                      int? classId = null, string? className = null)
+                      int? classId = null, string? className = null, string? ipAddress = null)
     {
         if (_timer is not null) return;
         var prefix = role == "Student" ? "stu" : "prof";
         _key = $"autoco:online:{prefix}:{id}";
         var json = JsonSerializer.Serialize(new OnlineUserSnapshot(
             id, displayName, role, photoUrl, classId, className,
-            DateTimeOffset.UtcNow.ToUnixTimeSeconds()));
+            DateTimeOffset.UtcNow.ToUnixTimeSeconds(), ipAddress));
         _ = _db.StringSetAsync(_key, json, TimeSpan.FromSeconds(30));
         _timer = new Timer(
             state => { _ = _db.StringSetAsync(_key!, json, TimeSpan.FromSeconds(30)); },

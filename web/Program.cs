@@ -76,6 +76,9 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new System.IO.DirectoryInfo("/app/dp-keys"))
     .SetApplicationName("AutoCo");
 
+// IHttpContextAccessor: captura IP del client a OnInitialized (MainLayout)
+builder.Services.AddHttpContextAccessor();
+
 // Estat de l'usuari (substitueix ISession + SessionHelper)
 builder.Services.AddScoped<UserStateService>();
 

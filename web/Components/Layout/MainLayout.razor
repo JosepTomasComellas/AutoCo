@@ -9,6 +9,7 @@
 @inject NotificationBroadcastService NotifBroadcast
 @inject AutoCo.Web.Services.BrandingService Branding
 @inject OnlinePresenceService Presence
+@inject IHttpContextAccessor HttpCtx
 @inject IOptions<Microsoft.AspNetCore.Builder.RequestLocalizationOptions> LocalizationOptions
 
 <MudThemeProvider Theme="_theme" IsDarkMode="@_darkMode" />
@@ -233,6 +234,7 @@
     private bool   _darkMode       = false;
     private string _primaryColor   = "#CC0000"; // sobreescrit a OnInitialized des de BrandingService
     private IReadOnlyList<System.Globalization.CultureInfo> _supportedCultures = [];
+    private string? _clientIp;
 
     // Refs dels menús desplegables
     private MudMenu? _notifMenu;
@@ -312,6 +314,11 @@
                 Divider          = "rgba(255,255,255,0.08)",
             }
         };
+        // Captura la IP aquí: és l'únic moment on HttpContext és disponible en Blazor Server
+        var ip = HttpCtx.HttpContext?.Connection.RemoteIpAddress;
+        if (ip is not null && ip.IsIPv4MappedToIPv6) ip = ip.MapToIPv4();
+        _clientIp = ip?.ToString();
+
         UserState.OnSessionExpired += HandleSessionExpired;
         UserState.OnChange         += HandleUserStateChanged;
     }
@@ -330,7 +337,7 @@
         if (UserState.IsLoggedIn && UserState.UserId.HasValue)
             Presence.Start(UserState.UserId.Value, UserState.NomComplet ?? "",
                 UserState.Role ?? "Professor", UserState.FotoUrl,
-                UserState.ClassId, UserState.ClassName);
+                UserState.ClassId, UserState.ClassName, _clientIp);
     }
 
     private async void HandleSessionExpired()
@@ -418,11 +425,11 @@
 
         _sessionChecked = true;
 
-        // Iniciar heartbeat de presència online
+        // Iniciar heartbeat de presència online (per sessions carregades des de localStorage)
         if (UserState.IsLoggedIn && UserState.UserId.HasValue)
             Presence.Start(UserState.UserId.Value, UserState.NomComplet ?? "",
                 UserState.Role ?? "Professor", UserState.FotoUrl,
-                UserState.ClassId, UserState.ClassName);
+                UserState.ClassId, UserState.ClassName, _clientIp);
 
         // Carregar notificacions in-app si és professor
         if (UserState.IsProfessor && UserState.UserId.HasValue)
