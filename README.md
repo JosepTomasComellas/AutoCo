@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.21
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.22
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -389,6 +389,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.22
+- **Dual-engine MSSQL + PostgreSQL**: variable `DB_PROVIDER=SqlServer` (per defecte) o `DB_PROVIDER=PostgreSQL`; MSSQL continua usant `Migrate()` + patches idempotents; PostgreSQL usa `EnsureCreated()` (crea tot l'esquema des del model EF Core); `Npgsql.EntityFrameworkCore.PostgreSQL 10.0.1` afegit; `SeedData` fa seed del Cicle «General» per a qualsevol proveïdor; `AUTO_CLOSE OFF` condicionat a MSSQL; servei `db-postgres` documentat i comentat al `docker-compose.yml`
 
 ### v2.6.21
 - **Backup v2.2 — correccions de completesa**: `Professor.IsGestor` ara s'exporta i es restaura correctament (bug crític: professors Gestors perdien el rol); `Activity.IsArchived` inclòs al backup (les activitats arxivades es restauraven com a actives); `Group.OrderIndex` preservat (l'ordre dels grups es mantindrà); `DefaultCriteria` exportada i restaurada (els criteris per defecte personalitzats ja no es perden); version bumped a `"2.2"`; compatibilitat enrere amb backups `"2.1"` i `"2.0"` (tots els camps nous amb valor per defecte)

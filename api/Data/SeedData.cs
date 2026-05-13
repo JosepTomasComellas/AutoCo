@@ -7,6 +7,13 @@ public static class SeedData
 {
     public static async Task InitializeAsync(AppDbContext db, IConfiguration config)
     {
+        // Seed Cicle «General» si la taula és buida (instal·lació nova, qualsevol proveïdor)
+        if (!await db.Cicles.AnyAsync())
+        {
+            db.Cicles.Add(new Cicle { Name = "General" });
+            await db.SaveChangesAsync();
+        }
+
         var email    = config["Admin:Email"]    ?? "admin@autoco.cat";
         var password = config["Admin:Password"] ?? "Admin123!";
         var nom      = config["Admin:Nom"]      ?? "Administrador";

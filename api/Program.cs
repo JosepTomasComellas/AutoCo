@@ -25,10 +25,17 @@ builder.Services.AddSingleton(logHolder);
 builder.Logging.AddFilter((category, level) => level >= logHolder.Level);
 
 // ── Base de dades ─────────────────────────────────────────────────────────────
+var dbProvider = builder.Configuration["DB_PROVIDER"] ?? "SqlServer";
 builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-           sql => sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery))
-       .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
+{
+    var connStr = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (dbProvider == "PostgreSQL")
+        opt.UseNpgsql(connStr);
+    else
+        opt.UseSqlServer(connStr,
+               sql => sql.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
+    opt.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
+});
 
 // ── JWT ───────────────────────────────────────────────────────────────────────
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]
@@ -125,164 +132,174 @@ using (var scope = app.Services.CreateScope())
 {
     var db     = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
-    db.Database.Migrate();
+    var provider = config["DB_PROVIDER"] ?? "SqlServer";
 
-    // ── Taules afegides al model sense migració formal (crea si no existeix) ──
-    // Idempotent: segur d'executar a cada arrencada. Necessari quan el projecte
-    // no té fitxers de migració i la BD va ser creada amb EnsureCreated o bé
-    // amb una versió anterior del model.
-    await db.Database.ExecuteSqlRawAsync("""
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Cicles')
-        BEGIN
-            CREATE TABLE [Cicles] (
-                [Id]        INT           NOT NULL IDENTITY(1,1),
-                [Name]      NVARCHAR(200) NOT NULL,
-                [CreatedAt] DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
-                CONSTRAINT [PK_Cicles] PRIMARY KEY ([Id])
-            );
-            INSERT INTO [Cicles] ([Name]) VALUES (N'General');
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorClasses')
-        BEGIN
-            CREATE TABLE [ProfessorClasses] (
-                [ProfessorId] INT NOT NULL,
-                [ClassId]     INT NOT NULL,
-                CONSTRAINT [PK_ProfessorClasses] PRIMARY KEY ([ProfessorId], [ClassId]),
-                CONSTRAINT [FK_ProfessorClasses_Professors]
-                    FOREIGN KEY ([ProfessorId]) REFERENCES [Professors]([Id]) ON DELETE CASCADE,
-                CONSTRAINT [FK_ProfessorClasses_Classes]
-                    FOREIGN KEY ([ClassId]) REFERENCES [Classes]([Id]) ON DELETE CASCADE
-            );
-            CREATE INDEX [IX_ProfessorClasses_ClassId] ON [ProfessorClasses] ([ClassId]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                       WHERE TABLE_NAME='Classes' AND COLUMN_NAME='CicleId')
-        BEGIN
-            ALTER TABLE [Classes] ADD [CicleId] INT NULL;
-            EXEC('UPDATE [Classes] SET [CicleId] = (SELECT TOP 1 [Id] FROM [Cicles] ORDER BY [Id])');
-            ALTER TABLE [Classes] ALTER COLUMN [CicleId] INT NOT NULL;
-            ALTER TABLE [Classes] ADD CONSTRAINT [FK_Classes_Cicles_CicleId]
-                FOREIGN KEY ([CicleId]) REFERENCES [Cicles]([Id]);
-            CREATE INDEX [IX_Classes_CicleId] ON [Classes] ([CicleId]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityCriteria')
-        BEGIN
-            CREATE TABLE [ActivityCriteria] (
-                [Id]         INT          NOT NULL IDENTITY(1,1),
-                [ActivityId] INT          NOT NULL,
-                [Key]        NVARCHAR(50) NOT NULL,
-                [Label]      NVARCHAR(200) NOT NULL,
-                [OrderIndex] INT          NOT NULL,
-                CONSTRAINT [PK_ActivityCriteria] PRIMARY KEY ([Id]),
-                CONSTRAINT [FK_ActivityCriteria_Activities_ActivityId]
-                    FOREIGN KEY ([ActivityId]) REFERENCES [Activities]([Id]) ON DELETE CASCADE
-            );
-            CREATE UNIQUE INDEX [IX_ActivityCriteria_ActivityId_Key]
-                ON [ActivityCriteria] ([ActivityId], [Key]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorNotes')
-        BEGIN
-            CREATE TABLE [ProfessorNotes] (
-                [Id]         INT           NOT NULL IDENTITY(1,1),
-                [ActivityId] INT           NOT NULL,
-                [StudentId]  INT           NOT NULL,
-                [Note]       NVARCHAR(MAX) NOT NULL,
-                [UpdatedAt]  DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
-                CONSTRAINT [PK_ProfessorNotes] PRIMARY KEY ([Id]),
-                CONSTRAINT [FK_ProfessorNotes_Activities_ActivityId]
-                    FOREIGN KEY ([ActivityId]) REFERENCES [Activities]([Id]) ON DELETE CASCADE,
-                CONSTRAINT [FK_ProfessorNotes_Students_StudentId]
-                    FOREIGN KEY ([StudentId]) REFERENCES [Students]([Id])
-            );
-            CREATE UNIQUE INDEX [IX_ProfessorNotes_ActivityId_StudentId]
-                ON [ProfessorNotes] ([ActivityId], [StudentId]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityTemplates')
-        BEGIN
-            CREATE TABLE [ActivityTemplates] (
-                [Id]          INT           NOT NULL IDENTITY(1,1),
-                [ProfessorId] INT           NOT NULL,
-                [Name]        NVARCHAR(300) NOT NULL,
-                [Description] NVARCHAR(MAX) NULL,
-                [CriteriaJson] NVARCHAR(MAX) NOT NULL DEFAULT N'[]',
-                [CreatedAt]   DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
-                CONSTRAINT [PK_ActivityTemplates] PRIMARY KEY ([Id])
-            );
-            CREATE INDEX [IX_ActivityTemplates_ProfessorId]
-                ON [ActivityTemplates] ([ProfessorId]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityLogs')
-        BEGIN
-            CREATE TABLE [ActivityLogs] (
-                [Id]           INT           NOT NULL IDENTITY(1,1),
-                [ActivityId]   INT           NOT NULL,
-                [ActivityName] NVARCHAR(300) NOT NULL,
-                [ActorName]    NVARCHAR(300) NULL,
-                [Action]       NVARCHAR(50)  NOT NULL,
-                [Details]      NVARCHAR(MAX) NULL,
-                [CreatedAt]    DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
-                CONSTRAINT [PK_ActivityLogs] PRIMARY KEY ([Id])
-            );
-            CREATE INDEX [IX_ActivityLogs_ActivityId]
-                ON [ActivityLogs] ([ActivityId]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorLogins')
-        BEGIN
-            CREATE TABLE [ProfessorLogins] (
-                [Id]          INT       NOT NULL IDENTITY(1,1),
-                [ProfessorId] INT       NOT NULL,
-                [CreatedAt]   DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
-                CONSTRAINT [PK_ProfessorLogins] PRIMARY KEY ([Id]),
-                CONSTRAINT [FK_ProfessorLogins_Professors_ProfessorId]
-                    FOREIGN KEY ([ProfessorId]) REFERENCES [Professors]([Id]) ON DELETE CASCADE
-            );
-            CREATE INDEX [IX_ProfessorLogins_ProfessorId]
-                ON [ProfessorLogins] ([ProfessorId]);
-            CREATE INDEX [IX_ProfessorLogins_CreatedAt]
-                ON [ProfessorLogins] ([CreatedAt]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AdminAuditLogs')
-        BEGIN
-            CREATE TABLE [AdminAuditLogs] (
-                [Id]        INT           NOT NULL IDENTITY(1,1),
-                [Action]    NVARCHAR(100) NOT NULL,
-                [ActorId]   INT           NULL,
-                [ActorName] NVARCHAR(300) NULL,
-                [Details]   NVARCHAR(MAX) NULL,
-                [CreatedAt] DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
-                CONSTRAINT [PK_AdminAuditLogs] PRIMARY KEY ([Id])
-            );
-            CREATE INDEX [IX_AdminAuditLogs_CreatedAt]
-                ON [AdminAuditLogs] ([CreatedAt]);
-        END
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                       WHERE TABLE_NAME='ActivityCriteria' AND COLUMN_NAME='Weight')
-            ALTER TABLE [ActivityCriteria] ADD [Weight] INT NOT NULL DEFAULT 1;
-
-        IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
-                       WHERE TABLE_NAME='Activities' AND COLUMN_NAME='ShowResultsToStudents')
-            ALTER TABLE [Activities] ADD [ShowResultsToStudents] BIT NOT NULL DEFAULT 0;
-        """);
-
-    // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
-    // que la BD s'aturi entre peticions i torna a arrencar amb cada connexió nova.
-    try
+    if (provider == "PostgreSQL")
     {
-        var dbName = db.Database.GetDbConnection().Database;
-#pragma warning disable EF1002 // dbName prové de la cadena de connexió, no de l'usuari
-        await db.Database.ExecuteSqlRawAsync($"ALTER DATABASE [{dbName}] SET AUTO_CLOSE OFF");
-#pragma warning restore EF1002
+        // EnsureCreated crea tot l'esquema des del model EF Core.
+        // Per a actualitzacions d'esquema entre versions: backup ZIP → update → restore ZIP.
+        await db.Database.EnsureCreatedAsync();
     }
-    catch { /* ignora si no té permisos o si ja està desactivat */ }
+    else
+    {
+        // MSSQL: migració EF Core + patches idempotents per a instal·lacions anteriors
+        // a l'adopció de migracions formals (compatibilitat enrere).
+        db.Database.Migrate();
+
+        await db.Database.ExecuteSqlRawAsync("""
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Cicles')
+            BEGIN
+                CREATE TABLE [Cicles] (
+                    [Id]        INT           NOT NULL IDENTITY(1,1),
+                    [Name]      NVARCHAR(200) NOT NULL,
+                    [CreatedAt] DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                    CONSTRAINT [PK_Cicles] PRIMARY KEY ([Id])
+                );
+                INSERT INTO [Cicles] ([Name]) VALUES (N'General');
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorClasses')
+            BEGIN
+                CREATE TABLE [ProfessorClasses] (
+                    [ProfessorId] INT NOT NULL,
+                    [ClassId]     INT NOT NULL,
+                    CONSTRAINT [PK_ProfessorClasses] PRIMARY KEY ([ProfessorId], [ClassId]),
+                    CONSTRAINT [FK_ProfessorClasses_Professors]
+                        FOREIGN KEY ([ProfessorId]) REFERENCES [Professors]([Id]) ON DELETE CASCADE,
+                    CONSTRAINT [FK_ProfessorClasses_Classes]
+                        FOREIGN KEY ([ClassId]) REFERENCES [Classes]([Id]) ON DELETE CASCADE
+                );
+                CREATE INDEX [IX_ProfessorClasses_ClassId] ON [ProfessorClasses] ([ClassId]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                           WHERE TABLE_NAME='Classes' AND COLUMN_NAME='CicleId')
+            BEGIN
+                ALTER TABLE [Classes] ADD [CicleId] INT NULL;
+                EXEC('UPDATE [Classes] SET [CicleId] = (SELECT TOP 1 [Id] FROM [Cicles] ORDER BY [Id])');
+                ALTER TABLE [Classes] ALTER COLUMN [CicleId] INT NOT NULL;
+                ALTER TABLE [Classes] ADD CONSTRAINT [FK_Classes_Cicles_CicleId]
+                    FOREIGN KEY ([CicleId]) REFERENCES [Cicles]([Id]);
+                CREATE INDEX [IX_Classes_CicleId] ON [Classes] ([CicleId]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityCriteria')
+            BEGIN
+                CREATE TABLE [ActivityCriteria] (
+                    [Id]         INT          NOT NULL IDENTITY(1,1),
+                    [ActivityId] INT          NOT NULL,
+                    [Key]        NVARCHAR(50) NOT NULL,
+                    [Label]      NVARCHAR(200) NOT NULL,
+                    [OrderIndex] INT          NOT NULL,
+                    CONSTRAINT [PK_ActivityCriteria] PRIMARY KEY ([Id]),
+                    CONSTRAINT [FK_ActivityCriteria_Activities_ActivityId]
+                        FOREIGN KEY ([ActivityId]) REFERENCES [Activities]([Id]) ON DELETE CASCADE
+                );
+                CREATE UNIQUE INDEX [IX_ActivityCriteria_ActivityId_Key]
+                    ON [ActivityCriteria] ([ActivityId], [Key]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorNotes')
+            BEGIN
+                CREATE TABLE [ProfessorNotes] (
+                    [Id]         INT           NOT NULL IDENTITY(1,1),
+                    [ActivityId] INT           NOT NULL,
+                    [StudentId]  INT           NOT NULL,
+                    [Note]       NVARCHAR(MAX) NOT NULL,
+                    [UpdatedAt]  DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                    CONSTRAINT [PK_ProfessorNotes] PRIMARY KEY ([Id]),
+                    CONSTRAINT [FK_ProfessorNotes_Activities_ActivityId]
+                        FOREIGN KEY ([ActivityId]) REFERENCES [Activities]([Id]) ON DELETE CASCADE,
+                    CONSTRAINT [FK_ProfessorNotes_Students_StudentId]
+                        FOREIGN KEY ([StudentId]) REFERENCES [Students]([Id])
+                );
+                CREATE UNIQUE INDEX [IX_ProfessorNotes_ActivityId_StudentId]
+                    ON [ProfessorNotes] ([ActivityId], [StudentId]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityTemplates')
+            BEGIN
+                CREATE TABLE [ActivityTemplates] (
+                    [Id]          INT           NOT NULL IDENTITY(1,1),
+                    [ProfessorId] INT           NOT NULL,
+                    [Name]        NVARCHAR(300) NOT NULL,
+                    [Description] NVARCHAR(MAX) NULL,
+                    [CriteriaJson] NVARCHAR(MAX) NOT NULL DEFAULT N'[]',
+                    [CreatedAt]   DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                    CONSTRAINT [PK_ActivityTemplates] PRIMARY KEY ([Id])
+                );
+                CREATE INDEX [IX_ActivityTemplates_ProfessorId]
+                    ON [ActivityTemplates] ([ProfessorId]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityLogs')
+            BEGIN
+                CREATE TABLE [ActivityLogs] (
+                    [Id]           INT           NOT NULL IDENTITY(1,1),
+                    [ActivityId]   INT           NOT NULL,
+                    [ActivityName] NVARCHAR(300) NOT NULL,
+                    [ActorName]    NVARCHAR(300) NULL,
+                    [Action]       NVARCHAR(50)  NOT NULL,
+                    [Details]      NVARCHAR(MAX) NULL,
+                    [CreatedAt]    DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                    CONSTRAINT [PK_ActivityLogs] PRIMARY KEY ([Id])
+                );
+                CREATE INDEX [IX_ActivityLogs_ActivityId]
+                    ON [ActivityLogs] ([ActivityId]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ProfessorLogins')
+            BEGIN
+                CREATE TABLE [ProfessorLogins] (
+                    [Id]          INT       NOT NULL IDENTITY(1,1),
+                    [ProfessorId] INT       NOT NULL,
+                    [CreatedAt]   DATETIME2 NOT NULL DEFAULT GETUTCDATE(),
+                    CONSTRAINT [PK_ProfessorLogins] PRIMARY KEY ([Id]),
+                    CONSTRAINT [FK_ProfessorLogins_Professors_ProfessorId]
+                        FOREIGN KEY ([ProfessorId]) REFERENCES [Professors]([Id]) ON DELETE CASCADE
+                );
+                CREATE INDEX [IX_ProfessorLogins_ProfessorId]
+                    ON [ProfessorLogins] ([ProfessorId]);
+                CREATE INDEX [IX_ProfessorLogins_CreatedAt]
+                    ON [ProfessorLogins] ([CreatedAt]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AdminAuditLogs')
+            BEGIN
+                CREATE TABLE [AdminAuditLogs] (
+                    [Id]        INT           NOT NULL IDENTITY(1,1),
+                    [Action]    NVARCHAR(100) NOT NULL,
+                    [ActorId]   INT           NULL,
+                    [ActorName] NVARCHAR(300) NULL,
+                    [Details]   NVARCHAR(MAX) NULL,
+                    [CreatedAt] DATETIME2     NOT NULL DEFAULT GETUTCDATE(),
+                    CONSTRAINT [PK_AdminAuditLogs] PRIMARY KEY ([Id])
+                );
+                CREATE INDEX [IX_AdminAuditLogs_CreatedAt]
+                    ON [AdminAuditLogs] ([CreatedAt]);
+            END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                           WHERE TABLE_NAME='ActivityCriteria' AND COLUMN_NAME='Weight')
+                ALTER TABLE [ActivityCriteria] ADD [Weight] INT NOT NULL DEFAULT 1;
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                           WHERE TABLE_NAME='Activities' AND COLUMN_NAME='ShowResultsToStudents')
+                ALTER TABLE [Activities] ADD [ShowResultsToStudents] BIT NOT NULL DEFAULT 0;
+            """);
+
+        // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
+        // que la BD s'aturi entre peticions i torna a arrencar amb cada connexió nova.
+        try
+        {
+            var dbName = db.Database.GetDbConnection().Database;
+#pragma warning disable EF1002 // dbName prové de la cadena de connexió, no de l'usuari
+            await db.Database.ExecuteSqlRawAsync($"ALTER DATABASE [{dbName}] SET AUTO_CLOSE OFF");
+#pragma warning restore EF1002
+        }
+        catch { /* ignora si no té permisos o si ja està desactivat */ }
+    }
+
     await SeedData.InitializeAsync(db, config);
 }
 
