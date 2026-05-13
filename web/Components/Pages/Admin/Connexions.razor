@@ -17,11 +17,21 @@
 }
 
 <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4" Wrap="Wrap.Wrap">
-    <MudText Typo="Typo.h5">
-        <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Class="mr-2" Style="vertical-align:middle" />
-        Connexions actives
-        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="ml-2">@_total</MudChip>
-    </MudText>
+    <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.h5">
+            <MudIcon Icon="@Icons.Material.Filled.PeopleAlt" Class="mr-2" Style="vertical-align:middle" />
+            Connexions actives
+        </MudText>
+        <MudTooltip Text="@($"{_totalConnections} sessions · {_totalUsers} usuaris únics")">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@_totalConnections sessions</MudChip>
+                @if (_totalConnections != _totalUsers)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Warning">@_totalUsers usuaris</MudChip>
+                }
+            </MudStack>
+        </MudTooltip>
+    </MudStack>
     <MudTooltip Text="Actualitzar ara">
         <MudIconButton Icon="@Icons.Material.Filled.Refresh"
                        Color="Color.Primary" Variant="Variant.Outlined"
@@ -74,7 +84,7 @@ else
         }
     }
 
-    @if (_total == 0)
+    @if (_totalConnections == 0)
     {
         <MudAlert Severity="Severity.Info" Class="mt-4">No hi ha cap usuari connectat en aquest moment.</MudAlert>
     }
@@ -88,7 +98,9 @@ else
     private List<OnlineUserSnapshot> _professors     = [];
     private List<OnlineUserSnapshot> _students       = [];
     private Dictionary<string, List<OnlineUserSnapshot>> _studentsByClass = [];
-    private int    _total               = 0;
+    private HashSet<int> _multiSessionIds = [];
+    private int    _totalConnections    = 0;
+    private int    _totalUsers          = 0;
     private bool   _loading             = true;
     private bool   _refreshing          = false;
     private int    _secondsSinceRefresh = 0;
@@ -151,7 +163,12 @@ else
             _studentsByClass = _students
                 .GroupBy(u => u.ClassName ?? "Sense classe")
                 .ToDictionary(g => g.Key, g => g.ToList());
-            _total = all.Count;
+            _multiSessionIds = all.GroupBy(u => u.Id)
+                                  .Where(g => g.Count() > 1)
+                                  .Select(g => g.Key)
+                                  .ToHashSet();
+            _totalConnections = all.Count;
+            _totalUsers       = all.Select(u => u.Id).Distinct().Count();
         }
         finally
         {
@@ -187,13 +204,22 @@ else
                                 @RelativeTime(u.ConnectedAt)
                             </MudText>
                         </MudStack>
-                        @if (u.IpAddress is not null)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Tertiary"
-                                     Style="font-family:monospace;font-size:.7rem">
-                                @u.IpAddress
-                            </MudText>
-                        }
+                        <MudStack Row="true" Spacing="1" AlignItems="AlignItems.Center">
+                            @if (u.IpAddress is not null)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Tertiary"
+                                         Style="font-family:monospace;font-size:.7rem">
+                                    @u.IpAddress
+                                </MudText>
+                            }
+                            @if (_multiSessionIds.Contains(u.Id))
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning"
+                                         Icon="@Icons.Material.Filled.ContentCopy">
+                                    Multi-sessió
+                                </MudChip>
+                            }
+                        </MudStack>
                     </MudStack>
                 </MudStack>
             </MudCardContent>

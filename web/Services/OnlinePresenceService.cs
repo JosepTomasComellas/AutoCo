@@ -9,7 +9,8 @@ public record OnlineUserSnapshot(
 
 public sealed class OnlinePresenceService(IConnectionMultiplexer redis) : IAsyncDisposable
 {
-    private readonly IDatabase _db = redis.GetDatabase();
+    private readonly IDatabase _db       = redis.GetDatabase();
+    private readonly string    _circuitId = Guid.NewGuid().ToString("N")[..8];
     private Timer?   _timer;
     private string?  _key;
 
@@ -18,7 +19,7 @@ public sealed class OnlinePresenceService(IConnectionMultiplexer redis) : IAsync
     {
         if (_timer is not null) return;
         var prefix = role == "Student" ? "stu" : "prof";
-        _key = $"autoco:online:{prefix}:{id}";
+        _key = $"autoco:online:{prefix}:{id}:{_circuitId}";
         var json = JsonSerializer.Serialize(new OnlineUserSnapshot(
             id, displayName, role, photoUrl, classId, className,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(), ipAddress));
