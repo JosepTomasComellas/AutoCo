@@ -51,14 +51,14 @@
 
 <div class="topbar">
   <h1>🔧 AutoCo — Guía del Administrador</h1>
-  <span class="version">v2.6.5 · Salesians de Sarrià, Dept. de Informática</span>
+  <span class="version">v2.6.26 · Salesians de Sarrià, Dept. de Informática</span>
   <button class="btn-print" onclick="window.print()">🖨️ Imprimir</button>
 </div>
 
 <div class="container">
 
   <h1 style="font-size:2rem;font-weight:800;color:var(--dark);margin-bottom:8px">AutoCo</h1>
-  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema de evaluación entre iguales · Guía del administrador · v2.6.5</p>
+  <p style="font-size:1.1rem;color:#64748b;margin-bottom:8px">Sistema de evaluación entre iguales · Guía del administrador · v2.6.26</p>
 
   <div class="box box-admin" style="margin-bottom:32px">
     <strong>🔧 Documento complementario</strong>
@@ -119,6 +119,20 @@
     <div class="box box-info">
       <strong>💡 Profesores sin clases asignadas</strong> no ven nada en su panel. Recuerda asignarles al menos una clase antes de que puedan trabajar.
     </div>
+    <h3>Deshabilitar / habilitar una cuenta</h3>
+    <p>El botón con icono de <strong>candado</strong> 🔒 en la ficha del profesor permite bloquear temporalmente el acceso de un profesor sin eliminar la cuenta. Un profesor deshabilitado:</p>
+    <ul>
+      <li>No puede iniciar sesión ni renovar el token JWT.</li>
+      <li>Sus sesiones activas se cierran inmediatamente (claves Redis borradas).</li>
+      <li>Sus clases, alumnos y actividades se conservan intactos.</li>
+    </ul>
+    <p>Para reactivar la cuenta, haz clic de nuevo en el botón (ahora con icono de candado abierto 🔓). El profesor recupera el acceso de forma inmediata.</p>
+    <div class="box box-warn">
+      <strong>⚠️ No se puede deshabilitar un administrador.</strong>
+      La función de deshabilitar cuenta no está disponible para cuentas con permisos de administrador.
+    </div>
+    <p>Los profesores deshabilitados aparecen con el chip <span class="badge" style="background:#fee2e2;color:#991b1b">Deshabilitado</span> y un estilo atenuado en la lista.</p>
+
     <h3>Eliminar un profesor</h3>
     <p>La eliminación es permanente. Las clases y actividades del profesor eliminado <strong>se conservan</strong> en el sistema.</p>
   </section>
@@ -263,6 +277,17 @@
     <h3>Múltiples sesiones</h3>
     <p>Si un mismo usuario tiene dos o más ventanas o pestañas abiertas, aparece una entrada por cada sesión (circuito Blazor). El contador de la cabecera muestra «<strong>N sesiones · M usuarios</strong>» cuando el número de sesiones supera el de usuarios únicos, y las tarjetas afectadas muestran el badge <span class="badge badge-purple">Multi-sesión</span>.</p>
 
+    <h3>Sesión propia y kick</h3>
+    <ul>
+      <li>Tu sesión actual aparece marcada con el badge <span class="badge badge-green" style="background:#dcfce7;color:#166534">Tú</span>.</li>
+      <li>Como administrador, puedes cerrar la sesión de cualquier otro usuario con el botón <strong>↩ Cerrar sesión</strong>. Se pedirá confirmación.</li>
+      <li>Al cerrar una sesión de profesor, se invalidan también todos sus <em>refresh tokens</em> (deberá volver a iniciar sesión).</li>
+    </ul>
+    <div class="box box-warn">
+      <strong>⚠️ Kick visible únicamente para administradores.</strong>
+      Los gestores ven la lista de conexiones pero no pueden expulsar sesiones.
+    </div>
+
     <h3>Actualización automática</h3>
     <ul>
       <li>Cada navegador envía un <em>heartbeat</em> a Redis cada <strong>10 segundos</strong>; las sesiones desaparecidas se eliminan automáticamente a los 30 s.</li>
@@ -277,7 +302,7 @@
   </section>
 
   <footer style="border-top:1px solid var(--border);padding-top:24px;margin-top:40px;color:#94a3b8;font-size:.85rem;text-align:center">
-    AutoCo v2.6.25 · Salesians de Sarrià, Departament d'Informàtica · 2026
+    AutoCo v2.6.26 · Salesians de Sarrià, Departament d'Informàtica · 2026
   </footer>
 
 </div>
