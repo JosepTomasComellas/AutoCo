@@ -197,10 +197,11 @@ public record BackupDto(
     List<ProfessorBackupDto>      Professors,
     List<ClassBackupDto>          Classes,
     List<ActivityBackupDto>       Activities,
-    List<TemplateBackupDto>?          Templates         = null,
-    List<AdminAuditLogBackupDto>?     AuditLogs         = null,
-    List<CicleBackupDto>?             Cicles            = null,
-    List<ProfessorClassBackupDto>?    ProfessorClasses  = null);
+    List<TemplateBackupDto>?              Templates         = null,
+    List<AdminAuditLogBackupDto>?         AuditLogs         = null,
+    List<CicleBackupDto>?                 Cicles            = null,
+    List<ProfessorClassBackupDto>?        ProfessorClasses  = null,
+    List<DefaultCriterionBackupDto>?      DefaultCriteria   = null);
 
 public record ProfessorBackupDto(
     int Id, string Email, string Nom, string Cognoms,
@@ -240,12 +241,15 @@ public record ActivityBackupDto(
     List<NoteBackupDto>?       Notes                 = null,
     bool                       ShowResultsToStudents = false,
     DateTime?                  OpenAt                = null,
-    DateTime?                  CloseAt               = null);
+    DateTime?                  CloseAt               = null,
+    bool                       IsArchived            = false);
 
 public record AdminAuditLogBackupDto(
     string Action, int? ActorId, string? ActorName, string? Details, DateTime CreatedAt);
 
-public record GroupBackupDto(int Id, string Name, List<int> StudentIds);
+public record DefaultCriterionBackupDto(string Key, string Label, int OrderIndex, int Weight = 1);
+
+public record GroupBackupDto(int Id, string Name, List<int> StudentIds, int OrderIndex = 0);
 
 public record EvaluationBackupDto(
     int EvaluatorId, int EvaluatedId, bool IsSelf,

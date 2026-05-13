@@ -40,24 +40,27 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
     // ── Export ────────────────────────────────────────────────────────────────
     public async Task<BackupDto> ExportAsync()
     {
-        var cicles     = await db.Cicles.AsNoTracking().ToListAsync();
-        var professors = await db.Professors.AsNoTracking().ToListAsync();
-        var profClasses = await db.ProfessorClasses.AsNoTracking().ToListAsync();
-        var classes    = await db.Classes.AsNoTracking().ToListAsync();
-        var students   = await db.Students.AsNoTracking().ToListAsync();
-        var modules    = await db.Modules.AsNoTracking().ToListAsync();
-        var exclusions = await db.ModuleExclusions.AsNoTracking().ToListAsync();
-        var activities = await db.Activities.AsNoTracking().ToListAsync();
-        var criteria   = await db.ActivityCriteria.AsNoTracking().ToListAsync();
-        var groups     = await db.Groups.AsNoTracking().ToListAsync();
-        var members    = await db.GroupMembers.AsNoTracking().ToListAsync();
-        var evals      = await db.Evaluations.AsNoTracking().Include(e => e.Scores).ToListAsync();
-        var notes      = await db.ProfessorNotes.AsNoTracking().ToListAsync();
-        var templates  = await db.ActivityTemplates.AsNoTracking().ToListAsync();
+        var cicles       = await db.Cicles.AsNoTracking().ToListAsync();
+        var professors   = await db.Professors.AsNoTracking().ToListAsync();
+        var profClasses  = await db.ProfessorClasses.AsNoTracking().ToListAsync();
+        var classes      = await db.Classes.AsNoTracking().ToListAsync();
+        var students     = await db.Students.AsNoTracking().ToListAsync();
+        var modules      = await db.Modules.AsNoTracking().ToListAsync();
+        var exclusions   = await db.ModuleExclusions.AsNoTracking().ToListAsync();
+        var activities   = await db.Activities.AsNoTracking().ToListAsync();
+        var criteria     = await db.ActivityCriteria.AsNoTracking().ToListAsync();
+        var groups       = await db.Groups.AsNoTracking().ToListAsync();
+        var members      = await db.GroupMembers.AsNoTracking().ToListAsync();
+        var evals        = await db.Evaluations.AsNoTracking().Include(e => e.Scores).ToListAsync();
+        var notes        = await db.ProfessorNotes.AsNoTracking().ToListAsync();
+        var templates    = await db.ActivityTemplates.AsNoTracking().ToListAsync();
+        var defCriteria  = await db.DefaultCriteria.AsNoTracking().OrderBy(d => d.OrderIndex).ToListAsync();
 
         var cicleDtos = cicles.Select(ci => new CicleBackupDto(ci.Id, ci.Name, ci.CreatedAt)).ToList();
         var profClassDtos = profClasses
             .Select(pc => new ProfessorClassBackupDto(pc.ProfessorId, pc.ClassId)).ToList();
+        var defCriteriaDtos = defCriteria
+            .Select(d => new DefaultCriterionBackupDto(d.Key, d.Label, d.OrderIndex, d.Weight)).ToList();
 
         var classDtos = classes.Select(c => new ClassBackupDto(
             c.Id, c.Name, c.AcademicYear, c.CreatedAt,
@@ -74,8 +77,10 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
         var activityDtos = activities.Select(a => new ActivityBackupDto(
             a.Id, a.ModuleId, a.Name, a.Description, a.IsOpen, a.CreatedAt,
             groups.Where(g => g.ActivityId == a.Id)
+                .OrderBy(g => g.OrderIndex)
                 .Select(g => new GroupBackupDto(g.Id, g.Name,
-                    members.Where(m => m.GroupId == g.Id).Select(m => m.StudentId).ToList()))
+                    members.Where(m => m.GroupId == g.Id).Select(m => m.StudentId).ToList(),
+                    g.OrderIndex))
                 .ToList(),
             evals.Where(e => e.ActivityId == a.Id)
                 .Select(e => new EvaluationBackupDto(
@@ -92,20 +97,23 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 .Select(n => new NoteBackupDto(n.StudentId, n.Note, n.UpdatedAt))
                 .ToList()
                 .NullIfEmpty(),
-            a.ShowResultsToStudents, a.OpenAt, a.CloseAt
+            a.ShowResultsToStudents, a.OpenAt, a.CloseAt,
+            a.IsArchived
         )).ToList();
 
         var templateDtos = templates.Select(t => new TemplateBackupDto(
             t.Id, t.ProfessorId, t.Name, t.Description, t.CriteriaJson, t.CreatedAt)).ToList();
 
-        return new BackupDto("2.1", DateTime.UtcNow,
+        return new BackupDto("2.2", DateTime.UtcNow,
             professors.Select(p => new ProfessorBackupDto(
-                p.Id, p.Email, p.Nom, p.Cognoms, p.IsAdmin, p.PasswordHash, p.CreatedAt)).ToList(),
+                p.Id, p.Email, p.Nom, p.Cognoms, p.IsAdmin, p.PasswordHash, p.CreatedAt,
+                p.IsGestor)).ToList(),
             classDtos, activityDtos,
             templateDtos.Count > 0 ? templateDtos : null,
             null, // AuditLogs no s'inclouen al backup
             cicleDtos.Count > 0 ? cicleDtos : null,
-            profClassDtos.Count > 0 ? profClassDtos : null);
+            profClassDtos.Count > 0 ? profClassDtos : null,
+            defCriteriaDtos.Count > 0 ? defCriteriaDtos : null);
     }
 
     public async Task<byte[]> ExportZipAsync() => ToZip(await ExportAsync());
@@ -199,6 +207,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             await db.ActivityTemplates.ExecuteDeleteAsync();
             await db.Professors.ExecuteDeleteAsync();
             await db.Cicles.ExecuteDeleteAsync();
+            await db.DefaultCriteria.ExecuteDeleteAsync();
 
             // ── Cicles ────────────────────────────────────────────────────────
             Dictionary<int, int> cicleMap = [];
@@ -224,7 +233,8 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             var profEnts = bk.Professors.Select(p => new Professor
             {
                 Email = p.Email, Nom = p.Nom, Cognoms = p.Cognoms,
-                IsAdmin = p.IsAdmin, PasswordHash = p.PasswordHash, CreatedAt = p.CreatedAt
+                IsAdmin = p.IsAdmin, IsGestor = p.IsGestor,
+                PasswordHash = p.PasswordHash, CreatedAt = p.CreatedAt
             }).ToList();
             db.Professors.AddRange(profEnts);
             await db.SaveChangesAsync();
@@ -314,7 +324,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                 var ent = new Activity
                 {
                     ModuleId = newModId, Name = a.Name, Description = a.Description,
-                    IsOpen = a.IsOpen, CreatedAt = a.CreatedAt,
+                    IsOpen = a.IsOpen, IsArchived = a.IsArchived, CreatedAt = a.CreatedAt,
                     ShowResultsToStudents = a.ShowResultsToStudents,
                     OpenAt = a.OpenAt, CloseAt = a.CloseAt
                 };
@@ -342,7 +352,7 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
             foreach (var (aDto, actEnt) in actPairs)
                 foreach (var g in aDto.Groups)
                 {
-                    var ent = new Group { ActivityId = actEnt.Id, Name = g.Name };
+                    var ent = new Group { ActivityId = actEnt.Id, Name = g.Name, OrderIndex = g.OrderIndex };
                     groupPairs.Add((g, ent));
                     db.Groups.Add(ent);
                 }
@@ -402,6 +412,20 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
                     if (profMap.TryGetValue(pc.ProfessorId, out var newPid) &&
                         classMap.TryGetValue(pc.ClassId, out var newCid))
                         db.ProfessorClasses.Add(new ProfessorClass { ProfessorId = newPid, ClassId = newCid });
+                await db.SaveChangesAsync();
+            }
+
+            // ── Default Criteria ──────────────────────────────────────────────
+            if (bk.DefaultCriteria is { Count: > 0 })
+            {
+                foreach (var d in bk.DefaultCriteria)
+                    db.DefaultCriteria.Add(new AutoCo.Api.Data.Models.DefaultCriterion
+                    {
+                        Key        = d.Key,
+                        Label      = d.Label,
+                        OrderIndex = d.OrderIndex,
+                        Weight     = d.Weight > 0 ? d.Weight : 1
+                    });
                 await db.SaveChangesAsync();
             }
 

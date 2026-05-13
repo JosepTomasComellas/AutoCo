@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.20
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.21
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -389,6 +389,9 @@ GET  /api/criteria                                    # Llista de criteris globa
 ---
 
 ## Changelog
+
+### v2.6.21
+- **Backup v2.2 — correccions de completesa**: `Professor.IsGestor` ara s'exporta i es restaura correctament (bug crític: professors Gestors perdien el rol); `Activity.IsArchived` inclòs al backup (les activitats arxivades es restauraven com a actives); `Group.OrderIndex` preservat (l'ordre dels grups es mantindrà); `DefaultCriteria` exportada i restaurada (els criteris per defecte personalitzats ja no es perden); version bumped a `"2.2"`; compatibilitat enrere amb backups `"2.1"` i `"2.0"` (tots els camps nous amb valor per defecte)
 
 ### v2.6.20
 - **Control d'accés a Resultats i Grups**: `Resultats.razor` i `Grups.razor` calculen `_canEdit = IsAdmin || UserId == Activity.ProfessorId`; els controls d'edició (notes del professor, arrossegar membres, renomenar grups, afegir/treure membres, importar CSV, gestió criteris) s'amaguen als usuaris sense propietat — gestors i professors externs conserven accés de lectura complet (veure resultats, exportar CSV/Excel, veure grups)
