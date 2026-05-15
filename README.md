@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.27
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.32
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -196,12 +196,22 @@ AdminAuditLog    (registre d'accions sensibles, sense FK)
 |-----|-------|
 | **Admin** | Tot. Gestiona professors, cicles, veu totes les classes i activitats, còpies de seguretat |
 | **Gestor** | Veu totes les classes, activitats, estadístiques i l'Informe Global. Modifica únicament les classes que té assignades |
-| **Professor** | Les seves pròpies classes, mòduls, activitats i resultats |
+| **Professor** | Les classes que té assignades via `ProfessorClass`. Pot crear activitats en qualsevol mòdul d'aquelles classes i veu les que ha creat (`CreatedByProfessorId`) |
 | **Alumne** | Les activitats del seu grup. Pot avaluar mentre l'activitat és oberta |
 
 ---
 
 ## Changelog
+
+### v2.6.32
+- **Fix nom del creador a la fitxa d'activitat**: `Activity.CreatedByProfessor` (nav. property EF Core); `ActivityDto` ara mostra el nom del professor que va crear l'activitat, no el propietari del mòdul; afecta el tauler, la fitxa i totes les accions (archive, update, toggle, duplicate)
+
+### v2.6.31
+- **Professors assignats via `ProfessorClass` veuen les seves activitats al tauler**: nou camp `Activity.CreatedByProfessorId` que guarda qui crea cada activitat; el filtre de visibilitat del dashboard comprova `Module.ProfessorId OR CreatedByProfessorId`; `CreateAsync`, `DuplicateAsync` i `DuplicateCrossAsync` assignen el camp; SQL patch idempotent + backfill des de `Module.ProfessorId` per a activitats existents
+- **`ActivityDto.CanEdit`** (server-computed): el backend calcula si l'usuari pot editar l'activitat; el frontend (`ActivityCard`, `Grups`, `Resultats`) usa `CanEdit` en lloc de comparar `UserId == ProfessorId`
+- **`WithAccess` helper** a `ActivityService` i `ModuleService`: totes les accions (editar, esborrar, grups, criteris…) admeten accés via `ProfessorClass` a més del propietari del mòdul
+- **Fix race condition SQL Server**: `db.Database.Migrate()` fa fins a 10 reintents amb delay de 5 s en cas de SQL Server extern no disponible en arrencar
+- **Fix crash Redis en shutdown**: `app.Run()` embolcallat en `try/catch (RedisConnectionException)`
 
 ### v2.6.27
 - **Fix kick de sessió — logout real al navegador**: el senyal de kick ara arriba via Redis pub/sub (`autoco:kick:{circuitId}`) al circuit Blazor de l'usuari expulsat, que esborra el localStorage i redirigeix a `/`; funciona per a professors i alumnes
