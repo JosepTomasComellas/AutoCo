@@ -70,13 +70,16 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
 
     private async Task<ActivityResultsDto?> ComputeResultsAsync(int activityId, int professorId, bool isAdmin)
     {
-        var activity = await db.Activities
+        var q = db.Activities
             .AsNoTracking()
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
-            .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+            .Where(a => a.Id == activityId);
+        var activity = await (isAdmin ? q : q.Where(a =>
+            a.Module.ProfessorId == professorId ||
+            db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == a.Module.ClassId))
+        ).FirstOrDefaultAsync();
 
         if (activity is null) return null;
 
@@ -176,12 +179,15 @@ public class ResultsService(AppDbContext db, IDistributedCache cache, IPhotoServ
 
     private async Task<ActivityChartDto?> ComputeChartAsync(int activityId, int professorId, bool isAdmin)
     {
-        var activity = await db.Activities
+        var q2 = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+            .Where(a => a.Id == activityId);
+        var activity = await (isAdmin ? q2 : q2.Where(a =>
+            a.Module.ProfessorId == professorId ||
+            db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == a.Module.ClassId))
+        ).FirstOrDefaultAsync();
         if (activity is null) return null;
 
         var actCriteria = await CriteriaHelper.GetForActivityAsync(db, activityId);

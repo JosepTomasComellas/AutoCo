@@ -341,6 +341,11 @@ static bool IsAdminOrGestor(ClaimsPrincipal user) =>
 static bool IsProfessor(ClaimsPrincipal user) =>
     user.IsInRole("Professor") || user.IsInRole("Admin") || user.IsInRole("Gestor");
 
+// Comprova accés a una activitat: propietari del mòdul O assignat a la classe via ProfessorClass.
+static Task<bool> HasActivityAccessAsync(int profId, bool isAdmin, int classId, int moduleProfId, AppDbContext db) =>
+    isAdmin || profId == moduleProfId ? Task.FromResult(true)
+    : db.ProfessorClasses.AnyAsync(pc => pc.ProfessorId == profId && pc.ClassId == classId);
+
 // Retorna els ClassIds assignats al professor; null si és admin (accés total).
 static Task<HashSet<int>> GetProfClassIdsAsync(int profId, AppDbContext db) =>
     db.ProfessorClasses
@@ -1822,7 +1827,7 @@ app.MapGet("/api/notes/{activityId:int}/{studentId:int}", async (
     var activity = await db.Activities.Include(a => a.Module)
         .FirstOrDefaultAsync(a => a.Id == activityId);
     if (activity is null) return Results.NotFound();
-    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+    if (!await HasActivityAccessAsync(GetUserId(user), IsAdmin(user), activity.Module.ClassId, activity.Module.ProfessorId, db)) return Results.Forbid();
 
     var note = await db.ProfessorNotes
         .FirstOrDefaultAsync(n => n.ActivityId == activityId && n.StudentId == studentId);
@@ -1837,7 +1842,7 @@ app.MapGet("/api/notes/{activityId:int}", async (
     var activity = await db.Activities.Include(a => a.Module)
         .FirstOrDefaultAsync(a => a.Id == activityId);
     if (activity is null) return Results.NotFound();
-    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+    if (!await HasActivityAccessAsync(GetUserId(user), IsAdmin(user), activity.Module.ClassId, activity.Module.ProfessorId, db)) return Results.Forbid();
 
     var notes = await db.ProfessorNotes
         .Where(n => n.ActivityId == activityId)
@@ -1854,7 +1859,7 @@ app.MapPut("/api/notes/{activityId:int}/{studentId:int}", async (
     var activity = await db.Activities.Include(a => a.Module)
         .FirstOrDefaultAsync(a => a.Id == activityId);
     if (activity is null) return Results.NotFound();
-    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+    if (!await HasActivityAccessAsync(GetUserId(user), IsAdmin(user), activity.Module.ClassId, activity.Module.ProfessorId, db)) return Results.Forbid();
 
     var note = await db.ProfessorNotes
         .FirstOrDefaultAsync(n => n.ActivityId == activityId && n.StudentId == studentId);
@@ -1948,7 +1953,7 @@ app.MapGet("/api/activities/{id:int}/log", async (
     var activity = await db.Activities.Include(a => a.Module)
         .FirstOrDefaultAsync(a => a.Id == id);
     if (activity is null) return Results.NotFound();
-    if (activity.Module.ProfessorId != GetUserId(user) && !IsAdmin(user)) return Results.Forbid();
+    if (!await HasActivityAccessAsync(GetUserId(user), IsAdmin(user), activity.Module.ClassId, activity.Module.ProfessorId, db)) return Results.Forbid();
 
     var logs = await db.ActivityLogs
         .Where(l => l.ActivityId == id)

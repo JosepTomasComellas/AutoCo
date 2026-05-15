@@ -39,6 +39,11 @@ public interface IActivityService
 
 public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoService photos) : IActivityService
 {
+    // Comprova accés a una activitat via propietat del mòdul O via ProfessorClass de la classe.
+    private IQueryable<Activity> WithAccess(IQueryable<Activity> q, int professorId) =>
+        q.Where(a => a.Module.ProfessorId == professorId ||
+                     db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == a.Module.ClassId));
+
     // ── Activitats ───────────────────────────────────────────────────────────
 
     public async Task<List<ActivityDto>> GetAllAsync(int? professorId, bool includeArchived = false)
@@ -50,7 +55,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .AsQueryable();
 
         if (professorId.HasValue)
-            q = q.Where(a => a.Module.ProfessorId == professorId.Value);
+            q = WithAccess(q, professorId.Value);
         if (!includeArchived)
             q = q.Where(a => !a.IsArchived);
 
@@ -69,7 +74,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .AsQueryable();
 
         if (professorId.HasValue)
-            q = q.Where(a => a.Module.ProfessorId == professorId.Value);
+            q = WithAccess(q, professorId.Value);
 
         var total = await q.CountAsync();
         var items = await q.OrderByDescending(a => a.CreatedAt)
@@ -81,12 +86,12 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ActivityDto?> ArchiveAsync(int id, int professorId, bool isAdmin)
     {
-        var a = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == id &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+            .Where(a => a.Id == id);
+        var a = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (a is null) return null;
 
         a.IsArchived = !a.IsArchived;
@@ -97,13 +102,12 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ActivityDto?> GetByIdAsync(int id, int? professorId)
     {
-        var a = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == id &&
-                (!professorId.HasValue || a.Module.ProfessorId == professorId.Value));
-
+            .Where(a => a.Id == id);
+        var a = await (professorId.HasValue ? WithAccess(q, professorId.Value) : q).FirstOrDefaultAsync();
         return a is null ? null : ToDto(a);
     }
 
@@ -141,12 +145,12 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ActivityDto?> UpdateAsync(int id, int professorId, bool isAdmin, UpdateActivityRequest req)
     {
-        var a = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == id &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+            .Where(a => a.Id == id);
+        var a = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (a is null) return null;
 
         a.Name                  = req.Name.Trim();
@@ -160,9 +164,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<bool> DeleteAsync(int id, int professorId, bool isAdmin)
     {
-        var a = await db.Activities.Include(a => a.Module).ThenInclude(m => m.Class)
-            .FirstOrDefaultAsync(a => a.Id == id &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+        var q = db.Activities.Include(a => a.Module).ThenInclude(m => m.Class).Where(a => a.Id == id);
+        var a = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (a is null) return false;
         db.Activities.Remove(a);
         await db.SaveChangesAsync();
@@ -171,12 +174,12 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ActivityDto?> ToggleOpenAsync(int id, int professorId, bool isAdmin)
     {
-        var a = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == id &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+            .Where(a => a.Id == id);
+        var a = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (a is null) return null;
 
         a.IsOpen = !a.IsOpen;
@@ -192,12 +195,12 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ActivityDto> DuplicateAsync(int activityId, int professorId, bool isAdmin, DuplicateActivityRequest req)
     {
-        var original = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.ProfessorId == professorId))
+            .Where(a => a.Id == activityId);
+        var original = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync()
             ?? throw new UnauthorizedAccessException("Activitat no trobada o sense permisos.");
 
         var nova = new Activity
@@ -234,16 +237,18 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ActivityDto> DuplicateCrossAsync(int activityId, int professorId, bool isAdmin, DuplicateCrossRequest req)
     {
-        var original = await db.Activities
+        var q = db.Activities
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.ProfessorId == professorId))
+            .Where(a => a.Id == activityId);
+        var original = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync()
             ?? throw new UnauthorizedAccessException("Activitat no trobada o sense permisos.");
 
         var targetModule = await db.Modules
             .Include(m => m.Professor)
             .Include(m => m.Class)
-            .FirstOrDefaultAsync(m => m.Id == req.TargetModuleId && (isAdmin || m.ProfessorId == professorId))
+            .FirstOrDefaultAsync(m => m.Id == req.TargetModuleId &&
+                (isAdmin || m.ProfessorId == professorId ||
+                 db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == m.ClassId)))
             ?? throw new UnauthorizedAccessException("Mòdul destí no trobat o sense permisos.");
 
         var nova = new Activity
@@ -276,8 +281,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ParticipationDto> GetParticipationAsync(int activityId, int professorId, bool isAdmin)
     {
-        var hasAccess = await db.Activities.AnyAsync(a => a.Id == activityId &&
-            (isAdmin || a.Module.ProfessorId == professorId));
+        var q = db.Activities.Where(a => a.Id == activityId);
+        var hasAccess = await (isAdmin ? q : WithAccess(q, professorId)).AnyAsync();
         if (!hasAccess) return new(activityId, 0, 0);
 
         var total = await db.GroupMembers
@@ -299,11 +304,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
     {
         if (!email.IsEnabled) return new(0, 0, true);
 
-        var activity = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
-            .FirstOrDefaultAsync(a => a.Id == activityId && a.IsOpen &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+            .Where(a => a.Id == activityId && a.IsOpen);
+        var activity = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (activity is null) return new(0, 0, false);
 
         var submittedIds = await db.Evaluations
@@ -331,11 +336,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<(byte[] Content, string FileName)?> ExportGroupsAsync(int activityId, int professorId, bool isAdmin)
     {
-        var activity = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members).ThenInclude(m => m.Student)
-            .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.ProfessorId == professorId));
+            .Where(a => a.Id == activityId);
+        var activity = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (activity is null) return null;
 
         var sb = new System.Text.StringBuilder();
@@ -351,11 +356,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<ImportGroupsResult> ImportGroupsAsync(int activityId, int professorId, bool isAdmin, string csvContent)
     {
-        var activity = await db.Activities
+        var q = db.Activities
             .Include(a => a.Module).ThenInclude(m => m.Class).ThenInclude(c => c.Students)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
-            .FirstOrDefaultAsync(a => a.Id == activityId &&
-                (isAdmin || a.Module.ProfessorId == professorId))
+            .Where(a => a.Id == activityId);
+        var activity = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync()
             ?? throw new UnauthorizedAccessException("Activitat no trobada o sense permisos.");
 
         const int MaxBytes = 5 * 1024 * 1024; // 5 MB
@@ -441,9 +446,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<List<GroupDto>?> GetGroupsAsync(int activityId, int professorId, bool isAdmin)
     {
-        // Valida que l'activitat pertany al professor (o que és admin)
-        var owns = await db.Activities
-            .AnyAsync(a => a.Id == activityId && (isAdmin || a.Module.ProfessorId == professorId));
+        var q = db.Activities.Where(a => a.Id == activityId);
+        var owns = await (isAdmin ? q : WithAccess(q, professorId)).AnyAsync();
         if (!owns) return null;
 
         var groups = await db.Groups
@@ -460,8 +464,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<GroupDto?> CreateGroupAsync(int activityId, CreateGroupRequest req, int professorId, bool isAdmin)
     {
-        var owns = await db.Activities
-            .AnyAsync(a => a.Id == activityId && (isAdmin || a.Module.ProfessorId == professorId));
+        var q = db.Activities.Where(a => a.Id == activityId);
+        var owns = await (isAdmin ? q : WithAccess(q, professorId)).AnyAsync();
         if (!owns) return null;
 
         // OrderIndex = màxim actual + 1 per afegir al final
@@ -477,9 +481,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<bool> ReorderGroupsAsync(int activityId, List<int> orderedGroupIds, int professorId, bool isAdmin)
     {
-        // Valida que el professor és propietari de l'activitat
-        var owns = await db.Activities
-            .AnyAsync(a => a.Id == activityId && (isAdmin || a.Module.ProfessorId == professorId));
+        var q = db.Activities.Where(a => a.Id == activityId);
+        var owns = await (isAdmin ? q : WithAccess(q, professorId)).AnyAsync();
         if (!owns) return false;
 
         var groups = await db.Groups
@@ -499,10 +502,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<bool> RenameGroupAsync(int activityId, int groupId, string name, int professorId, bool isAdmin)
     {
-        var group = await db.Groups
+        var q = db.Groups
             .Include(g => g.Activity).ThenInclude(a => a.Module)
-            .FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId
-                && (isAdmin || g.Activity.Module.ProfessorId == professorId));
+            .Where(g => g.Id == groupId && g.ActivityId == activityId);
+        var group = await (isAdmin ? q : q.Where(g =>
+            g.Activity.Module.ProfessorId == professorId ||
+            db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == g.Activity.Module.ClassId))
+        ).FirstOrDefaultAsync();
         if (group is null) return false;
         group.Name = name.Trim();
         await db.SaveChangesAsync();
@@ -511,10 +517,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<bool> DeleteGroupAsync(int activityId, int groupId, int professorId, bool isAdmin)
     {
-        var group = await db.Groups
+        var q = db.Groups
             .Include(g => g.Activity).ThenInclude(a => a.Module)
-            .FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId
-                && (isAdmin || g.Activity.Module.ProfessorId == professorId));
+            .Where(g => g.Id == groupId && g.ActivityId == activityId);
+        var group = await (isAdmin ? q : q.Where(g =>
+            g.Activity.Module.ProfessorId == professorId ||
+            db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == g.Activity.Module.ClassId))
+        ).FirstOrDefaultAsync();
         if (group is null) return false;
         db.Groups.Remove(group);
         await db.SaveChangesAsync();
@@ -523,10 +532,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<bool> AddMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin)
     {
-        var group = await db.Groups
+        var q = db.Groups
             .Include(g => g.Activity).ThenInclude(a => a.Module)
-            .FirstOrDefaultAsync(g => g.Id == groupId && g.ActivityId == activityId
-                && (isAdmin || g.Activity.Module.ProfessorId == professorId));
+            .Where(g => g.Id == groupId && g.ActivityId == activityId);
+        var group = await (isAdmin ? q : q.Where(g =>
+            g.Activity.Module.ProfessorId == professorId ||
+            db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == g.Activity.Module.ClassId))
+        ).FirstOrDefaultAsync();
         if (group is null) return false;
 
         var alreadyAssigned = await db.GroupMembers
@@ -541,11 +553,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<bool> RemoveMemberAsync(int activityId, int groupId, int studentId, int professorId, bool isAdmin)
     {
-        var member = await db.GroupMembers
+        var q = db.GroupMembers
             .Include(gm => gm.Group).ThenInclude(g => g.Activity).ThenInclude(a => a.Module)
-            .FirstOrDefaultAsync(gm => gm.GroupId == groupId && gm.StudentId == studentId
-                && gm.Group.ActivityId == activityId
-                && (isAdmin || gm.Group.Activity.Module.ProfessorId == professorId));
+            .Where(gm => gm.GroupId == groupId && gm.StudentId == studentId && gm.Group.ActivityId == activityId);
+        var member = await (isAdmin ? q : q.Where(gm =>
+            gm.Group.Activity.Module.ProfessorId == professorId ||
+            db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == gm.Group.Activity.Module.ClassId))
+        ).FirstOrDefaultAsync();
         if (member is null) return false;
         db.GroupMembers.Remove(member);
         await db.SaveChangesAsync();
@@ -606,16 +620,16 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     public async Task<List<ActivityCriterionDto>> GetCriteriaAsync(int activityId, int professorId, bool isAdmin)
     {
-        var hasAccess = await db.Activities.AnyAsync(a => a.Id == activityId &&
-            (isAdmin || a.Module.ProfessorId == professorId));
+        var q = db.Activities.Where(a => a.Id == activityId);
+        var hasAccess = await (isAdmin ? q : WithAccess(q, professorId)).AnyAsync();
         if (!hasAccess) return [];
         return await CriteriaHelper.GetDtosAsync(db, activityId);
     }
 
     public async Task<List<ActivityCriterionDto>> SaveCriteriaAsync(int activityId, int professorId, bool isAdmin, SaveCriteriaRequest req)
     {
-        var hasAccess = await db.Activities.AnyAsync(a => a.Id == activityId &&
-            (isAdmin || a.Module.ProfessorId == professorId));
+        var q = db.Activities.Where(a => a.Id == activityId);
+        var hasAccess = await (isAdmin ? q : WithAccess(q, professorId)).AnyAsync();
         if (!hasAccess) return [];
 
         // Substitueix tots els criteris existents
