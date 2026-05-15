@@ -160,4 +160,12 @@ app.MapGet("/manifest.json", (BrandingService b) =>
 app.MapRazorComponents<AutoCo.Web.Components.App>()
     .AddInteractiveServerRenderMode();
 
-app.Run();
+try
+{
+    app.Run();
+}
+catch (StackExchange.Redis.RedisConnectionException ex)
+{
+    // Esperat durant l'aturada del contenidor quan Redis s'atura abans que el web.
+    app.Logger.LogWarning("Redis connection reset durant shutdown: {Message}", ex.Message);
+}

@@ -112,7 +112,9 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         var modul = await db.Modules
             .Include(m => m.Professor)
             .Include(m => m.Class)
-            .FirstOrDefaultAsync(m => m.Id == req.ModuleId && (isAdmin || m.ProfessorId == professorId))
+            .FirstOrDefaultAsync(m => m.Id == req.ModuleId &&
+                (isAdmin || m.ProfessorId == professorId ||
+                 db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == m.ClassId)))
             ?? throw new UnauthorizedAccessException("El mòdul no pertany a aquest professor.");
 
         var activity = new Activity

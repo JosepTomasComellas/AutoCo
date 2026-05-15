@@ -144,7 +144,14 @@ using (var scope = app.Services.CreateScope())
     {
         // MSSQL: migració EF Core + patches idempotents per a instal·lacions anteriors
         // a l'adopció de migracions formals (compatibilitat enrere).
-        db.Database.Migrate();
+        // Reintents per si SQL Server extern no és accessible en el moment d'arrencada.
+        var migrateRetries = 10;
+        while (true)
+        {
+            try { db.Database.Migrate(); break; }
+            catch (Microsoft.Data.SqlClient.SqlException) when (migrateRetries-- > 0)
+            { await Task.Delay(TimeSpan.FromSeconds(5)); }
+        }
 
         await db.Database.ExecuteSqlRawAsync("""
             IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Cicles')
