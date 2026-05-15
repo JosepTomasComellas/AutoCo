@@ -4,6 +4,8 @@ public class Activity
 {
     public int    Id           { get; set; }
     public int    ModuleId     { get; set; }
+    // Professor que ha creat l'activitat (pot diferir de Module.ProfessorId si és d'una classe assignada)
+    public int?   CreatedByProfessorId { get; set; }
     public string Name         { get; set; } = null!;
     public string? Description { get; set; }
     public bool      IsOpen                { get; set; } = true;

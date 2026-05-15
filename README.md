@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.26
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.27
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -202,6 +202,11 @@ AdminAuditLog    (registre d'accions sensibles, sense FK)
 ---
 
 ## Changelog
+
+### v2.6.27
+- **Fix kick de sessió — logout real al navegador**: el senyal de kick ara arriba via Redis pub/sub (`autoco:kick:{circuitId}`) al circuit Blazor de l'usuari expulsat, que esborra el localStorage i redirigeix a `/`; funciona per a professors i alumnes
+- **Fix entrades duplicades en refresc** (`CircuitPresenceHandler`): `ICircuitHandler.OnConnectionDownAsync` atura el heartbeat Redis en el moment de la desconnexió del navegador (Ctrl+F5, tancament de pestanya), evitant entrades dobles durant el període de retenció del circuit (~3 min)
+- **Fix `TaskCanceledException`**: `Nav.NavigateTo` usa `forceLoad: false` (navegació interna Blazor sense JS interop) per evitar errors quan el circuit és parcialment desconnectat en rebre el kick
 
 ### v2.6.26
 - **Kick de sessió** (`/admin/connexions`): botó per tancar qualsevol sessió activa (esborra clau Redis online + invalida refresh tokens del professor); no es pot expulsar la sessió pròpia

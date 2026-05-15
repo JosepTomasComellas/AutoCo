@@ -60,10 +60,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .AsQueryable();
 
-        // Visibilitat: el professor veu les seves pròpies activitats (mòduls que va crear).
-        // L'accés a accions sobre activitats d'altres mòduls de la classe es comprova via WithAccess.
+        // Visibilitat: el professor veu les activitats que va crear (CreatedByProfessorId)
+        // o les dels mòduls que posseeix (Module.ProfessorId). Separa "qui crea" de "qui posseeix el mòdul".
         if (professorId.HasValue)
-            q = q.Where(a => a.Module.ProfessorId == professorId.Value);
+            q = q.Where(a => a.Module.ProfessorId == professorId.Value ||
+                             a.CreatedByProfessorId == professorId.Value);
         if (!includeArchived)
             q = q.Where(a => !a.IsArchived);
 
@@ -82,7 +83,8 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .AsQueryable();
 
         if (professorId.HasValue)
-            q = q.Where(a => a.Module.ProfessorId == professorId.Value);
+            q = q.Where(a => a.Module.ProfessorId == professorId.Value ||
+                             a.CreatedByProfessorId == professorId.Value);
 
         var total = await q.CountAsync();
         var items = await q.OrderByDescending(a => a.CreatedAt)
@@ -131,11 +133,12 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
         var activity = new Activity
         {
-            ModuleId    = req.ModuleId,
-            Name        = req.Name.Trim(),
-            Description = req.Description?.Trim(),
-            OpenAt      = req.OpenAt,
-            CloseAt     = req.CloseAt
+            ModuleId             = req.ModuleId,
+            CreatedByProfessorId = professorId,
+            Name                 = req.Name.Trim(),
+            Description          = req.Description?.Trim(),
+            OpenAt               = req.OpenAt,
+            CloseAt              = req.CloseAt
         };
         db.Activities.Add(activity);
         await db.SaveChangesAsync();
@@ -213,10 +216,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
         var nova = new Activity
         {
-            ModuleId    = original.ModuleId,
-            Name        = req.Name.Trim(),
-            Description = req.Description?.Trim(),
-            IsOpen      = true
+            ModuleId             = original.ModuleId,
+            CreatedByProfessorId = professorId,
+            Name                 = req.Name.Trim(),
+            Description          = req.Description?.Trim(),
+            IsOpen               = true
         };
         db.Activities.Add(nova);
         await db.SaveChangesAsync();
@@ -261,10 +265,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
         var nova = new Activity
         {
-            ModuleId    = req.TargetModuleId,
-            Name        = req.Name.Trim(),
-            Description = req.Description?.Trim(),
-            IsOpen      = true
+            ModuleId             = req.TargetModuleId,
+            CreatedByProfessorId = professorId,
+            Name                 = req.Name.Trim(),
+            Description          = req.Description?.Trim(),
+            IsOpen               = true
         };
         db.Activities.Add(nova);
         await db.SaveChangesAsync();

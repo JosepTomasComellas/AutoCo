@@ -293,6 +293,16 @@ using (var scope = app.Services.CreateScope())
             IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
                            WHERE TABLE_NAME='Activities' AND COLUMN_NAME='ShowResultsToStudents')
                 ALTER TABLE [Activities] ADD [ShowResultsToStudents] BIT NOT NULL DEFAULT 0;
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                           WHERE TABLE_NAME='Activities' AND COLUMN_NAME='CreatedByProfessorId')
+            BEGIN
+                ALTER TABLE [Activities] ADD [CreatedByProfessorId] INT NULL;
+                -- Retrocompatibilitat: activitats existents s'atribueixen al professor del mòdul
+                UPDATE [Activities] SET [CreatedByProfessorId] = (
+                    SELECT [ProfessorId] FROM [Modules] WHERE [Id] = [Activities].[ModuleId]
+                );
+            END
             """);
 
         // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
