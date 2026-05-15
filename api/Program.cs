@@ -298,10 +298,7 @@ using (var scope = app.Services.CreateScope())
                            WHERE TABLE_NAME='Activities' AND COLUMN_NAME='CreatedByProfessorId')
             BEGIN
                 ALTER TABLE [Activities] ADD [CreatedByProfessorId] INT NULL;
-                -- Retrocompatibilitat: activitats existents s'atribueixen al professor del mòdul
-                UPDATE [Activities] SET [CreatedByProfessorId] = (
-                    SELECT [ProfessorId] FROM [Modules] WHERE [Id] = [Activities].[ModuleId]
-                );
+                EXEC('UPDATE [Activities] SET [CreatedByProfessorId] = (SELECT [ProfessorId] FROM [Modules] WHERE [Id] = [Activities].[ModuleId])');
             END
             """);
 
