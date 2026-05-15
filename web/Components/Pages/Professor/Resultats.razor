@@ -372,8 +372,7 @@ else
     private List<ActivityLogDto>     _log     = [];
     private Dictionary<int, string>  _notes   = [];
 
-    private bool _canEdit => UserState.IsAdmin ||
-        (_results is not null && UserState.UserId == _results.Activity.ProfessorId);
+    private bool _canEdit => _results?.Activity.CanEdit ?? false;
 
     // Filtres
     private string _filterGroup   = "";

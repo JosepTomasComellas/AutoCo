@@ -40,9 +40,15 @@ public interface IActivityService
 public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoService photos) : IActivityService
 {
     // Comprova accés a una activitat via propietat del mòdul O via ProfessorClass de la classe.
+    // Usat per a ACCIONS (editar, esborrar, grups...) però NO per a la visibilitat del tauler.
     private IQueryable<Activity> WithAccess(IQueryable<Activity> q, int professorId) =>
         q.Where(a => a.Module.ProfessorId == professorId ||
                      db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == a.Module.ClassId));
+
+    // Comprova si un professor pot editar una activitat (per al camp CanEdit del DTO).
+    private Task<bool> CanEditAsync(int activityClassId, int activityModuleProfId, int professorId) =>
+        activityModuleProfId == professorId ? Task.FromResult(true)
+        : db.ProfessorClasses.AnyAsync(pc => pc.ProfessorId == professorId && pc.ClassId == activityClassId);
 
     // ── Activitats ───────────────────────────────────────────────────────────
 
@@ -54,8 +60,10 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Groups).ThenInclude(g => g.Members)
             .AsQueryable();
 
+        // Visibilitat: el professor veu les seves pròpies activitats (mòduls que va crear).
+        // L'accés a accions sobre activitats d'altres mòduls de la classe es comprova via WithAccess.
         if (professorId.HasValue)
-            q = WithAccess(q, professorId.Value);
+            q = q.Where(a => a.Module.ProfessorId == professorId.Value);
         if (!includeArchived)
             q = q.Where(a => !a.IsArchived);
 
@@ -74,7 +82,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .AsQueryable();
 
         if (professorId.HasValue)
-            q = WithAccess(q, professorId.Value);
+            q = q.Where(a => a.Module.ProfessorId == professorId.Value);
 
         var total = await q.CountAsync();
         var items = await q.OrderByDescending(a => a.CreatedAt)
@@ -708,7 +716,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static ActivityDto ToDto(Activity a)
+    private static ActivityDto ToDto(Activity a, bool canEdit = true)
     {
         var numGroups   = a.Groups.Count;
         var numStudents = a.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count();
@@ -718,7 +726,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
             a.Module.ProfessorId, a.Module.Professor.NomComplet,
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents,
-            a.OpenAt, a.CloseAt, a.ShowResultsToStudents, a.IsArchived);
+            a.OpenAt, a.CloseAt, a.ShowResultsToStudents, a.IsArchived, canEdit);
     }
 
     private StudentDto ToStudentDto(Student s) => new(

@@ -313,7 +313,7 @@
     [Parameter] public EventCallback<ActivityDto>  OnArchived { get; set; }
     [Parameter] public bool Compact { get; set; }
 
-    private bool _canEdit => UserState.IsAdmin || UserState.UserId == Act.ProfessorId;
+    private bool _canEdit => Act.CanEdit;
 
     private ParticipationDto? _participation        = null;
     private bool              _loadingParticipation = false;

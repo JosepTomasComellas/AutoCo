@@ -296,8 +296,7 @@
     private bool _loading  = true;
     private bool _saving   = false;
 
-    private bool _canEdit => UserState.IsAdmin ||
-        (_activity is not null && UserState.UserId == _activity.ProfessorId);
+    private bool _canEdit => _activity?.CanEdit ?? false;
     private string _nomGrup = "";
     private bool _showImport    = false;
     private bool _importing     = false;
