@@ -58,6 +58,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Include(a => a.CreatedByProfessor)
             .AsQueryable();
 
         // Visibilitat: el professor veu les activitats que va crear (CreatedByProfessorId)
@@ -79,6 +80,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Include(a => a.CreatedByProfessor)
             .Where(a => !a.IsArchived)
             .AsQueryable();
 
@@ -100,6 +102,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Include(a => a.CreatedByProfessor)
             .Where(a => a.Id == id);
         var a = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (a is null) return null;
@@ -116,6 +119,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Include(a => a.CreatedByProfessor)
             .Where(a => a.Id == id);
         var a = await (professorId.HasValue ? WithAccess(q, professorId.Value) : q).FirstOrDefaultAsync();
         return a is null ? null : ToDto(a);
@@ -146,10 +150,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         // Còpia dels criteris globals com a criteris per defecte de l'activitat
         await SeedDefaultCriteriaAsync(activity.Id);
 
+        var creatorName = professorId == modul.ProfessorId
+            ? modul.Professor.NomComplet
+            : (await db.Professors.FindAsync(professorId))?.NomComplet ?? modul.Professor.NomComplet;
         return new ActivityDto(activity.Id,
             modul.Id, modul.Code, modul.Name,
             modul.ClassId, modul.Class.Name, modul.Class.AcademicYear,
-            modul.ProfessorId, modul.Professor.NomComplet,
+            professorId, creatorName,
             activity.Name, activity.Description, activity.IsOpen, activity.CreatedAt, 0, 0,
             activity.OpenAt, activity.CloseAt);
     }
@@ -160,6 +167,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Include(a => a.CreatedByProfessor)
             .Where(a => a.Id == id);
         var a = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (a is null) return null;
@@ -189,6 +197,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.Module).ThenInclude(m => m.Professor)
             .Include(a => a.Module).ThenInclude(m => m.Class)
             .Include(a => a.Groups).ThenInclude(g => g.Members)
+            .Include(a => a.CreatedByProfessor)
             .Where(a => a.Id == id);
         var a = await (isAdmin ? q : WithAccess(q, professorId)).FirstOrDefaultAsync();
         if (a is null) return null;
@@ -238,11 +247,14 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         }
         await db.SaveChangesAsync();
 
-        var numStudents = original.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count();
+        var numStudents  = original.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count();
+        var dupCreatorName = professorId == original.Module.ProfessorId
+            ? original.Module.Professor.NomComplet
+            : (await db.Professors.FindAsync(professorId))?.NomComplet ?? original.Module.Professor.NomComplet;
         return new ActivityDto(nova.Id,
             original.Module.Id, original.Module.Code, original.Module.Name,
             original.Module.ClassId, original.Module.Class.Name, original.Module.Class.AcademicYear,
-            original.Module.ProfessorId, original.Module.Professor.NomComplet,
+            professorId, dupCreatorName,
             nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
             original.Groups.Count, numStudents);
     }
@@ -284,10 +296,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         }
         await db.SaveChangesAsync();
 
+        var crossCreatorName = professorId == targetModule.ProfessorId
+            ? targetModule.Professor.NomComplet
+            : (await db.Professors.FindAsync(professorId))?.NomComplet ?? targetModule.Professor.NomComplet;
         return new ActivityDto(nova.Id,
             targetModule.Id, targetModule.Code, targetModule.Name,
             targetModule.ClassId, targetModule.Class.Name, targetModule.Class.AcademicYear,
-            targetModule.ProfessorId, targetModule.Professor.NomComplet,
+            professorId, crossCreatorName,
             nova.Name, nova.Description, nova.IsOpen, nova.CreatedAt,
             original.Groups.Count, 0, null, null);
     }
@@ -725,11 +740,13 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
     {
         var numGroups   = a.Groups.Count;
         var numStudents = a.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count();
+        var creator     = a.CreatedByProfessor ?? a.Module.Professor;
+        var creatorId   = a.CreatedByProfessorId ?? a.Module.ProfessorId;
         return new ActivityDto(
             a.Id,
             a.ModuleId, a.Module.Code, a.Module.Name,
             a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
-            a.Module.ProfessorId, a.Module.Professor.NomComplet,
+            creatorId, creator.NomComplet,
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents,
             a.OpenAt, a.CloseAt, a.ShowResultsToStudents, a.IsArchived, canEdit);
     }
