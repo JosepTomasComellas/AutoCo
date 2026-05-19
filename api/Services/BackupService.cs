@@ -14,6 +14,7 @@ public interface IBackupService
     Task<BackupDto>               ExportAsync();
     Task<byte[]>                  ExportZipAsync();
     Task<ImportResult>            ImportAsync(BackupDto backup);
+    Task<ImportResult>            ImportZipAsync(byte[] zipData);
     Task<List<BackupFileInfoDto>> ListFilesAsync();
     Task<BackupFileInfoDto>       CreateFileAsync();
     Task<BackupFileInfoDto>       CreateAutoBackupAsync(string type);
@@ -183,6 +184,14 @@ public class BackupService(AppDbContext db, IConfiguration cfg, ILogger<BackupSe
 
     // ── Import (substitueix totes les dades) ──────────────────────────────────
     public Task<ImportResult> ImportAsync(BackupDto backup) => ImportCoreAsync(backup, null);
+
+    public async Task<ImportResult> ImportZipAsync(byte[] zipData)
+    {
+        var (backup, photos) = FromZipFull(zipData);
+        if (backup is null)
+            return new ImportResult(false, "Format ZIP invàlid o backup.json no trobat", 0, 0, 0, 0, 0, 0);
+        return await ImportCoreAsync(backup, photos);
+    }
 
     private async Task<ImportResult> ImportCoreAsync(BackupDto bk, Dictionary<string, byte[]>? photos)
     {

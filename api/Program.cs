@@ -1811,6 +1811,20 @@ app.MapPost("/api/admin/backup/import", async (
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 }).RequireAuthorization().RequireRateLimiting("admin");
 
+app.MapPost("/api/admin/backup/import-zip", async (
+    HttpRequest req, IBackupService svc, AppDbContext db, ClaimsPrincipal user) =>
+{
+    if (!IsAdmin(user)) return Results.Forbid();
+    using var ms = new MemoryStream();
+    await req.Body.CopyToAsync(ms);
+    var result = await svc.ImportZipAsync(ms.ToArray());
+    if (result.Success)
+        await AuditAsync(db, "backup.imported.zip", GetUserId(user),
+            user.FindFirstValue(ClaimTypes.Name),
+            $"Professors:{result.Professors} Classes:{result.Classes} Students:{result.Students}");
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}).RequireAuthorization().RequireRateLimiting("admin");
+
 app.MapGet("/api/admin/backup/files", async (IBackupService svc, ClaimsPrincipal user) =>
 {
     if (!IsAdmin(user)) return Results.Forbid();

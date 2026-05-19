@@ -476,6 +476,15 @@ public class ApiClient
     public Task<ImportResult?> ImportBackupAsync(BackupDto backup) =>
         PostAsync<ImportResult>("/api/admin/backup/import", backup);
 
+    public async Task<ImportResult?> ImportZipBackupAsync(byte[] data)
+    {
+        using var content = new ByteArrayContent(data);
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/zip");
+        var resp = await _http.PostAsync("/api/admin/backup/import-zip", content);
+        if (!resp.IsSuccessStatusCode) { if (resp.StatusCode == System.Net.HttpStatusCode.Unauthorized) _userState.SessionExpired(); return null; }
+        return await resp.Content.ReadFromJsonAsync<ImportResult?>();
+    }
+
     public Task<List<BackupFileInfoDto>?> ListBackupFilesAsync() =>
         GetAsync<List<BackupFileInfoDto>>("/api/admin/backup/files");
 
