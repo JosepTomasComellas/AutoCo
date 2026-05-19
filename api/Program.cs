@@ -301,6 +301,13 @@ using (var scope = app.Services.CreateScope())
                 EXEC('UPDATE [Activities] SET [CreatedByProfessorId] = (SELECT [ProfessorId] FROM [Modules] WHERE [Id] = [Activities].[ModuleId])');
             END
 
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS
+                           WHERE TABLE_NAME='Groups' AND COLUMN_NAME='OrderIndex')
+            BEGIN
+                ALTER TABLE [Groups] ADD [OrderIndex] INT NOT NULL DEFAULT 0;
+                UPDATE [Groups] SET [OrderIndex] = [Id];
+            END
+
             IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityShares')
             BEGIN
                 CREATE TABLE [ActivityShares] (

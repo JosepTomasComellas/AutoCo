@@ -5,6 +5,7 @@
       "AutoCo":                                         "Information",
       "System.Net.Http":                                "Warning",
       "Microsoft.AspNetCore":                           "Warning",
+      "Microsoft.AspNetCore.Antiforgery":               "None",
       "Microsoft.EntityFrameworkCore":                  "Warning",
       "Microsoft.AspNetCore.Components.Server":         "Warning",
       "Microsoft.AspNetCore.SignalR":                   "Warning",
