@@ -91,6 +91,8 @@ Per a producció real, canviar:
 - `DB_CONNECTION` — cadena de connexió completa (MSSQL o PostgreSQL); **sempre obligatori**
 - `MSSQL_SA_PASSWORD` — contrasenya SQL Server (només si s'usa MSSQL intern)
 - `JWT_SECRET` — secret JWT (mínim 32 caràcters)
+- `JWT_EXPIRY_HOURS` — durada del JWT d'accés (per defecte `1`)
+- `JWT_REFRESH_EXPIRY_HOURS` — durada del refresh token (per defecte `1`); TTL inactivitat de sessió
 - `ADMIN_EMAIL` / `ADMIN_PASSWORD` — credencials de l'administrador inicial
 - `DEFAULT_LANGUAGE` — idioma per defecte de la UI (`ca`, `es`, o qualsevol codi de `config/i18n/`; per defecte `ca`)
 - `I18N_PATH` — ruta als fitxers JSON de traducció (per defecte `/app/i18n`, muntat via volum `./config/i18n`)
@@ -106,6 +108,7 @@ Per a producció real, canviar:
 ```
 Cicle ────< Class ──────< Module ──< Activity ──< Group ──< GroupMember (Student)
                 │           │              ├──< ActivityCriteria (criteris per activitat)
+                │           │              ├──< ActivityShares (professors amb accés compartit)
                 │           │              ├──< Evaluation ──< EvaluationScore (per criteri)
                 │           │              ├──< ProfessorNote (per alumne)
                 │           │              └──< ActivityLog (registre d'accions)
@@ -174,6 +177,7 @@ GET/POST/DELETE /api/activities/{id}/groups               # Gestió grups
 PUT  /api/activities/{id}/groups/{gid}                    # Renomenar grup
 POST/DELETE /api/activities/{id}/groups/{gid}/members     # Membres de grup
 GET  /api/activities/{id}/log                             # Registre d'activitat
+GET/PUT /api/activities/{id}/shares                       # Professors amb qui es comparteix (creador/admin)
 
 GET  /api/evaluations/{activityId}           # Formulari d'avaluació (alumne)
 POST /api/evaluations/{activityId}           # Guardar avaluació
@@ -217,11 +221,11 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - `MudMenu` (MudBlazor 9.x): `ActivatorContent` ja no connecta el click automàticament. Usar `@ref="_menu"` al component + `OnClick="OpenMenuAsync"` al botó activador, on `Task OpenMenuAsync(MouseEventArgs e) => _menu?.OpenMenuAsync(e, false) ?? Task.CompletedTask`
 - Programació d'activitats: `OpenAt`/`CloseAt` en UTC; `ActivitySchedulerService` comprova cada minut i neteja el camp usat; `ToggleOpenAsync` neteja dates passades; UTC→local per a display, local→UTC en desar
 - Pesos de criteris: `ActivityCriterion.Weight` (int, default 1); les mitjanes globals es calculen com a `sum(score*weight)/sum(weights)`; `CriteriaHelper.GetForActivityAsync` retorna `(Key, Label, Weight)` tuples
-- Còpies de seguretat ZIP: `IBackupService.ExportZipAsync()` retorna `byte[]`; `BackupService` usa `System.IO.Compression.ZipArchive`; compatibilitat enrere amb `.json` antics; `ListFilesAsync` llista `*.zip` i `*.json`
+- Còpies de seguretat ZIP: `IBackupService.ExportZipAsync()` retorna `byte[]`; `BackupService` usa `System.IO.Compression.ZipArchive`; `ImportZipAsync(byte[])` extreu `backup.json` + fotos i crida `ImportCoreAsync`; endpoint `POST /api/admin/backup/import-zip` accepta bytes bruts; `Backup.razor` detecta extensió `.zip`/`.json` i tria ruta; compatibilitat enrere amb `.json` antics; `ListFilesAsync` llista `*.zip` i `*.json`
 - Resultats alumne: `ShowResultsToStudents` a `Activity`; quan és `true` i activitat tancada, `GET /api/student/results/{id}` retorna `StudentOwnResultDto`; visible a `/alumne/resultats/{id}`
 - Renovació de curs: `POST /api/admin/new-year` duplica classes (nou `AcademicYear`) i mòduls; retorna `NewYearResult(ClassesCreated, ModulesCreated)`
 - Validació de requests: DataAnnotations als DTOs (`[Required]`, `[MaxLength]`, `[EmailAddress]`, `[Range]`); helper `Validate<T>()` a `Program.cs` retorna `Results.ValidationProblem` (RFC 9457)
-- JWT refresh tokens: `StoreRefreshTokenAsync` genera base64url segur, desa a Redis `autoco:refresh:{token}` (TTL 7 dies); rotació en cada refresh; `RefreshFromTokenAsync` a `ApiClient` per a `MainLayout`; `TryRefreshAsync` privat per a reintentar peticions 401
+- JWT refresh tokens: `StoreRefreshTokenAsync` genera base64url segur, desa a Redis `autoco:refresh:{token}` (TTL configurable via `JwtSettings:RefreshExpiryHours`, per defecte 1h = inactivitat màxima de sessió); rotació en cada refresh; `RefreshFromTokenAsync` a `ApiClient` per a `MainLayout`; `TryRefreshAsync` privat per a reintentar peticions 401
 - Paginació del servidor: `PagedResult<T>` als DTOs; paràmetres `?page=1&size=N`; `ApiClient` desempaqueta a `List<T>` (size=500 per defecte = compatible amb codi existent)
 - Tests (39): `ResultsServiceTests` (15), `AuthServiceTests` (8), `ActivityServiceTests` (6), `CicleServiceTests` (10); pattern `file sealed class FakePhotoService : IPhotoService` per no usar mocking library
 - Rate limiting: SlidingWindow `auth` (5/min), SlidingWindow `remind` (2/min, mass-send), FixedWindow `admin` (20/min); `RejectionStatusCode = 429`
@@ -239,8 +243,11 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Kick de sessió: publica `autoco:kick:{circuitId}` via Redis pub/sub; `OnlinePresenceService.Start()` subscriu al canal i dispara `OnKicked` event; `MainLayout.HandleKickedAsync` esborra localStorage i navega a `/` (forceLoad:false per evitar JS interop en circuit desconnectat); `CircuitPresenceHandler` (Scoped `CircuitHandler`) implementa `OnConnectionDownAsync` → `StopAsync()` per eliminar la clau Redis en el moment de desconnexió del navegador (evita entrades duplicades en Ctrl+F5)
 - Deshabilitar compte professor: `Professor.IsDisabled` (BIT, default 0); migració `20260513000000_AddProfessorIsDisabled`; `ProfessorLoginAsync` i `RefreshAsync` retornen `null` si `IsDisabled`; `POST /api/professors/{id}/toggle-disabled` fa toggle, invalida sessions online i refresh tokens si deshabilitant; no aplicable a admins; pàgina `/admin/professors` mostra chip «Deshabilitat», botó lock/unlock per a no-admins, estil atenuat (`opacity:.65`) per a deshabilitadors
 - `X-Forwarded-For` Docker: `ForwardedHeadersOptions.KnownNetworks.Clear()` + `KnownProxies.Clear()` a `web/Program.cs` perquè nginx (172.18.x.x) no és a la llista de confiança per defecte; sense això `RemoteIpAddress` retorna la IP del contenidor nginx en lloc de la IP real del client
-- Accés a activitats per professors assignats via `ProfessorClass`: `WithAccess(q, professorId)` helper privat a `ActivityService` i `ModuleService` — filtra per `Module.ProfessorId == professorId OR ProfessorClasses.Any(...)` — usat per ACCIONS (editar, esborrar, grups…); la VISIBILITAT del tauler usa `Module.ProfessorId == professorId OR CreatedByProfessorId == professorId`; `HasActivityAccessAsync` helper a `Program.cs` per a endpoints inline (notes, log)
+- Accés a activitats per professors assignats via `ProfessorClass`: `WithAccess(q, professorId)` helper privat a `ActivityService` i `ModuleService` — filtra per `Module.ProfessorId == professorId OR ProfessorClasses.Any(...)` — usat per ACCIONS (editar, esborrar, grups…); la VISIBILITAT del tauler usa `Module.ProfessorId == professorId OR CreatedByProfessorId == professorId OR ActivityShares.Any(s => s.ProfessorId == professorId)`; `HasActivityAccessAsync` helper a `Program.cs` per a endpoints inline (notes, log)
+- Compartir activitats: `ActivityShares` (join table `ActivityId`+`ProfessorId`, CASCADE delete); un professor veu una activitat si és creador, propietari del mòdul, o està a `ActivityShares`; `ActivityDto.CanShare` (bool, server-computed): `true` si el viewer és creador (`CreatedByProfessorId`) o propietari del mòdul; `GET/PUT /api/activities/{id}/shares` retorna/actualitza la llista de professors elegibles (via `ProfessorClass` de la mateixa classe) amb flag `IsShared`; `CompartirActivitatDialog` mostra checkboxes; botó «Compartir» visible si `CanShare || IsAdmin`
 - `Activity.CreatedByProfessorId` (nullable int): qui ha creat l'activitat, pot diferir de `Module.ProfessorId` si és un professor assignat; `CreatedByProfessor` nav. property per obtenir el nom; `ToDto` usa `CreatedByProfessor ?? Module.Professor`; tots els mètodes de creació (`CreateAsync`, `DuplicateAsync`, `DuplicateCrossAsync`) assignen el camp; SQL patch idempotent amb `EXEC(...)` per al backfill (SQL Server valida tots els noms de columna del batch a temps de compilació — les columnes acabades d'afegir cal referenciar-les via `EXEC()` dins el mateix batch)
 - `ActivityDto.CanEdit` (bool, server-computed, default `true`): el backend decideix si l'usuari pot editar; frontend (`ActivityCard`, `Grups`, `Resultats`) usa `Act.CanEdit` en lloc de comparar `UserId == ProfessorId`
 - Retry migració MSSQL: `db.Database.Migrate()` fa fins a 10 reintents amb delay de 5 s per si SQL Server extern no és accessible en el moment d'arrencada del contenidor `api`
 - Redis shutdown: `app.Run()` al `web/Program.cs` embolcallat en `try/catch (RedisConnectionException)` per evitar excepció no capturada quan Redis s'atura abans que el contenidor web
+- DataProtection: claus persistides a `/app/dp-keys` (volum Docker `dp-keys`); `SetApplicationName("AutoCo")`; evita que reinicis de contenidor invaliden cookies d'antiforgery i `ProtectedLocalStorage`; `config/logging.json` filtra `Microsoft.AspNetCore.Antiforgery` a `None` per suprimir el soroll de tokens invàlids de sessions anteriors
+- SQL patches a l'arrencada: tot `UPDATE` que referencïi una columna acabada d'afegir al mateix batch ha d'anar dins `EXEC('...')` — SQL Server valida tots els noms de columna del batch a temps de compilació, fins i tot dins blocs `IF NOT EXISTS BEGIN...END`
