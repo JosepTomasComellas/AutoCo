@@ -19,4 +19,5 @@ public class Activity
     public Module                         Module   { get; set; } = null!;
     public ICollection<Group>             Groups   { get; set; } = [];
     public ICollection<ActivityCriterion> Criteria { get; set; } = [];
+    public ICollection<ActivityShare>     Shares   { get; set; } = [];
 }

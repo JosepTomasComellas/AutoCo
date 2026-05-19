@@ -197,6 +197,12 @@ public class ApiClient
     public Task<ParticipationDto?> GetParticipationAsync(int activityId) =>
         GetAsync<ParticipationDto>($"/api/activities/{activityId}/participation");
 
+    public Task<List<ActivityShareEntryDto>?> GetActivitySharesAsync(int activityId) =>
+        GetAsync<List<ActivityShareEntryDto>>($"/api/activities/{activityId}/shares");
+
+    public Task<bool> UpdateActivitySharesAsync(int activityId, UpdateActivitySharesRequest req) =>
+        PutNoContentAsync($"/api/activities/{activityId}/shares", req);
+
     public Task<ReminderResult?> SendRemindersAsync(int activityId) =>
         PostAsync<ReminderResult>($"/api/activities/{activityId}/remind", (object?)null);
 

@@ -1,0 +1,81 @@
+@inject ApiClient Api
+@inject UserStateService UserState
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResources> Loc
+
+<MudDialog>
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (_entries.Count == 0)
+        {
+            <MudText Color="Color.Secondary">@Loc["ShareDlg_NoOptions"]</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                @Loc["ShareDlg_Info", ClassName]
+            </MudText>
+            @foreach (var e in _entries)
+            {
+                var entry = e;
+                <MudCheckBox @bind-Value="entry.IsChecked" Color="Color.Primary"
+                             Label="@entry.NomComplet" Class="mb-1" />
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => MudDialog.Cancel()">@Loc["Action_Cancel"]</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   Disabled="@(_loading || _saving)"
+                   OnClick="SaveAsync">
+            @Loc["Action_Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int    ActivityId { get; set; }
+    [Parameter] public string ClassName  { get; set; } = "";
+
+    private bool _loading = true;
+    private bool _saving  = false;
+
+    private sealed class CheckEntry
+    {
+        public int    ProfessorId { get; init; }
+        public string NomComplet  { get; init; } = "";
+        public bool   IsChecked   { get; set;  }
+    }
+
+    private List<CheckEntry> _entries = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        Api.SetToken(UserState.Token!);
+        var shares = await Api.GetActivitySharesAsync(ActivityId);
+        _entries = (shares ?? [])
+            .Select(s => new CheckEntry { ProfessorId = s.ProfessorId, NomComplet = s.NomComplet, IsChecked = s.IsShared })
+            .ToList();
+        _loading = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        var selectedIds = _entries.Where(e => e.IsChecked).Select(e => e.ProfessorId).ToList();
+        Api.SetToken(UserState.Token!);
+        var ok = await Api.UpdateActivitySharesAsync(ActivityId, new UpdateActivitySharesRequest(selectedIds));
+        _saving = false;
+        if (ok)
+        {
+            Snackbar.Add(Loc["ShareDlg_Saved"].Value, Severity.Success);
+            MudDialog.Close(DialogResult.Ok(selectedIds));
+        }
+        else
+            Snackbar.Add(Loc["ShareDlg_Error"].Value, Severity.Error);
+    }
+}

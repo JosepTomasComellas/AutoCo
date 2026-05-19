@@ -118,7 +118,8 @@ public record ActivityDto(
     DateTime? OpenAt = null, DateTime? CloseAt = null,
     bool ShowResultsToStudents = false,
     bool IsArchived = false,
-    bool CanEdit = true);
+    bool CanEdit = true,
+    bool CanShare = false);
 
 public record CreateActivityRequest(
     [Range(1, int.MaxValue)] int ModuleId,
@@ -134,6 +135,8 @@ public record DuplicateActivityRequest(string Name, string? Description);
 public record DuplicateCrossRequest(int TargetModuleId, string Name, string? Description);
 public record ImportGroupsRequest(string CsvContent);
 public record ImportGroupsResult(int Assigned, int Skipped, List<string> Errors);
+public record ActivityShareEntryDto(int ProfessorId, string NomComplet, bool IsShared);
+public record UpdateActivitySharesRequest(List<int> ProfessorIds);
 public record ParticipationDto(int ActivityId, int Submitted, int Total);
 public record ReminderResult(int Sent, int Skipped, bool EmailDisabled);
 public record InviteTargetDto(int StudentId, string NomComplet, string Email, string GroupName);

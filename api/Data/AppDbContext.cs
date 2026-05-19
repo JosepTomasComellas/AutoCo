@@ -25,6 +25,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ProfessorClass>      ProfessorClasses     => Set<ProfessorClass>();
     public DbSet<AdminAuditLog>       AdminAuditLogs       => Set<AdminAuditLog>();
     public DbSet<DefaultCriterion>    DefaultCriteria      => Set<DefaultCriterion>();
+    public DbSet<ActivityShare>       ActivityShares       => Set<ActivityShare>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -200,6 +201,15 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(dc => dc.Key).IsUnique();
             e.Property(dc => dc.Key).HasMaxLength(50);
             e.Property(dc => dc.Label).HasMaxLength(200);
+        });
+
+        b.Entity<ActivityShare>(e => {
+            e.HasKey(s => new { s.ActivityId, s.ProfessorId });
+            e.HasOne(s => s.Activity).WithMany(a => a.Shares)
+             .HasForeignKey(s => s.ActivityId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(s => s.Professor).WithMany()
+             .HasForeignKey(s => s.ProfessorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(s => s.ProfessorId);
         });
 
         // Tots els DateTime llegits de la BD es marquen com a UTC perquè

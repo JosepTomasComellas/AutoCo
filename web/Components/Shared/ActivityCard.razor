@@ -108,6 +108,13 @@
                              OnClick="ShowChartAsync">
                     @Loc["Card_ViewChart"]
                 </MudMenuItem>
+                @if (_canShare)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Share"
+                                 OnClick="CompartirAsync">
+                        @Loc["Card_Share"]
+                    </MudMenuItem>
+                }
                 @if (_canEdit)
                 {
                     <MudMenuItem Icon="@Icons.Material.Filled.Edit"
@@ -169,6 +176,13 @@
             <MudMenu Icon="@Icons.Material.Filled.MoreVert" Color="Color.Default"
                      title="@Loc["Card_MoreActions"]"
                      AnchorOrigin="Origin.BottomRight" Dense="true">
+                @if (_canShare)
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Share"
+                                 OnClick="CompartirAsync">
+                        @Loc["Card_Share"]
+                    </MudMenuItem>
+                }
                 @if (_canEdit)
                 {
                     <MudMenuItem Icon="@Icons.Material.Filled.ContentCopy"
@@ -313,7 +327,8 @@
     [Parameter] public EventCallback<ActivityDto>  OnArchived { get; set; }
     [Parameter] public bool Compact { get; set; }
 
-    private bool _canEdit => Act.CanEdit;
+    private bool _canEdit  => Act.CanEdit;
+    private bool _canShare => Act.CanShare || UserState.IsAdmin;
 
     private ParticipationDto? _participation        = null;
     private bool              _loadingParticipation = false;
@@ -462,6 +477,17 @@
             Nav.NavigateTo($"/professor/grups/{nova.Id}");
         }
         else Snackbar.Add(Loc["Card_DuplicateError"].Value, Severity.Error);
+    }
+
+    private async Task CompartirAsync()
+    {
+        var parameters = new DialogParameters<CompartirActivitatDialog>
+        {
+            { d => d.ActivityId, Act.Id },
+            { d => d.ClassName,  Act.ClassName }
+        };
+        var opts = new DialogOptions { MaxWidth = MaxWidth.ExtraSmall, FullWidth = true };
+        await Dialog.ShowAsync<CompartirActivitatDialog>(Loc["ShareDlg_Title"].Value, parameters, opts);
     }
 
     private async Task ManageCriteriaAsync()

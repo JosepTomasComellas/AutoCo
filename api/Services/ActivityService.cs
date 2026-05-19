@@ -22,6 +22,8 @@ public interface IActivityService
     Task<ReminderResult>    SendRemindersAsync(int activityId, int professorId, bool isAdmin, IEmailService email);
     Task<List<ActivityCriterionDto>> GetCriteriaAsync(int activityId, int professorId, bool isAdmin);
     Task<List<ActivityCriterionDto>> SaveCriteriaAsync(int activityId, int professorId, bool isAdmin, SaveCriteriaRequest req);
+    Task<List<ActivityShareEntryDto>?> GetSharesAsync(int activityId, int professorId, bool isAdmin);
+    Task<bool>                         UpdateSharesAsync(int activityId, int professorId, bool isAdmin, List<int> professorIds);
     Task<(byte[] Content, string FileName)?>  ExportGroupsAsync(int activityId, int professorId, bool isAdmin);
     Task<ImportGroupsResult> ImportGroupsAsync(int activityId, int professorId, bool isAdmin, string csvContent);
 
@@ -39,8 +41,7 @@ public interface IActivityService
 
 public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoService photos) : IActivityService
 {
-    // Comprova accés a una activitat via propietat del mòdul O via ProfessorClass de la classe.
-    // Usat per a ACCIONS (editar, esborrar, grups...) i per a la visibilitat del tauler.
+    // Comprova accés (editar/esborrar/grups) via propietat del mòdul O via ProfessorClass.
     private IQueryable<Activity> WithAccess(IQueryable<Activity> q, int professorId) =>
         q.Where(a => a.Module.ProfessorId == professorId ||
                      db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == a.Module.ClassId));
@@ -64,14 +65,14 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         if (professorId.HasValue)
             q = q.Where(a => a.Module.ProfessorId == professorId.Value ||
                              a.CreatedByProfessorId == professorId.Value ||
-                             db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId.Value &&
-                                                           pc.ClassId == a.Module.ClassId));
+                             db.ActivityShares.Any(s => s.ActivityId == a.Id && s.ProfessorId == professorId.Value));
         if (!includeArchived)
             q = q.Where(a => !a.IsArchived);
 
-        return await q.OrderByDescending(a => a.CreatedAt)
-            .Select(a => ToDto(a))
-            .ToListAsync();
+        var pid = professorId;
+        return (await q.OrderByDescending(a => a.CreatedAt).ToListAsync())
+            .Select(a => ToDto(a, viewerProfessorId: pid))
+            .ToList();
     }
 
     public async Task<(List<ActivityDto> Items, int Total)> GetAllPagedAsync(int? professorId, int page, int size)
@@ -87,14 +88,15 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         if (professorId.HasValue)
             q = q.Where(a => a.Module.ProfessorId == professorId.Value ||
                              a.CreatedByProfessorId == professorId.Value ||
-                             db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId.Value &&
-                                                           pc.ClassId == a.Module.ClassId));
+                             db.ActivityShares.Any(s => s.ActivityId == a.Id && s.ProfessorId == professorId.Value));
 
         var total = await q.CountAsync();
-        var items = await q.OrderByDescending(a => a.CreatedAt)
+        var pid   = professorId;
+        var items = (await q.OrderByDescending(a => a.CreatedAt)
             .Skip((page - 1) * size).Take(size)
-            .Select(a => ToDto(a))
-            .ToListAsync();
+            .ToListAsync())
+            .Select(a => ToDto(a, viewerProfessorId: pid))
+            .ToList();
         return (items, total);
     }
 
@@ -683,6 +685,65 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
         return await CriteriaHelper.GetDtosAsync(db, activityId);
     }
 
+    // ── Compartir activitat ──────────────────────────────────────────────────────
+
+    public async Task<List<ActivityShareEntryDto>?> GetSharesAsync(int activityId, int professorId, bool isAdmin)
+    {
+        var activity = await db.Activities
+            .Include(a => a.Module)
+            .Include(a => a.Shares)
+            .FirstOrDefaultAsync(a => a.Id == activityId);
+        if (activity is null) return null;
+
+        var isOwner = activity.Module.ProfessorId == professorId || activity.CreatedByProfessorId == professorId;
+        if (!isAdmin && !isOwner) return null;
+
+        var classId     = activity.Module.ClassId;
+        var sharedIds   = activity.Shares.Select(s => s.ProfessorId).ToHashSet();
+
+        var candidates = await db.ProfessorClasses
+            .Include(pc => pc.Professor)
+            .Where(pc => pc.ClassId == classId &&
+                         pc.ProfessorId != professorId &&
+                         !pc.Professor.IsDisabled)
+            .Select(pc => new { pc.ProfessorId, pc.Professor.Nom, pc.Professor.Cognoms })
+            .ToListAsync();
+
+        return candidates
+            .Select(p => new ActivityShareEntryDto(
+                p.ProfessorId,
+                $"{p.Nom} {p.Cognoms}".Trim(),
+                sharedIds.Contains(p.ProfessorId)))
+            .OrderBy(e => e.NomComplet)
+            .ToList();
+    }
+
+    public async Task<bool> UpdateSharesAsync(int activityId, int professorId, bool isAdmin, List<int> professorIds)
+    {
+        var activity = await db.Activities
+            .Include(a => a.Module)
+            .Include(a => a.Shares)
+            .FirstOrDefaultAsync(a => a.Id == activityId);
+        if (activity is null) return false;
+
+        var isOwner = activity.Module.ProfessorId == professorId || activity.CreatedByProfessorId == professorId;
+        if (!isAdmin && !isOwner) return false;
+
+        // Valida que els professors seleccionats tinguin accés a la classe
+        var classId = activity.Module.ClassId;
+        var validIds = await db.ProfessorClasses
+            .Where(pc => pc.ClassId == classId && professorIds.Contains(pc.ProfessorId) && pc.ProfessorId != professorId)
+            .Select(pc => pc.ProfessorId)
+            .ToHashSetAsync();
+
+        db.ActivityShares.RemoveRange(activity.Shares);
+        foreach (var pid in validIds)
+            db.ActivityShares.Add(new AutoCo.Api.Data.Models.ActivityShare { ActivityId = activityId, ProfessorId = pid });
+
+        await db.SaveChangesAsync();
+        return true;
+    }
+
     private async Task SeedDefaultCriteriaAsync(int activityId)
     {
         var defaults = await db.DefaultCriteria.OrderBy(d => d.OrderIndex).ToListAsync();
@@ -738,19 +799,21 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private static ActivityDto ToDto(Activity a, bool canEdit = true)
+    private static ActivityDto ToDto(Activity a, bool canEdit = true, int? viewerProfessorId = null)
     {
         var numGroups   = a.Groups.Count;
         var numStudents = a.Groups.SelectMany(g => g.Members).Select(m => m.StudentId).Distinct().Count();
         var creator     = a.CreatedByProfessor ?? a.Module.Professor;
         var creatorId   = a.CreatedByProfessorId ?? a.Module.ProfessorId;
+        var canShare    = viewerProfessorId.HasValue &&
+                          (creatorId == viewerProfessorId.Value || a.Module.ProfessorId == viewerProfessorId.Value);
         return new ActivityDto(
             a.Id,
             a.ModuleId, a.Module.Code, a.Module.Name,
             a.Module.ClassId, a.Module.Class.Name, a.Module.Class.AcademicYear,
             creatorId, creator.NomComplet,
             a.Name, a.Description, a.IsOpen, a.CreatedAt, numGroups, numStudents,
-            a.OpenAt, a.CloseAt, a.ShowResultsToStudents, a.IsArchived, canEdit);
+            a.OpenAt, a.CloseAt, a.ShowResultsToStudents, a.IsArchived, canEdit, canShare);
     }
 
     private StudentDto ToStudentDto(Student s) => new(

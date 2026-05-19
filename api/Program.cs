@@ -300,6 +300,20 @@ using (var scope = app.Services.CreateScope())
                 ALTER TABLE [Activities] ADD [CreatedByProfessorId] INT NULL;
                 EXEC('UPDATE [Activities] SET [CreatedByProfessorId] = (SELECT [ProfessorId] FROM [Modules] WHERE [Id] = [Activities].[ModuleId])');
             END
+
+            IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityShares')
+            BEGIN
+                CREATE TABLE [ActivityShares] (
+                    [ActivityId]  INT NOT NULL,
+                    [ProfessorId] INT NOT NULL,
+                    CONSTRAINT [PK_ActivityShares] PRIMARY KEY ([ActivityId], [ProfessorId]),
+                    CONSTRAINT [FK_ActivityShares_Activities_ActivityId]
+                        FOREIGN KEY ([ActivityId]) REFERENCES [Activities]([Id]) ON DELETE CASCADE,
+                    CONSTRAINT [FK_ActivityShares_Professors_ProfessorId]
+                        FOREIGN KEY ([ProfessorId]) REFERENCES [Professors]([Id]) ON DELETE CASCADE
+                );
+                CREATE INDEX [IX_ActivityShares_ProfessorId] ON [ActivityShares] ([ProfessorId]);
+            END
             """);
 
         // SQL Server Express activa AUTO_CLOSE per defecte: desactivar-lo evita
@@ -1091,6 +1105,22 @@ app.MapPost("/api/activities/{id:int}/invite/{studentId:int}", async (
         student.Email, student.NomComplet, activity.Name,
         activity.Module.Class.Name, req.IncludePassword, password);
     return Results.Ok(new InviteOneResult(sent, sent ? null : "Error en l'enviament."));
+}).RequireAuthorization();
+
+app.MapGet("/api/activities/{id:int}/shares", async (int id, IActivityService svc,
+    ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var shares = await svc.GetSharesAsync(id, GetUserId(user), IsAdmin(user));
+    return shares is null ? Results.Forbid() : Results.Ok(shares);
+}).RequireAuthorization();
+
+app.MapPut("/api/activities/{id:int}/shares", async (int id, UpdateActivitySharesRequest req,
+    IActivityService svc, ClaimsPrincipal user) =>
+{
+    if (!IsProfessor(user)) return Results.Forbid();
+    var ok = await svc.UpdateSharesAsync(id, GetUserId(user), IsAdmin(user), req.ProfessorIds);
+    return ok ? Results.Ok() : Results.Forbid();
 }).RequireAuthorization();
 
 app.MapGet("/api/activities/{id:int}/criteria", async (int id, IActivityService svc,
