@@ -305,7 +305,7 @@ using (var scope = app.Services.CreateScope())
                            WHERE TABLE_NAME='Groups' AND COLUMN_NAME='OrderIndex')
             BEGIN
                 ALTER TABLE [Groups] ADD [OrderIndex] INT NOT NULL DEFAULT 0;
-                UPDATE [Groups] SET [OrderIndex] = [Id];
+                EXEC('UPDATE [Groups] SET [OrderIndex] = [Id]');
             END
 
             IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ActivityShares')
