@@ -21,9 +21,6 @@ public interface IAuthService
 public class AuthService(AppDbContext db, IConfiguration config, IPhotoService photos,
     IDistributedCache cache) : IAuthService
 {
-    private static readonly DistributedCacheEntryOptions RefreshTtl = new()
-        { AbsoluteExpirationRelativeToNow = TimeSpan.FromDays(7) };
-
     public async Task<LoginResponse?> ProfessorLoginAsync(ProfessorLoginRequest req)
     {
         var professor = await db.Professors
@@ -103,9 +100,12 @@ public class AuthService(AppDbContext db, IConfiguration config, IPhotoService p
 
     private async Task<string> StoreRefreshTokenAsync(int id, string role)
     {
+        var hours = int.TryParse(config["JwtSettings:RefreshExpiryHours"], out var h) ? h : 1;
+        var ttl   = new DistributedCacheEntryOptions
+            { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(hours) };
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32))
             .Replace('+', '-').Replace('/', '_').TrimEnd('=');
-        await cache.SetStringAsync($"autoco:refresh:{token}", $"{id}:{role}", RefreshTtl);
+        await cache.SetStringAsync($"autoco:refresh:{token}", $"{id}:{role}", ttl);
         return token;
     }
 

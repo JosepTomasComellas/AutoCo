@@ -40,7 +40,7 @@ public interface IActivityService
 public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoService photos) : IActivityService
 {
     // Comprova accés a una activitat via propietat del mòdul O via ProfessorClass de la classe.
-    // Usat per a ACCIONS (editar, esborrar, grups...) però NO per a la visibilitat del tauler.
+    // Usat per a ACCIONS (editar, esborrar, grups...) i per a la visibilitat del tauler.
     private IQueryable<Activity> WithAccess(IQueryable<Activity> q, int professorId) =>
         q.Where(a => a.Module.ProfessorId == professorId ||
                      db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId && pc.ClassId == a.Module.ClassId));
@@ -61,11 +61,11 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Include(a => a.CreatedByProfessor)
             .AsQueryable();
 
-        // Visibilitat: el professor veu les activitats que va crear (CreatedByProfessorId)
-        // o les dels mòduls que posseeix (Module.ProfessorId). Separa "qui crea" de "qui posseeix el mòdul".
         if (professorId.HasValue)
             q = q.Where(a => a.Module.ProfessorId == professorId.Value ||
-                             a.CreatedByProfessorId == professorId.Value);
+                             a.CreatedByProfessorId == professorId.Value ||
+                             db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId.Value &&
+                                                           pc.ClassId == a.Module.ClassId));
         if (!includeArchived)
             q = q.Where(a => !a.IsArchived);
 
@@ -86,7 +86,9 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
 
         if (professorId.HasValue)
             q = q.Where(a => a.Module.ProfessorId == professorId.Value ||
-                             a.CreatedByProfessorId == professorId.Value);
+                             a.CreatedByProfessorId == professorId.Value ||
+                             db.ProfessorClasses.Any(pc => pc.ProfessorId == professorId.Value &&
+                                                           pc.ClassId == a.Module.ClassId));
 
         var total = await q.CountAsync();
         var items = await q.OrderByDescending(a => a.CreatedAt)
