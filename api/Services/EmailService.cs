@@ -236,10 +236,13 @@ public class EmailService(IConfiguration config, ILogger<EmailService> logger) :
             var valStyle = highlight
                 ? "color:#CC0000;font-weight:700;font-family:monospace,monospace;font-size:15px"
                 : "color:#1e293b;font-weight:600";
+            // Etiqueta i valor en una sola <td> per evitar el tabulat que inserten
+            // els clients de correu quan es copia text d'una taula de dues columnes.
             sb.Append($"""
                   <tr>
-                    <td style="color:#64748b;font-size:13px;padding:4px 0;width:110px;vertical-align:top">{label}</td>
-                    <td style="{valStyle};font-size:14px;padding:4px 0">{value}</td>
+                    <td style="padding:4px 0">
+                      <span style="color:#64748b;font-size:13px">{label}:&nbsp;</span><span style="{valStyle};font-size:14px">{value}</span>
+                    </td>
                   </tr>
                 """);
         }
