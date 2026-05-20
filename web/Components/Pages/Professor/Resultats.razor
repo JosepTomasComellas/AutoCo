@@ -132,6 +132,17 @@ else
                         <MudSelectItem T="string" Value='"none"'>@Loc["Results_NoPeer"]</MudSelectItem>
                     </MudSelect>
                 </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="string" @bind-Value="_filterAutoGrade" Label="@Loc["Results_AutoGradeRange"]"
+                               Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
+                               ShrinkLabel="true">
+                        <MudSelectItem T="string" Value='""'>@Loc["Results_AllRanges"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"high"'>@Loc["Results_HighGrade"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"mid"'>@Loc["Results_MidGrade"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"low"'>@Loc["Results_LowGrade"]</MudSelectItem>
+                        <MudSelectItem T="string" Value='"none"'>@Loc["Results_NoSelf"]</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
                 @if (_canEdit)
                 {
                     <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
@@ -395,9 +406,10 @@ else
     private bool _canEdit => _results?.Activity.CanEdit ?? false;
 
     // Filtres
-    private string _filterGroup   = "";
-    private string _filterGrade   = "";
-    private string _filterStudent = "";
+    private string _filterGroup     = "";
+    private string _filterGrade     = "";
+    private string _filterAutoGrade = "";
+    private string _filterStudent   = "";
     private bool   _showNotes     = false;
 
     // Panels (persistits a sessionStorage)
@@ -424,6 +436,14 @@ else
                 "mid"  => s.AvgGlobal is >= 5 and < 8,
                 "low"  => s.AvgGlobal is < 5,
                 "none" => !s.AvgGlobal.HasValue,
+                _      => true
+            }) &&
+            (_filterAutoGrade switch
+            {
+                "high" => s.AutAvgGlobal >= 8,
+                "mid"  => s.AutAvgGlobal is >= 5 and < 8,
+                "low"  => s.AutAvgGlobal is < 5,
+                "none" => !s.AutAvgGlobal.HasValue,
                 _      => true
             }))
         .ToList() ?? [];
