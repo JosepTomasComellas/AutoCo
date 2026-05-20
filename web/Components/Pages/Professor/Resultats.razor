@@ -102,15 +102,15 @@ else
         <!-- Bloc 1: Filtres avançats -->
         <MudExpansionPanel Text="@Loc["Results_AdvancedFilters"]" Icon="@Icons.Material.Filled.FilterList"
                            @bind-Expanded="_panelFilters" @bind-Expanded:after="SavePanelStateAsync">
-            <MudGrid Spacing="2">
-                <MudItem xs="12" sm="6" md="4">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                <div style="flex:1;min-width:140px">
                     <MudTextField @bind-Value="_filterStudent" Label="@Loc["Results_FilterStudent"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense"
                                   Clearable="true" Immediate="true"
                                   Adornment="Adornment.Start"
                                   AdornmentIcon="@Icons.Material.Filled.Search" />
-                </MudItem>
-                <MudItem xs="6" sm="3" md="2">
+                </div>
+                <div style="flex:1;min-width:140px">
                     <MudSelect T="string" @bind-Value="_filterGroup" Label="@Loc["Results_ColGroup"]"
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
                                ShrinkLabel="true">
@@ -120,8 +120,8 @@ else
                             <MudSelectItem T="string" Value="@g">@g</MudSelectItem>
                         }
                     </MudSelect>
-                </MudItem>
-                <MudItem xs="6" sm="3" md="2">
+                </div>
+                <div style="flex:1;min-width:140px">
                     <MudSelect T="string" @bind-Value="_filterGrade" Label="@Loc["Results_GradeRange"]"
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
                                ShrinkLabel="true">
@@ -131,8 +131,8 @@ else
                         <MudSelectItem T="string" Value='"low"'>@Loc["Results_LowGrade"]</MudSelectItem>
                         <MudSelectItem T="string" Value='"none"'>@Loc["Results_NoPeer"]</MudSelectItem>
                     </MudSelect>
-                </MudItem>
-                <MudItem xs="6" sm="3" md="2">
+                </div>
+                <div style="flex:1;min-width:140px">
                     <MudSelect T="string" @bind-Value="_filterAutoGrade" Label="@Loc["Results_AutoGradeRange"]"
                                Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true"
                                ShrinkLabel="true">
@@ -142,20 +142,18 @@ else
                         <MudSelectItem T="string" Value='"low"'>@Loc["Results_LowGrade"]</MudSelectItem>
                         <MudSelectItem T="string" Value='"none"'>@Loc["Results_NoSelf"]</MudSelectItem>
                     </MudSelect>
-                </MudItem>
+                </div>
                 @if (_canEdit)
                 {
-                    <MudItem xs="6" sm="3" md="2" Class="d-flex align-center">
+                    <div style="flex:1;min-width:140px" class="d-flex align-center">
                         <MudSwitch @bind-Value="_showNotes" Color="Color.Primary"
                                    Label="@Loc["Results_ShowNotes"]" Size="Size.Small" />
-                    </MudItem>
+                    </div>
                 }
-                <MudItem xs="12" Class="d-flex align-center">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        @Loc["Results_CountOf", _filteredStudents.Count, totalAlumnes]
-                    </MudText>
-                </MudItem>
-            </MudGrid>
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="white-space:nowrap;margin-left:auto">
+                    @Loc["Results_CountOf", _filteredStudents.Count, totalAlumnes]
+                </MudText>
+            </div>
         </MudExpansionPanel>
 
         <!-- Bloc 2: Taula de resultats -->
