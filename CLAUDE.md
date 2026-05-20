@@ -210,8 +210,9 @@ POST /api/auth/logout                        # Invalidar refresh token a Redis
 - Branding: `BrandingService` singleton (variables `BRAND_*`); `manifest.json` és un endpoint dinàmic (fitxer estàtic eliminat); logo via volum `./config/branding/logo.png`; `MainLayout.razor` i `App.razor` injecten `BrandingService`
 - EF Core amb migracions automàtiques a l'inici (`db.Database.Migrate()`)
 - Passwords hashejades amb BCrypt (work factor 12)
+- Correus HTML (`EmailService`): `CredentialBlock` usa una sola `<td>` per fila (etiqueta + valor com a `<span>` inline) — **mai dues `<td>` separades**, els clients de correu insereixen un tabulat entre cel·les en copiar
 - Caché de resultats: Redis `IDistributedCache`, TTL 5 min, invalidació automàtica
-- Temps real: Redis pub/sub → `ParticipationNotificationService` → Blazor
+- Temps real: Redis pub/sub → `ParticipationNotificationService` → Blazor; `ParticipationDto(ActivityId, SelfEvaluated, PeerEvaluated, Total)` — dos comptadors separats (autoavaluació: `IsSelf==true`; coavaluació: `IsSelf==false`); `ActivityCard` i `Resultats.razor` mostren dos xips+barres side-by-side
 - Nivell de log en calent: `LogLevelHolder` singleton (api + web), `AddFilter` predicate, persistit a Redis `autoco:loglevel`
 - Estat de panels a `Resultats.razor`: `sessionStorage` clau `autoco:resultats:{ActivityId}`, carregat a `OnAfterRenderAsync(firstRender)`
 - `MudExpansionPanel` (MudBlazor 9.x): usar `@bind-Expanded` + `@bind-Expanded:after` — **no** `IsExpanded`/`IsExpandedChanged` (MUD0002)

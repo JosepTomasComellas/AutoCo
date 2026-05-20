@@ -1,4 +1,4 @@
-# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.37
+# AutoCo — Sistema d'Avaluació entre Iguals · v2.6.41
 
 Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en activitats de grup, pensada per a entorns educatius de cicles formatius i batxillerat.
 
@@ -32,7 +32,7 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 - Importació/exportació de grups per CSV
 - **Duplicació d'activitats** reutilitzant la configuració de grups
 - **Duplicació creuada** d'activitats a una altra classe i mòdul
-- **Indicador de participació** en temps real a cada targeta (Redis pub/sub, instantani)
+- **Indicador de participació doble** en temps real a cada targeta: barres independents d'**autoavaluació** i **coavaluació** en dues columnes (Redis pub/sub, instantani)
 - **Botó «Convidar a participar»** directament visible a la targeta quan l'activitat és oberta — envia correu a tots els alumnes del grup amb barra de progrés en temps real
 - **Recordatoris per correu** als alumnes que no han omplert l'avaluació
 - **Notificació automàtica al professor** quan el 100% de l'activitat s'ha completat
@@ -42,7 +42,8 @@ Aplicació web per gestionar **autoavaluació** i **coavaluació** d'alumnes en 
 
 **Resultats i informes**
 - Taula de **resultats** amb capçalera fixa, paginació (25 files), puntuació per criteri (Auto / Co) i notes globals acolorides per rang (verd/taronja/vermell); quatre blocs **col·lapsables** (filtres, taula, detall coavaluacions, registre) amb **estat persistent** entre recàrregues (`sessionStorage` per activitat)
-- **Filtres avançats**: per **alumne** (cerca per nom/cognoms), per grup i per rang de nota (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense coavaluació)
+- **Filtres avançats**: per **alumne** (cerca per nom/cognoms), per grup, per rang de nota de coavaluació i per rang de nota d'**autoavaluació** (alta ≥8 / mitjana 5–7.9 / baixa <5 / sense avaluació); tots els controls amb amplada igual i comptador d'alumnes filtrats a la mateixa fila
+- **Barres de progrés dobles** al tauler de resultats: autoavaluació i coavaluació side-by-side
 - **Notes del professor** per alumne: camp editable inline a la taula de resultats
 - **Gràfiques comparatives** per grup (Auto vs. Co, desglossament per criteri) amb Chart.js
 - **Informe PDF individual per alumne**: pàgina optimitzada per a impressió/PDF amb dades, notes globals, detall per criteri i comentaris
@@ -202,6 +203,14 @@ AdminAuditLog    (registre d'accions sensibles, sense FK)
 ---
 
 ## Changelog
+
+### v2.6.41
+- **Fix tabulat en copiar credencials del correu**: `CredentialBlock` usava dues `<td>` per fila (etiqueta + valor); els clients de correu (Gmail, Outlook…) insereixen un tabulat entre cel·les quan es copia el text. Ara etiqueta i valor van en una sola `<td>` amb dos `<span>` inline, sense canvi visual
+
+### v2.6.38–40
+- **Participació doble (Auto / Co)**: `ParticipationDto` divideix `Submitted` en `SelfEvaluated` + `PeerEvaluated`; `ActivityCard` i la pàgina de resultats mostren dos xips (icona `Person` / `Group`) amb barres de progrés independents en dues columnes (side-by-side)
+- **Filtre «Rang de nota (autoaval.)»** a la pàgina de resultats: idèntic al de coavaluació però filtra per `AutAvgGlobal`
+- **Filtres en una sola fila**: flexbox amb `flex:1` perquè tots els controls creixin igual; comptador d'alumnes filtrats alineat a la dreta a la mateixa fila
 
 ### v2.6.32
 - **Fix nom del creador a la fitxa d'activitat**: `Activity.CreatedByProfessor` (nav. property EF Core); `ActivityDto` ara mostra el nom del professor que va crear l'activitat, no el propietari del mòdul; afecta el tauler, la fitxa i totes les accions (archive, update, toggle, duplicate)
