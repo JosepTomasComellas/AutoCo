@@ -315,7 +315,7 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
     {
         var q = db.Activities.Where(a => a.Id == activityId);
         var hasAccess = await (isAdmin ? q : WithAccess(q, professorId)).AnyAsync();
-        if (!hasAccess) return new(activityId, 0, 0);
+        if (!hasAccess) return new(activityId, 0, 0, 0);
 
         var total = await db.GroupMembers
             .Where(gm => gm.Group.ActivityId == activityId)
@@ -323,13 +323,19 @@ public class ActivityService(AppDbContext db, IDistributedCache cache, IPhotoSer
             .Distinct()
             .CountAsync();
 
-        var submitted = await db.Evaluations
+        var selfEvaluated = await db.Evaluations
             .Where(e => e.ActivityId == activityId && e.IsSelf)
             .Select(e => e.EvaluatorId)
             .Distinct()
             .CountAsync();
 
-        return new(activityId, submitted, total);
+        var peerEvaluated = await db.Evaluations
+            .Where(e => e.ActivityId == activityId && !e.IsSelf)
+            .Select(e => e.EvaluatorId)
+            .Distinct()
+            .CountAsync();
+
+        return new(activityId, selfEvaluated, peerEvaluated, total);
     }
 
     public async Task<ReminderResult> SendRemindersAsync(int activityId, int professorId, bool isAdmin, IEmailService email)

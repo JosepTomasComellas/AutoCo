@@ -154,11 +154,15 @@ public class EvaluationService(AppDbContext db, IServiceScopeFactory scopeFactor
                         .Where(gm => gm.Group.ActivityId == activityId)
                         .Select(gm => gm.StudentId).Distinct().CountAsync();
 
-                    var submitted = await scopedDb.Evaluations
+                    var selfEvaluated = await scopedDb.Evaluations
                         .Where(e => e.ActivityId == activityId && e.IsSelf)
                         .Select(e => e.EvaluatorId).Distinct().CountAsync();
 
-                    var dto     = new ParticipationDto(activityId, submitted, total);
+                    var peerEvaluated = await scopedDb.Evaluations
+                        .Where(e => e.ActivityId == activityId && !e.IsSelf)
+                        .Select(e => e.EvaluatorId).Distinct().CountAsync();
+
+                    var dto     = new ParticipationDto(activityId, selfEvaluated, peerEvaluated, total);
                     var payload = JsonSerializer.Serialize(dto);
                     var pub     = redis.GetSubscriber();
                     await pub.PublishAsync(

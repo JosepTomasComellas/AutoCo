@@ -137,7 +137,7 @@ public record ImportGroupsRequest(string CsvContent);
 public record ImportGroupsResult(int Assigned, int Skipped, List<string> Errors);
 public record ActivityShareEntryDto(int ProfessorId, string NomComplet, bool IsShared);
 public record UpdateActivitySharesRequest(List<int> ProfessorIds);
-public record ParticipationDto(int ActivityId, int Submitted, int Total);
+public record ParticipationDto(int ActivityId, int SelfEvaluated, int PeerEvaluated, int Total);
 public record ReminderResult(int Sent, int Skipped, bool EmailDisabled);
 public record InviteTargetDto(int StudentId, string NomComplet, string Email, string GroupName);
 public record InviteOneRequest(bool IncludePassword);

@@ -65,27 +65,35 @@
                     @Loc["Card_ScheduledClose", Act.CloseAt.Value.ToLocalTime().ToString("dd/MM HH:mm")]
                 </MudChip>
             }
-            @if (Act.IsOpen && _participation is not null)
-            {
-                <MudTooltip Text="@Loc["Card_EvalTooltip", _participation.Submitted, _participation.Total]">
-                    <MudChip T="string" Size="Size.Small"
-                             Color="@(_participation.Submitted == _participation.Total && _participation.Total > 0
-                                       ? Color.Success : Color.Warning)"
-                             Variant="Variant.Filled">
-                        @Loc["Card_Evaluated", _participation.Submitted, _participation.Total]
-                    </MudChip>
-                </MudTooltip>
-            }
-            else if (Act.IsOpen && _loadingParticipation)
+            @if (Act.IsOpen && _loadingParticipation)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" />
             }
         </MudStack>
         @if (Act.IsOpen && _participation is not null && _participation.Total > 0)
         {
-            <MudProgressLinear Value="@(100.0 * _participation.Submitted / _participation.Total)"
-                               Color="@(_participation.Submitted == _participation.Total ? Color.Success : Color.Warning)"
-                               Rounded="true" Size="Size.Small" Class="mt-2" />
+            <MudTooltip Text="@Loc["Card_SelfEvalTip", _participation.SelfEvaluated, _participation.Total]">
+                <MudChip T="string" Size="Size.Small"
+                         Icon="@Icons.Material.Filled.Person"
+                         Color="@(_participation.SelfEvaluated == _participation.Total ? Color.Success : Color.Warning)"
+                         Variant="Variant.Filled" Class="mt-2">
+                    @Loc["Card_SelfEval", _participation.SelfEvaluated, _participation.Total]
+                </MudChip>
+            </MudTooltip>
+            <MudProgressLinear Value="@(100.0 * _participation.SelfEvaluated / _participation.Total)"
+                               Color="@(_participation.SelfEvaluated == _participation.Total ? Color.Success : Color.Warning)"
+                               Rounded="true" Size="Size.Small" Class="mb-2" />
+            <MudTooltip Text="@Loc["Card_PeerEvalTip", _participation.PeerEvaluated, _participation.Total]">
+                <MudChip T="string" Size="Size.Small"
+                         Icon="@Icons.Material.Filled.Group"
+                         Color="@(_participation.PeerEvaluated == _participation.Total ? Color.Success : Color.Warning)"
+                         Variant="Variant.Filled">
+                    @Loc["Card_PeerEval", _participation.PeerEvaluated, _participation.Total]
+                </MudChip>
+            </MudTooltip>
+            <MudProgressLinear Value="@(100.0 * _participation.PeerEvaluated / _participation.Total)"
+                               Color="@(_participation.PeerEvaluated == _participation.Total ? Color.Success : Color.Warning)"
+                               Rounded="true" Size="Size.Small" />
         }
     </MudCardContent>
     }
